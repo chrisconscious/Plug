@@ -1,0 +1,1748 @@
+@import url("https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap");
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --background: 0 0% 100%;
+  --foreground: 0 0% 17.6%;
+  --radius: 0px;
+
+  --color-primary: #2d2d2d;
+  --color-accent-green: #018849;
+  --color-accent-red: #d01345;
+  --color-border: #dddddd;
+  --color-muted: #767676;
+  --color-muted-light: #eeeeee;
+
+  --font-sans: "Manrope", Arial, sans-serif;
+
+  /* ASOS Specific Color Tokens from Document */
+  --asos-dark: 0 0% 17.6%;
+  --asos-black: 0 0% 0%;
+  --asos-gray-dark: 0 1.2% 31.8%;
+  --asos-gray: 0 0% 40%;
+  --asos-gray-muted: 0 0% 46.3%;
+  --asos-gray-light: 0 0% 57.3%;
+  --asos-border: 0 0% 86.7%;
+  --asos-bg-light: 0 0% 93.3%;
+  --asos-bg-white: 0 0% 97.3%;
+  --asos-green: 152 98.5% 26.9%;
+  --asos-red: 344.1 83.3% 44.5%;
+
+  --card: 0 0% 100%;
+  --card-foreground: 0 0% 17.6%;
+  --popover: 0 0% 100%;
+  --popover-foreground: 0 0% 17.6%;
+  --primary: 0 0% 17.6%;
+  --primary-foreground: 0 0% 100%;
+  --secondary: 0 0% 93.3%;
+  --secondary-foreground: 0 0% 17.6%;
+  --muted: 0 0% 93.3%;
+  --muted-foreground: 0 0% 40%;
+  --accent: 0 0% 93.3%;
+  --accent-foreground: 0 0% 17.6%;
+  --destructive: 344.1 83.3% 44.5%;
+  --destructive-foreground: 0 0% 100%;
+  --border: 0 0% 86.7%;
+  --input: 0 0% 86.7%;
+  --ring: 0 0% 17.6%;
+  --chart-1: 152 98.5% 26.9%;
+  --chart-2: 344.1 83.3% 44.5%;
+  --chart-3: 0 0% 40%;
+  --chart-4: 0 0% 57.3%;
+  --chart-5: 0 0% 17.6%;
+  --sidebar-background: 0 0% 100%;
+  --sidebar-foreground: 0 0% 17.6%;
+  --sidebar-primary: 0 0% 17.6%;
+  --sidebar-primary-foreground: 0 0% 100%;
+  --sidebar-accent: 0 0% 93.3%;
+  --sidebar-accent-foreground: 0 0% 17.6%;
+  --sidebar-border: 0 0% 86.7%;
+  --sidebar-ring: 0 0% 17.6%;
+
+  --animate-marquee: marquee 40s linear infinite;
+}
+
+@keyframes marquee {
+  from { transform: translateX(0); }
+  to { transform: translateX(-100%); }
+}
+
+@layer base {
+  * {
+    border-color: hsl(var(--border));
+  }
+  body {
+    background-color: hsl(var(--background));
+    color: hsl(var(--foreground));
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+  }
+}
+
+@layer utilities {
+  .nav-drop-shadow {
+    box-shadow: 0 2px 4px rgba(0,0,0,0.08);
+  }
+
+  .animate-marquee {
+    animation: var(--animate-marquee);
+  }
+}
+html{scroll-behavior:smooth}.font-display{font-family:Manrope,sans-serif}button,a{transition:all .2s ease}img{display:block}
+/* Premium commerce + administration expansion */
+.announcement{height:28px;background:#090909;color:#fff;display:flex;justify-content:space-around;align-items:center;font-size:9px;letter-spacing:.08em}.announcement span{opacity:.4}.storeHeader{height:64px;display:flex;align-items:center;justify-content:space-between;padding:0 4%;border-bottom:1px solid #e5e5e5;background:#fff;position:sticky;top:0;z-index:20}.logo,.authLogo{font:800 clamp(24px,.75vw + 21px,32px) Manrope;color:#141414;letter-spacing:.08em;line-height:1;white-space:nowrap}.storeHeader nav{display:flex;gap:27px;font-size:11px;font-weight:700}.storeHeader nav a{color:#333}.headerIcons{display:flex;gap:16px;align-items:center}.headerIcons a{color:inherit}.shopLayout{display:grid;grid-template-columns:235px 1fr;max-width:1500px;margin:auto;padding:34px 4%;gap:32px}.filters{border-right:1px solid #e5e5e5;padding-right:25px;font-size:12px}.filters label{display:block;margin:11px 0;color:#555}.filters h4{margin:20px 0 12px}.filters hr{border:0;border-top:1px solid #eee;margin:20px 0}.sizeChips,.sizes{display:flex;gap:7px;flex-wrap:wrap}.sizeChips button,.sizes button{background:#fff;border:1px solid #ddd;padding:9px 13px;font-size:11px}.colorDots{display:flex;gap:8px;margin:10px 0}.colorDots i{width:15px;height:15px;border-radius:50%;background:#151515;border:1px solid #ccc}.colorDots i:nth-child(2){background:#cbb89b}.colorDots i:nth-child(3){background:#f2f2ed}.colorDots i:nth-child(4){background:#7d382f}.colorDots i:nth-child(5){background:#69765e}.colorDots i:nth-child(6){background:#7c246d}.breadcrumb{font-size:9px;color:#888;margin-bottom:16px}.pageTitle{display:flex;align-items:center;gap:10px;justify-content:space-between;margin-bottom:25px}.pageTitle h1{font:800 26px Manrope;margin:0}.pageTitle button,.pageTitle select,.managementToolbar>button{border:1px solid #ddd;background:#fff;padding:10px 13px;font-size:11px}.productGrid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:17px}.productImage{height:265px;background:#f4f2ee;position:relative;overflow:hidden}.productImage img{width:100%;height:100%;object-fit:cover}.productImage button{position:absolute;right:9px;top:9px;border:0;background:#fff;padding:7px;border-radius:50%}.productName{font-size:11px;margin:10px 0 5px}.productCard b{font-size:11px}.dots{display:flex;gap:5px;margin-top:8px}.dots i{width:8px;height:8px;background:#111;border-radius:50%}.dots i:nth-child(2){background:#b7a790}.dots i:nth-child(3){background:#fff;border:1px solid #bbb}.detail{max-width:1380px;margin:35px auto;display:grid;grid-template-columns:80px 1.1fr .9fr;gap:18px;padding:0 4%}.thumbs img{width:65px;height:80px;object-fit:cover;margin-bottom:10px}.detailImage{height:680px;background:#eee}.detailImage img{width:100%;height:100%;object-fit:cover}.detailInfo{padding:15px 25px}.detailInfo h1{font:800 30px Manrope;margin:8px 0}.detailInfo h2{font-size:18px}.detailInfo p{font-size:12px;line-height:1.8;color:#555;max-width:440px}.stars{font-size:13px;margin:15px 0}.stars span{color:#777;font-size:10px}.sizeTitle{display:flex;justify-content:space-between;align-items:center}.sizeTitle a{font-size:10px;text-decoration:underline}.sizes{margin:10px 0 18px}.blackButton{display:flex;align-items:center;justify-content:center;gap:7px;background:#111!important;color:#fff!important;border:0;padding:15px 18px;font-size:11px;font-weight:700;letter-spacing:.09em;text-decoration:none;border-radius:2px;transition:background .18s ease}.blackButton:hover{background:#000!important}.outlineButton{width:100%;background:#fff;border:1px solid #bbb;padding:13px;margin-top:8px;font-size:11px}.detailInfo .blackButton{width:100%}.serviceRow{display:flex;justify-content:space-between;border-block:1px solid #eee;margin-top:25px;padding:15px 0;font-size:9px}.serviceRow span{display:flex;gap:5px;align-items:center}.serviceRow svg{width:14px}.pAccordion{border-top:1px solid #eee;margin-top:18px}.pAccordionItem{margin-bottom:1px}.accordion{border-bottom:1px solid #eee;padding:17px 0;font-size:10px;font-weight:700;display:flex;justify-content:space-between;width:100%;background:none;border-left:0;border-right:0;border-top:0;cursor:pointer;color:inherit}.accordion svg{transition:transform .15s}.accordion svg.open{transform:rotate(45deg)}.accordionBody{padding:2px 0 16px;font-size:12px;font-weight:400;line-height:1.7;color:#555;white-space:pre-wrap}.recommend{max-width:1380px;margin:50px auto;padding:0 4%}.recommend h2{font:800 20px Manrope}.cartPage,.checkout{max-width:1280px;margin:42px auto;display:grid;grid-template-columns:1.6fr .7fr;gap:56px;padding:0 4%}.cartItem{display:grid;grid-template-columns:85px 1fr 100px 110px 30px;gap:20px;align-items:center;border-top:1px solid #eee;padding:16px 0;font-size:11px}.cartItem img{width:75px;height:95px;object-fit:cover;background:#eee}.cartItem p{color:#888}.qty{display:flex;border:1px solid #ddd;align-items:center;justify-content:space-between}.qty button,.iconBtn{border:0;background:#fff;padding:6px}.qty svg,.iconBtn svg{width:13px}.summary{border:1px solid #e6e6e6;padding:25px;height:max-content}.summary h3{font-size:11px;text-transform:uppercase;letter-spacing:.14em;color:#1a1a1a;font-weight:700;margin-bottom:16px}.summary p{display:flex;justify-content:space-between;font-size:12.5px;color:#555;padding:6px 0}.summary .total{font-size:16px;font-weight:700;color:#111;border-top:1px solid #ece9e2;margin-top:8px;padding-top:14px}.summary .blackButton{width:100%;margin:15px 0}.secure{text-align:center;font-size:10px;color:#555}.secure svg{width:16px;vertical-align:middle}.cartRecs{margin-top:40px}.cartRecs h3{font-size:13px}.checkoutSteps{display:flex;justify-content:space-between;font-size:10px;text-transform:uppercase;letter-spacing:.12em;color:#999;border-bottom:1px solid #e8e5df;padding-bottom:18px;font-weight:600}.checkout h1{font:800 30px Manrope;letter-spacing:.02em;color:#141414}.checkout h3{font-size:11px;margin-top:32px;margin-bottom:14px;text-transform:uppercase;letter-spacing:.14em;color:#1a1a1a;font-weight:700;padding-bottom:10px;border-bottom:1px solid #ece9e2}.formGrid{display:grid;grid-template-columns:1fr 1fr;gap:10px}.formGrid input{padding:13px 14px;border:1px solid #d8d5cd;font-size:12px;border-radius:2px;background:#fff;transition:border-color .15s ease}.formGrid input:focus{outline:none;border-color:#c9a35a}.formGrid input:first-child{grid-column:span 2}.checkout .blackButton{margin-top:26px;width:100%;padding:16px 18px}.confirmation{max-width:850px;margin:60px auto;text-align:center;padding:0 5%}.successIcon svg{width:50px;height:50px;stroke:#5c9771}.confirmation h1{font:800 24px Manrope;letter-spacing:.06em;margin:15px 0 0}.confirmation h2{font:500 12px Manrope;color:#777;margin-top:4px;letter-spacing:.03em}.confirmation p{font-size:12px;color:#555}.orderBox{border:1px solid #e4e4e4;padding:25px;text-align:left;margin:30px 0}.orderBox h3{font-size:11px}.orderBox div{display:flex;justify-content:space-between;border-top:1px solid #eee;padding:12px 0;font-size:11px}.nextSteps{display:flex;align-items:center;justify-content:space-between;font-size:10px;margin:25px 0}.confirmation .blackButton{display:inline-flex}.auth{min-height:100vh;display:grid;grid-template-columns:1fr 1fr}.authVisual{background-size:cover;background-position:center;position:relative;color:#fff;padding:55px;display:flex;flex-direction:column;justify-content:space-between}.authVisual:before{content:'';position:absolute;inset:0;background:linear-gradient(90deg,rgba(0,0,0,.55),rgba(0,0,0,.05))}.authVisual>*{position:relative}.authLogo{color:#fff}.authVisual h1{font:800 45px Manrope;max-width:400px}.authForm{max-width:430px;width:80%;margin:auto}.authForm h1{font:800 29px Manrope;margin-bottom:5px}.authForm>p{font-size:12px;color:#666}.authForm .formGrid{display:block}.authForm input{display:block;width:100%;margin:10px 0}.authForm .blackButton{width:100%;margin:15px 0}.or{text-align:center;color:#888;font-size:9px;margin:18px}.socials{display:flex;gap:10px}.socials button{flex:1;padding:12px;background:#fff;border:1px solid #ddd}.check{font-size:10px;color:#666;display:block;margin-top:12px}.backoffice{display:flex;min-height:100vh;background:#f7f7f6}.adminSidebar{width:250px;background:#111;color:#eee;padding:22px 13px;display:flex;flex-direction:column;position:fixed;inset:0 auto 0 0}.adminLogo{color:#fff;font-weight:800;letter-spacing:.02em;margin:0 12px 26px;text-decoration:none}.adminLogo small{display:block;font-size:8px;margin:3px 0 0 29px;color:#999}.navSection{overflow:auto}.navSection a{display:flex;gap:11px;align-items:center;padding:11px 12px;margin:2px 0;color:#bbb;text-decoration:none;font-size:11px;border-radius:5px}.navSection a.active,.navSection a:hover{background:#242424;color:#fff}.visitStore{margin-top:auto;color:#fff;text-decoration:none;border:1px solid #444;padding:12px;text-align:center;font-size:11px;border-radius:5px}.adminMain{margin-left:250px;width:calc(100% - 250px);padding-bottom:50px}.adminHeader{height:65px;background:#fff;border-bottom:1px solid #e6e6e6;display:flex;justify-content:space-between;align-items:center;padding:0 35px}.adminHeader button{border:0;background:none}.adminHeader>div{display:flex;gap:17px;align-items:center;font-size:11px}.avatar{width:30px;height:30px;border-radius:50%;background:#d5b99e;display:grid;place-items:center}.adminIntro{display:flex;justify-content:space-between;align-items:end;padding:32px 35px 25px}.eyebrow{font-size:9px;color:#888;font-weight:700;letter-spacing:.12em}.adminIntro h1{font:800 27px Manrope;margin:5px 0}.adminIntro p{font-size:11px;color:#777;margin:0}.adminActions{display:flex;gap:8px}.dateBtn{border:1px solid #ddd;background:#fff;padding:11px;font-size:10px}.dashboard,.management{padding:0 35px}.statGrid{display:grid;grid-template-columns:repeat(5,1fr);gap:14px}.statCard,.panel,.tableCard{background:#fff;border:1px solid #e4e4e4;border-radius:8px}.statCard{padding:19px}.statCard span{font-size:10px;color:#777}.statCard h2{margin:8px 0;font-size:22px}.statCard small{font-size:9px;color:#43885a}.chartGrid{display:grid;grid-template-columns:1.4fr .75fr 1fr;gap:14px;margin:14px 0}.panel{padding:18px;min-height:210px}.panelTitle{font-size:11px;font-weight:700;display:flex;justify-content:space-between}.panelTitle button,.panelTitle select{border:0;background:#f5f5f5;font-size:9px;padding:5px}.fakeChart{height:160px;border-bottom:1px solid #ddd;display:flex;align-items:end;gap:8px;padding:15px}.fakeChart i{flex:1;background:#171717;border-radius:8px 8px 0 0;height:var(--h)}.fakeChart i:nth-child(1){height:35%}.fakeChart i:nth-child(2){height:60%}.fakeChart i:nth-child(3){height:48%}.fakeChart i:nth-child(4){height:75%}.fakeChart i:nth-child(5){height:50%}.fakeChart i:nth-child(6){height:88%}.fakeChart i:nth-child(7){height:70%}.donut{width:125px;height:125px;border-radius:50%;background:conic-gradient(#4f9b68 0 59%,#785bb4 59% 78%,#e59b2d 78% 90%,#dc6258 90%);display:grid;place-items:center;color:#111;font-size:17px;font-weight:800;margin:25px auto;position:relative}.donut:before{content:'';position:absolute;width:72px;height:72px;background:#fff;border-radius:50%}.donut{isolation:isolate}.donut::after{content:'59%';position:absolute;z-index:2}.legend{font-size:9px;line-height:2;list-style:none;padding:0}.dataPanel{min-height:210px}.dataRow{display:flex;justify-content:space-between;border-bottom:1px solid #eee;padding:12px 0;font-size:10px}.dataRow b{font-size:9px;color:#5d8f67}.lowerGrid{display:grid;grid-template-columns:1fr 1fr .8fr;gap:14px}.quick{width:100%;display:flex;justify-content:space-between;padding:12px;border:1px solid #eee;background:#fff;margin-top:6px;font-size:10px}.managementHero{display:flex;align-items:center;gap:15px;background:#fff;border:1px solid #e4e4e4;border-radius:9px;padding:22px}.managementHero h2{font:800 18px Manrope;margin:0}.managementHero p{font-size:10px;color:#777;margin:4px 0}.managementHero .blackButton{margin-left:auto}.moduleIcon{width:48px;height:48px;background:#f1eee9;display:grid;place-items:center;border-radius:10px}.managementToolbar{display:flex;gap:8px;margin:18px 0}.searchBox{display:flex;gap:8px;align-items:center;background:#fff;border:1px solid #ddd;padding:0 10px;flex:1}.searchBox input{border:0;outline:0;padding:11px;width:100%;font-size:11px}.tableHead,.tableRow{display:grid;grid-template-columns:2fr 1fr 1fr 70px;gap:10px;align-items:center}.tableHead{padding:13px 18px;background:#f5f5f4;font-size:9px;color:#777}.tableRow{padding:13px 18px;border-top:1px solid #eee;font-size:10px}.rowPrimary{display:flex;align-items:center;gap:10px}.miniThumb{width:30px;height:30px;background:#eee;display:grid;place-items:center;border-radius:5px}.status{color:#38805b;font-size:9px}.status.warning{color:#a36d15}.tableRow button{border:0;background:none}.moduleGrid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:14px}.moduleGrid h3{font-size:12px}.fakeBars{height:130px;display:flex;gap:10px;align-items:end}.fakeBars i{flex:1;background:#171717;border-radius:5px 5px 0 0}.activity{display:flex;gap:9px;align-items:center;border-bottom:1px solid #eee;padding:10px 0;font-size:10px}.activity small{margin-left:auto;color:#888}
+@media(max-width:900px){.storeHeader nav{display:none}.desktopOnlyIcon{display:none}.shopLayout{grid-template-columns:1fr}.filters{display:none}.productGrid{grid-template-columns:repeat(2,1fr)}.productImage{height:220px}.detail{grid-template-columns:1fr}.thumbs{display:flex;gap:7px}.thumbs img{width:55px}.detailImage{height:500px}.cartPage,.checkout{grid-template-columns:1fr}.auth{grid-template-columns:1fr}.authVisual{min-height:42vh}.backoffice{display:block}.adminSidebar{position:static;width:100%;height:auto;padding:15px}.navSection{display:flex;overflow:auto}.navSection a{white-space:nowrap}.visitStore{display:none}.adminMain{margin-left:0;width:100%}.statGrid{grid-template-columns:repeat(2,1fr)}.chartGrid,.lowerGrid,.moduleGrid{grid-template-columns:1fr}.adminIntro{padding:22px}.adminActions{display:none}.dashboard,.management{padding:0 18px}.tableHead,.tableRow{grid-template-columns:2fr 1fr 50px}.tableHead span:nth-child(3),.tableRow>span:nth-child(3){display:none}.managementToolbar{flex-wrap:wrap}.managementHero .blackButton{display:none}}
+
+/* ═══════════════════════════════════════════════════════════
+   DESIGN 6 — Checkout & Payment Method
+   ═══════════════════════════════════════════════════════════ */
+
+/* ── Checkout layout ─────────────────────────────────── */
+.checkout h1{font:600 20px Manrope;letter-spacing:.01em;margin:0 0 2px;color:#111}
+.checkout h3{font:600 11px Manrope;text-transform:uppercase;letter-spacing:.08em;color:#999;margin:0 0 6px}
+.checkout .checkoutTitleSection{margin-bottom:10px}.checkoutTitleSection:before{content:"";display:block;width:44px;height:2px;background:#c9a35a;margin-bottom:14px}
+.checkout .checkoutSubtitle{font-size:13.5px;color:#8a8578;margin:6px 0 24px;font-weight:400;letter-spacing:.01em}
+.checkoutSteps{display:flex;justify-content:space-between;font-size:10px;text-transform:uppercase;letter-spacing:.12em;color:#999;border-bottom:1px solid #e8e5df;padding-bottom:18px;font-weight:600}
+.checkoutSteps .muted{color:#ccc}.checkoutSteps .active{color:#111;border-bottom:2px solid #111;padding-bottom:4px;font-weight:600}
+
+/* ── Payment method section ──────────────────────────── */
+.pmSection{margin-bottom:24px}
+.pmSectionTitle{font:700 11px Manrope;text-transform:uppercase;letter-spacing:.12em;color:#8a8578;margin:0 0 6px}
+.pmSectionDesc{font-size:13px;color:#888;margin:0 0 16px;font-weight:400;line-height:1.5}
+
+/* ── Payment method cards ────────────────────────────── */
+.pmCards{display:flex;flex-direction:column;gap:10px}
+.pmCard{
+  display:flex;align-items:center;gap:16px;
+  padding:18px 20px;background:#fff;
+  border:1.5px solid #e8e8e8;cursor:pointer;
+  color:#111;font-family:var(--font-sans);
+  transition:border-color .2s ease,background .2s ease,box-shadow .2s ease;
+  position:relative;
+}
+.pmCard:hover{border-color:#ccc}
+.pmCard.active{border-color:#111;background:#fafafa}
+.pmCard:focus-visible{outline:2px solid #38805b;outline-offset:2px}
+.pmCardIcon{
+  display:grid;place-items:center;width:42px;height:42px;
+  background:#f5f5f5;color:#555;flex-shrink:0;
+  transition:background .2s ease,color .2s ease;
+}
+.pmCard.active .pmCardIcon{background:#1a1a1a;color:#e9d9b8}
+.pmCardBody{flex:1;min-width:0}
+.pmCardName{font:600 14.5px Manrope;color:#141414;margin-bottom:3px;letter-spacing:.01em}
+.pmCardDesc{font-size:12.5px;color:#888;font-weight:400;line-height:1.4}
+.pmCardBadge{
+  display:inline-block;margin-top:5px;
+  font:600 10px Manrope;letter-spacing:.04em;
+  padding:2px 7px;
+}
+.pmCardBadge.green{background:#e8f5e9;color:#2e7d32}
+.pmCardBadge.amber{background:#fff8e1;color:#e65100}
+.pmCardIndicator{
+  display:grid;place-items:center;width:20px;height:20px;
+  border-radius:50%;border:1.5px solid #ddd;flex-shrink:0;
+  transition:border-color .2s ease,background .2s ease;
+}
+.pmCard.active .pmCardIndicator{border-color:#c9a35a;background:#c9a35a}
+.pmCardCheck{color:#fff;opacity:0;transition:opacity .15s ease}
+.pmCard.active .pmCardCheck{opacity:1}
+
+/* ── Online pay section ──────────────────────────────── */
+.opSection{margin-top:20px;animation:slideIn .25s ease}
+.opPayNumHint{font-size:12px;color:#888;margin-top:10px;line-height:1.5}
+
+/* ── Cash on delivery section ────────────────────────── */
+.codSection{margin-top:20px;animation:slideIn .25s ease}
+.codFeeBox{display:flex;justify-content:space-between;align-items:center;border:1px solid #ece5d5;padding:16px 18px;background:#fbf8f1;border-radius:2px}
+.codFeeLabel{font-size:13px;color:#555;font-weight:500}
+.codFeeAmount{font:700 14px Manrope;color:#111;letter-spacing:.01em}
+.codFeeNote{font-size:12px;color:#999;margin-top:8px;line-height:1.5}
+
+/* ── Summary ── (redefined in DESIGN 7 block below) ──── */
+
+/* ── Confirmation ────────────────────────────────────── */
+.confirmation{max-width:680px;margin:60px auto;text-align:center;padding:0 5%}
+.successIcon svg{width:48px;height:48px;stroke:#5c9771}
+.confirmation h1{font:600 22px Manrope;margin:14px 0 0;color:#111}
+.confirmation h2{font:500 12px Manrope;color:#888;margin-top:4px}
+.confirmation p{font-size:12px;color:#666;line-height:1.7}
+.orderBox{border:1px solid #eee;padding:22px 24px;text-align:left;margin:28px 0}
+.orderBox h3{font:600 10px Manrope;text-transform:uppercase;letter-spacing:.08em;color:#999;margin-bottom:10px}
+.orderBox div{display:flex;justify-content:space-between;border-top:1px solid #f5f5f5;padding:10px 0;font-size:12px;color:#555}
+.orderBox div b{font-weight:600;color:#111}
+.nextSteps{display:flex;align-items:center;justify-content:space-between;font-size:10px;margin:26px 0;color:#bbb}
+.nextSteps span{display:flex;align-items:center;gap:4px}
+
+/* ── Loading / empty ─────────────────────────────────── */
+.payLoading{padding:20px;font-size:13px;color:#2e7d32;border:1px solid #e8f5e9;background:#f1f8e9}
+.payEmpty{padding:20px;font-size:13px;color:#666;border:1px solid #eee;background:#fafafa;line-height:1.6}
+
+/* ── Animations ──────────────────────────────────────── */
+@keyframes slideIn{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:translateY(0)}}
+@media(prefers-reduced-motion:reduce){.pmCard,.opPayNumber,.checkoutCta,.codFeeBox,.networkRow{transition:none}.opSection,.codSection{animation:none}}
+
+/* ── Responsive ──────────────────────────────────────── */
+@media(max-width:768px){
+  .cartPage,.checkout{grid-template-columns:1fr !important;gap:30px !important}
+  .pmCard{padding:17px 19px;border-radius:2px;transition:border-color .15s ease}
+  .summary{order:10}
+}
+
+.productBrand{font-size:9px;font-weight:800;letter-spacing:.08em;color:#888;text-transform:uppercase;margin-top:10px}
+.brandFilterLink{display:block;margin:9px 0;color:#555;font-size:12px;text-decoration:none}
+.brandFilterLink:hover,.brandFilterLink.active{color:#111;font-weight:700}
+.activeFilterRow{display:flex;align-items:center;gap:10px;font-size:11px;color:#555;margin:-10px 0 20px}
+.clearFilter{display:inline-flex;align-items:center;gap:4px;font-size:10px;font-weight:700;color:#111;text-decoration:underline;margin-left:4px}
+.brandsPage{max-width:1350px;margin:35px auto;padding:0 4%}
+.brandsIntro{font-size:12px;color:#666;max-width:520px;margin:-14px 0 22px}
+.brandSearch{max-width:420px;margin-bottom:20px}
+.alphaNav{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:28px}
+.alphaNav button{border:1px solid #ddd;background:#fff;width:32px;height:32px;font-size:11px;font-weight:700}
+.alphaNav button.active{background:#111;color:#fff;border-color:#111}
+.brandsSectionTitle{font:800 14px Manrope;letter-spacing:.05em;margin:30px 0 16px}
+.brandGrid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px}
+.brandCard{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;text-align:center;border:1px solid #e5e5e5;padding:28px 12px;text-decoration:none;color:#111;transition:border-color .2s ease,transform .2s ease}
+.brandCard:hover{border-color:#111;transform:translateY(-2px)}
+.brandMark{font:800 20px Manrope;letter-spacing:-.02em}
+.brandName{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.04em}
+.brandCard small{font-size:10px;color:#888}
+.brandsEmpty{font-size:12px;color:#777;padding:30px 0}
+@media(max-width:900px){
+.brandGrid{grid-template-columns:repeat(2,1fr)}
+.alphaNav{gap:5px}
+.alphaNav button{width:28px;height:28px;font-size:10px}
+.brandsPage{padding:0 5%}
+}
+@media(max-width:480px){
+/* Keep the brand-card design but tighten the interior on small phones so a
+   2-column grid keeps elegant proportions instead of stretching. */
+.brandCard{padding:20px 8px;gap:6px}
+.brandMark{font-size:17px}
+.brandName{font-size:10.5px}
+}
+
+/* ---- Brand logo display (customer-facing) ---- */
+.productBrandRow{display:flex;align-items:center;gap:7px;text-decoration:none}
+.productBrandLogo{width:18px;height:18px;object-fit:contain;border-radius:3px;flex-shrink:0}
+.productBrand .productBrandRow{color:#888;font-size:9px;font-weight:800;letter-spacing:.08em;text-transform:uppercase}
+.productBrandRow span{display:inline-block}
+.detailBrand{justify-content:flex-start;margin-bottom:8px;color:#111}
+.detailBrand span{font-size:11px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:#38805b;border-bottom:1px solid #38805b;padding-bottom:1px}
+.detailLogo{width:22px;height:22px}
+.brandLogoImg{width:48px;height:48px;object-fit:contain}
+
+/* ---- Canonical storefront header (search + mobile menu) ---- */
+.storeHeader .menuToggle{display:none;background:none;border:0;color:#171717;padding:4px;cursor:pointer}
+.storeHeader .iconBtn{background:none;border:0;color:inherit;padding:4px;cursor:pointer;line-height:0}
+.headerIcons .iconBtn{display:inline-flex;align-items:center}
+.storeHeader a{text-decoration:none}
+.navOverlay{position:fixed;inset:0;z-index:80;background:rgba(0,0,0,.5);display:flex}
+.navDrawer{background:#fff;color:#111;width:86%;max-width:340px;height:100%;padding:20px;overflow-y:auto;display:flex;flex-direction:column}
+.navOverlayHead{display:flex;justify-content:space-between;align-items:center;margin-bottom:18px}
+.navOverlayHead b{font:800 22px Manrope;color:#171717;letter-spacing:-.04em}
+.navOverlayLink{display:block;padding:15px 0;border-bottom:1px solid #eee;font-size:15px;font-weight:700;color:#111;text-decoration:none}
+.navOverlayLink:hover{color:#555}
+.searchModal{background:#fff;color:#111;width:100%;max-width:560px;margin:auto 16px;border-radius:20px;box-shadow:0 20px 60px rgba(0,0,0,.3);overflow:hidden}
+.searchModal form{display:flex;align-items:center;gap:12px;padding:16px 18px;border-bottom:1px solid #eee}
+.searchModal form>svg{flex-shrink:0;color:#888}
+.searchModal input{flex:1;outline:none;border:0;font-size:16px;background:transparent;color:#111}
+.searchGo{background:#111;color:#fff;border:0;font:700 11px Manrope;letter-spacing:.1em;padding:10px 16px;cursor:pointer;white-space:nowrap}
+.searchHints{padding:14px 18px 20px;display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.searchHints span{font-size:10px;font-weight:800;letter-spacing:.15em;color:#999;margin-right:6px;text-transform:uppercase}
+.searchHints button{border:1px solid #ddd;background:#fff;color:#333;font-size:13px;font-weight:600;padding:8px 14px;cursor:pointer;border-radius:99px}
+.searchHints button:hover{border-color:#111;color:#111}
+
+/* ---- Category mega-menu (desktop hover: WOMEN / MEN) ---- */
+.storeHeader nav{position:relative}
+.storeHeader nav .navItem{cursor:default}
+.storeHeader nav .navItem>a{display:inline-flex;align-items:center;gap:4px}
+.megaBackdrop{position:absolute;left:0;right:0;top:100%;z-index:30;background:#fff;border-top:1px solid #e5e5e5;box-shadow:0 18px 40px rgba(0,0,0,.08)}
+.megaPanel{max-width:1500px;margin:auto;padding:30px 4% 34px}
+.megaPanelHead{display:flex;align-items:baseline;justify-content:space-between;gap:16px;margin-bottom:22px}
+.megaKicker{font:800 11px Manrope;letter-spacing:.16em;color:#999}
+.megaShopAll{font-size:11px;font-weight:700;letter-spacing:.06em;text-decoration:none;color:#111;border-bottom:1px solid #111;padding-bottom:2px;white-space:nowrap}
+.megaShopAll:hover{color:#555;border-color:#555}
+.megaCols{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:30px 40px}
+.megaCol{min-width:0;display:flex;flex-direction:column}
+.megaColTitle{display:flex;align-items:baseline;justify-content:space-between;gap:10px;font:800 11px Manrope;letter-spacing:.14em;color:#111;text-decoration:none;text-transform:uppercase;padding-bottom:9px;border-bottom:1px solid #ececec;margin-bottom:10px}
+.megaColTitle:hover{color:#555}
+.megaColCount{font:700 10px Manrope;color:#aaa}
+.megaColLinks{display:flex;flex-direction:column;gap:2px}
+.megaColLink{display:flex;align-items:baseline;justify-content:space-between;gap:10px;font-size:13px;font-weight:500;color:#444;text-decoration:none;padding:5px 0}
+.megaColLink:hover{color:#111}
+.megaColNb{font-size:11px;color:#bbb}
+.megaEmpty{font-size:13px;color:#999;margin:12px 0}
+@media(max-width:900px){
+.megaBackdrop{display:none}
+.storeHeader .menuToggle{display:inline-flex;align-items:center}
+}
+
+/* ---- Mobile drawer: WOMEN / MEN category accordions ---- */
+.mobGroup{border-bottom:1px solid #eee}
+.mobGroupHead{display:flex;align-items:center;justify-content:space-between;width:100%;background:none;border:0;padding:15px 0;font:800 15px Manrope;color:#111;cursor:pointer}
+.mobGroupHead svg{color:#999;transition:transform .15s}
+.mobGroupHead.open svg{transform:rotate(180deg)}
+.mobGroupBody{padding:2px 0 16px}
+.mobCol{margin-top:12px}
+.mobColTitle{display:flex;align-items:baseline;justify-content:space-between;gap:10px;font:800 11px Manrope;letter-spacing:.14em;color:#777;text-decoration:none;text-transform:uppercase;margin-bottom:6px}
+.mobColTitle span,.mobColLink span{font-size:11px;color:#bbb}
+.mobColLink{display:flex;align-items:baseline;justify-content:space-between;gap:10px;font-size:14px;font-weight:600;color:#222;text-decoration:none;padding:7px 0 7px 8px}
+.mobColLink:hover{color:#111}
+.mobShopAll{display:block;margin-top:14px;font:800 11px Manrope;letter-spacing:.1em;color:#111;text-decoration:none;text-transform:uppercase}
+
+/* ---- Product detail: color/size selection (real, state-driven) ---- */
+.colorDots{display:flex;gap:12px;margin:12px 0 6px;flex-wrap:wrap}
+.vSwatch{width:34px;height:34px;border-radius:50%;border:1px solid #d8d8d8;cursor:pointer;padding:0;position:relative;outline:none;-webkit-tap-highlight-color:transparent}
+.vSwatch--active{border-color:#111;box-shadow:0 0 0 2px #111 inset,0 0 0 3px #fff inset}
+.vSwatch--soldOut{cursor:not-allowed;opacity:.45}
+.vSwatch--soldOut::after{
+  content:"";
+  position:absolute;
+  top:50%;left:-1px;right:-1px;
+  height:1.5px;
+  background:#8a8370;
+  transform:rotate(-45deg);
+}
+.sizes button{border:1px solid #d3d3d3;background:#fff;color:#222;min-width:44px;min-height:44px;padding:8px 14px;font-size:12px;font-weight:600;cursor:pointer;border-radius:6px}
+.sizes button.selected{border:2px solid #111;background:#111;color:#fff;padding:7px 13px}
+.sizes button.out{color:#bbb;text-decoration:line-through;border-color:#e5e5e5;background:#f7f7f7;cursor:not-allowed}
+.lowStockNote{margin:6px 0 0;font-size:11px;font-weight:700;color:#b45309}
+.selHint{margin:8px 0;font-size:11.5px;color:#888}
+
+/* ---- Admin: product variant matrix ---- */
+.vMatrix{display:flex;flex-direction:column;gap:8px;margin-bottom:10px}
+.vMatrixRow{display:grid;grid-template-columns:1.1fr 1fr 92px 1fr 40px;gap:8px;align-items:center}
+.vMatrixRow input,.vMatrixFoot input{border:1px solid #ddd;padding:9px 10px;font-size:12px;width:100%}
+.vMatrixRow .rmBtn{border:1px solid #e5c8c8;background:#fff;color:#c00;font-size:13px;cursor:pointer;height:36px}
+.vMatrixFoot{display:grid;grid-template-columns:1.1fr 1fr 92px 1fr;gap:8px;align-items:center}
+.vMatrixNames{font-size:12px;font-weight:600;color:#333;line-height:36px}
+.vMatrixAdd{border:0;background:#111;color:#fff;font-size:11px;font-weight:700;padding:10px 14px;cursor:pointer;margin-top:4px}
+@media(max-width:640px){
+.vMatrixRow{grid-template-columns:1fr 1fr 70px;gap:6px}
+.vMatrixFoot{grid-template-columns:1fr 1fr 70px;gap:6px}
+.vMatrixRow .rmBtn{height:36px}
+.vMatrixAdd{width:100%}
+}
+
+/* ═══════════════════════════════════════════════════════════
+   SHOP BY LIFESTYLE — flowing infinite carousel (migration 0019)
+
+   JS-driven seamless loop. Frontend-only duplication; no product rows are
+   touched. Direction: RIGHT -> LEFT by default. Drag/swipe and the arrow
+   buttons move either way; autoplay pauses while the user interacts and
+   resumes after a short beat. ONE single horizontal row at every breakpoint —
+   the row never wraps to a second line. Cards show the lifestyle image +
+   name only (no product counts). Under prefers-reduced-motion the engine is
+   bypassed and the row becomes a native horizontal scroller.
+   ═══════════════════════════════════════════════════════════ */
+.lsl-vp{position:relative;overflow:hidden;touch-action:pan-y;-webkit-user-select:none;user-select:none}
+.lsl-vp:not(.is-dragging){cursor:grab}
+.lsl-vp.is-dragging{cursor:grabbing}
+.lsl-vp img{pointer-events:none}
+.lsl-rows{display:flex;flex-direction:column;gap:18px}
+.lsl-track{display:flex;width:max-content;gap:14px;will-change:transform;transform:translate3d(0,0,0)}
+.lsl-slide{flex:0 0 auto;width:46vw;max-width:200px}
+.lsl-card{position:relative;aspect-ratio:3/4;overflow:hidden;background:#f4f2ee}
+.lsl-card img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;transition:transform 900ms cubic-bezier(.25,1,.35,1)}
+.lsl-slide:hover .lsl-card img{transform:scale(1.06)}
+.lsl-card-scrim{position:absolute;inset:0;background:linear-gradient(to top,rgba(0,0,0,.78) 0%,rgba(0,0,0,.18) 38%,transparent 64%)}
+.lsl-card-body{position:absolute;left:18px;right:18px;bottom:16px;color:#fff;pointer-events:none}
+.lsl-card-name{font-family:Manrope,sans-serif;font-size:15px;font-weight:800;letter-spacing:.02em;line-height:1.15;text-transform:uppercase;margin:0}
+.lsl-btn{position:absolute;top:50%;transform:translateY(-50%);z-index:5;display:flex;align-items:center;justify-content:center;width:44px;height:44px;border-radius:999px;border:1px solid rgba(0,0,0,.12);background:rgba(255,255,255,.94);color:#111;box-shadow:0 2px 14px rgba(0,0,0,.08);transition:border-color .2s ease,background .2s ease,color .2s ease;cursor:pointer}
+.lsl-btn:hover{border-color:#111;background:#111;color:#fff}
+.lsl-btn.prev{left:14px}
+.lsl-btn.next{right:14px}
+@media (max-width:767.98px){
+  .lsl-btn{display:none}
+}
+@media (min-width:768px){
+  .lsl-slide{width:246px;max-width:none}
+}
+@media (min-width:1024px){
+  .lsl-slide{width:318px}
+  .lsl-card-name{font-size:16px}
+}
+@media (prefers-reduced-motion: reduce){
+  .lsl-vp{overflow-x:auto;cursor:default}
+  .lsl-track{transform:none !important}
+  .lsl-btn{display:none}
+}
+
+/* ═══════════════════════════════════════════════════════════
+   SUPER ADMIN — Lifestyle Management (migration 0019)
+   Professional management interface: strong header, live stats,
+   table (cards on smaller screens), statuses, ordering, modal,
+   dropzone, toasts and loading/empty/error states.
+   ═══════════════════════════════════════════════════════════ */
+.lsadm{}
+.lsadm-header{display:flex;align-items:flex-end;justify-content:space-between;gap:20px;padding:20px 0 0}
+.lsadm-eyebrow{margin:0 0 6px;font-size:9px;font-weight:800;letter-spacing:.22em;text-transform:uppercase;color:#9ca3af}
+.lsadm-title{font-family:Manrope,sans-serif;font-size:24px;font-weight:800;letter-spacing:.01em;margin:0;color:#111}
+.lsadm-sub{margin:6px 0 0;font-size:13px;color:#8a8a85;max-width:640px}
+.lsadm-head-actions{display:flex;align-items:center;gap:10px;flex-shrink:0}
+.lsadm-stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin:20px 0 0}
+.lsadm-stat{display:flex;align-items:center;gap:12px;background:#fff;border:1px solid #e7e7e4;border-radius:10px;padding:14px 16px}
+.lsadm-stat-ic{display:flex;align-items:center;justify-content:center;width:36px;height:36px;border-radius:9px;background:#f5f5f3;color:#111;flex-shrink:0}
+.lsadm-stat b{display:block;font-family:Manrope,sans-serif;font-size:20px;line-height:1;color:#111}
+.lsadm-stat span{display:block;margin-top:4px;font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.08em;color:#9ca3af}
+.lsadm-panel{background:#fff;border:1px solid #e7e7e4;border-radius:12px;margin:16px 0 32px;overflow:hidden;box-shadow:0 1px 2px rgba(0,0,0,.03)}
+.lsadm-toolbar{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 18px;border-bottom:1px solid #f0f0ee}
+.lsadm-toolbar h3{margin:0;font-family:Manrope,sans-serif;font-size:13px;font-weight:700;letter-spacing:.02em;color:#111}
+.lsadm-toolbar p{margin:2px 0 0;font-size:11px;color:#9ca3af}
+.lsadm-table{min-width:0}
+.lsadm-thead,.lsadm-trow{display:grid;grid-template-columns:minmax(220px,2.1fr) 1fr 1fr .8fr .9fr 1fr;gap:14px;align-items:center;column-gap:18px;padding:0 18px}
+.lsadm-thead{padding-top:12px;padding-bottom:12px;background:#fafaf8;border-bottom:1px solid #f0f0ee}
+.lsadm-thead span{font-size:9px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:#9ca3af}
+.lsadm-trow{padding-top:14px;padding-bottom:14px;border-bottom:1px solid #f4f4f2}
+.lsadm-trow:hover{background:#fcfcfa}
+.lsadm-item{display:flex;align-items:center;gap:13px;min-width:0}
+.lsadm-thumb{position:relative;width:64px;height:46px;border-radius:8px;overflow:hidden;background:#f0f0ed;flex-shrink:0}
+.lsadm-thumb img{width:100%;height:100%;object-fit:cover}
+.lsadm-thumb-missing{display:flex;align-items:center;justify-content:center;width:100%;height:100%;color:#c4c4bf}
+.lsadm-name{font-size:13px;font-weight:700;color:#111;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.lsadm-slug{font-size:10px;color:#9ca3af;letter-spacing:.04em;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.lsadm-pill{display:inline-flex;align-items:center;gap:6px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;padding:4px 9px;border-radius:999px}
+.lsadm-pill.on{color:#018849;background:#eef8f1;border:1px solid #d5efe0}
+.lsadm-pill.off{color:#7c7c76;background:#f4f4f2;border:1px solid #e7e7e4}
+.lsadm-pill .dot{width:6px;height:6px;border-radius:50%;background:currentColor}
+.lsadm-warn{display:inline-flex;align-items:center;gap:5px;margin-top:5px;font-size:10px;color:#b45309}
+.lsadm-order{display:flex;align-items:center;gap:6px}
+.lsadm-order-num{font-family:Manrope,sans-serif;font-size:13px;font-weight:700;color:#111;min-width:20px}
+.lsadm-stepper{display:flex;flex-direction:column}
+.lsadm-stepper button{border:0;background:none;padding:1px 3px;color:#b7b7b2;cursor:pointer;line-height:0}
+.lsadm-stepper button:hover:not(:disabled){color:#111}
+.lsadm-stepper button:disabled{opacity:.28;cursor:default}
+.lsadm-count{font-family:Manrope,sans-serif;font-size:14px;font-weight:700;color:#111}
+.lsadm-count-sub{font-size:9px;font-weight:600;text-transform:uppercase;letter-spacing:.1em;color:#9ca3af;margin-top:2px}
+.lsadm-date{font-size:11px;color:#9ca3af}
+.lsadm-actions{display:flex;align-items:center;gap:8px}
+.lsadm-ghost{display:inline-flex;align-items:center;gap:6px;border:1px solid #e5e5e2;background:#fff;color:#3f3f3b;border-radius:8px;padding:7px 11px;font-size:11px;font-weight:600;cursor:pointer}
+.lsadm-ghost:hover{border-color:#c9c9c4;background:#fafaf8}
+.lsadm-ghost.danger{color:#b91c1c}
+.lsadm-ghost.danger:hover{border-color:#f3c6c6;background:#fef6f6}
+.lsadm-ghost:disabled{opacity:.5;cursor:default}
+.lsadm-switch{position:relative;width:38px;height:22px;border-radius:999px;border:1px solid #d7d7d2;background:#e8e8e5;cursor:pointer;transition:background .2s ease,border-color .2s ease;flex-shrink:0}
+.lsadm-switch::after{content:"";position:absolute;top:2px;left:2px;width:16px;height:16px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.18);transition:transform .2s ease}
+.lsadm-switch.on{background:#018849;border-color:#018849}
+.lsadm-switch.on::after{transform:translateX(16px)}
+.lsadm-switch:disabled{opacity:.5;cursor:default}
+.lsadm-skeleton{display:grid;grid-template-columns:minmax(220px,2.1fr) 1fr 1fr .8fr .9fr 1fr;gap:18px;padding:15px 18px;border-bottom:1px solid #f4f4f2}
+.lsadm-skeleton span{height:12px;border-radius:6px;background:linear-gradient(90deg,#f1f1ee 25%,#f8f8f6 50%,#f1f1ee 75%);background-size:200% 100%;animation:lsadm-shimmer 1.4s ease-in-out infinite}
+.lsadm-skeleton span:first-child{height:46px;grid-column:1}
+@keyframes lsadm-shimmer{to{background-position:-200% 0}}
+/* toast */
+.lsadm-toasts{position:fixed;right:20px;bottom:20px;z-index:1200;display:flex;flex-direction:column;gap:10px;max-width:min(380px,calc(100vw - 40px))}
+.lsadm-toast{display:flex;align-items:flex-start;gap:10px;background:#1c1c1c;color:#f5f5f2;border-radius:10px;padding:12px 14px;font-size:12.5px;box-shadow:0 10px 30px rgba(0,0,0,.22);animation:lsadm-toast-in .25s ease}
+.lsadm-toast.ok svg{color:#4ade80}
+.lsadm-toast.err svg{color:#f87171}
+.lsadm-toast button{background:none;border:0;color:#9b9b96;cursor:pointer;padding:2px;line-height:0;margin-left:auto}
+@keyframes lsadm-toast-in{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+/* modal + dropzone */
+.lsadm-modal{position:fixed;inset:0;background:rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;z-index:1100;padding:18px}
+.lsadm-modal-card{background:#fff;border-radius:14px;width:min(660px,100%);max-height:92vh;overflow:hidden;display:flex;flex-direction:column;box-shadow:0 24px 70px rgba(0,0,0,.28)}
+.lsadm-modal-head{display:flex;align-items:flex-start;justify-content:space-between;gap:14px;padding:20px 24px 0}
+.lsadm-modal-title{font-family:Manrope,sans-serif;font-size:17px;font-weight:800;margin:0;color:#111}
+.lsadm-modal-sub{margin:3px 0 0;font-size:11.5px;color:#9ca3af}
+.lsadm-modal-body{overflow-y:auto;padding:18px 24px 24px}
+.lsadm-field{margin-bottom:16px}
+.lsadm-label{display:block;font-size:10px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:#6b6b66;margin-bottom:6px}
+.lsadm-input{width:100%;padding:10px 12px;border:1px solid #dcdcd7;border-radius:9px;font-size:13px;background:#fff;color:#111;outline:none;transition:border-color .15s ease,box-shadow .15s ease}
+.lsadm-input:focus{border-color:#111;box-shadow:0 0 0 3px rgba(0,0,0,.06)}
+.lsadm-textarea{min-height:72px;resize:vertical}
+.lsadm-grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.lsadm-dropzone{position:relative;border:1.5px dashed #d3d3cd;border-radius:12px;background:#fafaf8;overflow:hidden;display:flex;align-items:center;justify-content:center;transition:border-color .15s ease,background .15s ease}
+.lsadm-dropzone.over{border-color:#111;background:#f5f5f2}
+.lsadm-dropzone.has-img{border-style:solid;border-color:#e5e5e2}
+.lsadm-dropzone img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.lsadm-dropzone-hint{display:flex;flex-direction:column;align-items:center;gap:8px;text-align:center;padding:18px;z-index:1}
+.lsadm-dropzone-hint b{font-size:13px;font-weight:700;color:#111}
+.lsadm-dropzone-hint span{font-size:11px;color:#9ca3af;line-height:1.5}
+.lsadm-dropzone .lsadm-drop-overlay{position:absolute;inset:0;z-index:2;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;background:rgba(255,255,255,.82);font-size:12px;font-weight:700;color:#111}
+.lsadm-modal-foot{display:flex;align-items:center;justify-content:flex-end;gap:10px;padding:16px 24px;border-top:1px solid #f0f0ee;background:#fcfcfa}
+.lsadm-modal-foot .spacer{flex:1}
+.lsadm-spin{width:13px;height:13px;border-radius:50%;border:2px solid rgba(255,255,255,.35);border-top-color:#fff;animation:lsadm-rot .7s linear infinite;display:inline-block;vertical-align:-2px;margin-right:7px}
+.lsadm-spin.dark{border-color:rgba(0,0,0,.18);border-top-color:#111}
+@keyframes lsadm-rot{to{transform:rotate(360deg)}}
+/* empty / error states */
+.lsadm-empty{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;padding:56px 20px;text-align:center;color:#9ca3af}
+.lsadm-empty b{font-family:Manrope,sans-serif;font-size:15px;color:#4b4b47}
+.lsadm-empty p{margin:0;font-size:12px;max-width:380px;line-height:1.5}
+.lsadm-error{display:flex;align-items:center;gap:12px;margin:0 0 16px;padding:13px 16px;border:1px solid #f3caca;background:#fdf1f1;color:#a23030;border-radius:10px;font-size:12.5px}
+.lsadm-error button{margin-left:auto;border:0;background:none;color:#a23030;font-weight:700;font-size:12px;cursor:pointer;text-decoration:underline}
+/* responsive: cards instead of table */
+@media (max-width:900px){
+  .lsadm-thead{display:none}
+  .lsadm-trow{display:grid;grid-template-columns:1fr;gap:12px;padding:16px}
+  .lsadm-stats{grid-template-columns:1fr 1fr 1fr;gap:10px}
+  .lsadm-stat{padding:12px 12px}
+  .lsadm-stat-ic{width:32px;height:32px}
+  .lsadm-grid2{grid-template-columns:1fr}
+  .lsadm-actions{justify-content:flex-end}
+  .lsadm-order{justify-content:flex-end}
+}
+@media (max-width:560px){
+  .lsadm-stats{grid-template-columns:1fr;gap:8px}
+  .lsadm-header{flex-direction:column;align-items:stretch}
+  .lsadm-head-actions .lsadm-ghost{display:none}
+}
+
+/* ---- Mobile bottom navigation (Home / Wishlist / Cart / Account) ---- */
+/* Hidden above the mobile breakpoint by default; shown only under the
+   max-width query below, matching the existing .storeHeader nav breakpoint
+   (900px) used elsewhere in this file for the same mobile/desktop split. */
+.mobileBottomNav{
+  display:none;
+}
+@media (max-width:900px){
+  .mobileBottomNav{
+    display:flex;
+    position:fixed;
+    left:0;right:0;bottom:0;
+    z-index:30;
+    background:#fff;
+    border-top:1px solid #e5e5e5;
+    padding-bottom:env(safe-area-inset-bottom, 0px);
+    /* Subtle, not a heavy shadow per the "cheap-looking shadows" guidance
+       elsewhere in this project's design direction. */
+    box-shadow:0 -1px 8px rgba(0,0,0,.04);
+  }
+  .mobileBottomNavItem{
+    flex:1 1 0;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    gap:3px;
+    padding:8px 4px 6px;
+    min-height:56px; /* comfortable one-handed touch target */
+    color:#8a8a8a;
+    text-decoration:none;
+    transition:color .15s ease;
+  }
+  .mobileBottomNavItem.active{
+    color:#111;
+  }
+  .mobileBottomNavIcon{
+    position:relative;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    line-height:0;
+  }
+  .mobileBottomNavLabel{
+    font-size:10px;
+    font-weight:600;
+    letter-spacing:.01em;
+  }
+  .mobileBottomNavBadge{
+    position:absolute;
+    top:-6px;
+    right:-9px;
+    min-width:16px;
+    height:16px;
+    padding:0 4px;
+    border-radius:999px;
+    background:#111;
+    color:#fff;
+    font-size:9px;
+    font-weight:700;
+    line-height:16px;
+    text-align:center;
+  }
+  /* Reserve space at the bottom of the page so this fixed bar never
+     covers the last piece of content — applied to the app's own scroll
+     root rather than every individual page. */
+  body{
+    padding-bottom:calc(56px + env(safe-area-inset-bottom, 0px));
+  }
+  /* The admin/backoffice area keeps its own layout untouched — this bar
+     is a storefront-only pattern, not shown while managing the store. */
+  body:has(.backoffice){
+    padding-bottom:0;
+  }
+}
+@media (max-width:900px) and (prefers-reduced-motion: reduce){
+  .mobileBottomNavItem{transition:none}
+}
+
+/* ---- PLUG Category-card design system ----
+   THE shared system for every "Shop by Category" surface (homepage,
+   Women/Men audiences, brand + lifestyle showcases). Homepage = the
+   visual reference; these `.catRow` / `.catCard` classes are the ONE
+   source of truth — changing a size here updates the whole website.
+
+   Row: one horizontal line, free native finger/trackpad scrolling, never
+   wraps. The homepage rail layers an extremely-slow, continuous autoplay
+   on top (see useAutoScrollCarousel) — it renders the exact same cards,
+   never duplicates content, and only slides when the row overflows. Snap
+   and CSS scroll-behavior:smooth are deliberately NOT used here so the
+   per-frame autoplay writes are not turned into async animations that
+   fight the loop; the `.catRow--auto` class forces instant writes while
+   autoplaying. Card: square 1:1 media tile (radius 16, hairline border)
+   with the real category image or icon fallback, then the name below
+   (13px desktop / 11px phone). 150px fixed on desktop; fluid
+   `calc(25% - …)` on phones so ~4 cards fit the visible row. */
+.categorySection{ padding:56px 0; background:#fff; }
+.categorySectionInner{ max-width:1350px; margin:0 auto; padding:0 20px; }
+.categorySectionHead{ text-align:center; margin-bottom:36px; }
+.categoryAccentLine{ display:inline-block; width:56px; height:2px; background:#c9a35a; margin-bottom:16px; }
+.categorySectionHead h2{ font-size:clamp(24px,3vw,34px); font-weight:800; letter-spacing:-0.01em; margin:0 0 8px; color:#141414; }
+.categorySectionHead p{ font-size:14px; color:#7a7a7a; margin:0; }
+
+.categoryCarouselWrap{ position:relative; display:flex; align-items:center; gap:10px; }
+
+.catRow{
+  flex:1 1 auto;
+  min-width:0;
+  display:flex;
+  align-items:stretch;
+  gap:16px;
+  overflow-x:auto;
+  scroll-behavior:smooth;
+  scrollbar-width:none;
+  -ms-overflow-style:none;
+  padding:4px 2px 12px;
+  -webkit-overflow-scrolling:touch;
+  cursor:grab;
+  /* The rail scrolls horizontally only; never chain page position/history
+     or page-side overscroll when a finger hits the edge of the row. */
+  overscroll-behavior-x:contain;
+}
+.catRow::-webkit-scrollbar{ display:none; }
+/* While autoplaying the rAF loop writes scrollLeft every frame — those must
+   be instant, so smooth (and any snap) is switched off inside the loop. */
+.catRow--auto{ scroll-behavior:auto; }
+/* During a desktop mouse drag the content follows the cursor; disable text
+   selection/image dragging so the rail behaves like a grab-and-tug surface. */
+.catRow--dragging{ cursor:grabbing; user-select:none; -webkit-user-select:none; }
+.catRow img{ -webkit-user-drag:none; }
+
+.catCard{
+  flex:0 0 150px;
+  width:150px;
+  max-width:100%;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  gap:10px;
+  text-decoration:none;
+  color:inherit;
+}
+.catCardMedia{
+  width:100%;
+  aspect-ratio:1/1;
+  border-radius:16px;
+  border:1px solid #e9e6df;
+  background:#fafaf8;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  overflow:hidden;
+  color:#3a3a3a;
+  transition:border-color .18s ease, transform .18s ease;
+}
+.catCardMedia img{ width:100%; height:100%; object-fit:cover; }
+.catCard:hover .catCardMedia{ border-color:#c9a35a; transform:translateY(-2px); }
+.catCard:focus-visible .catCardMedia{ outline:2px solid #c9a35a; outline-offset:2px; }
+.catCardName{ font-family:Manrope,sans-serif; font-size:13px; font-weight:600; letter-spacing:.01em; color:#1a1a1a; text-align:center; line-height:1.3; }
+.catCardCount{ font-family:Manrope,sans-serif; font-size:11px; font-weight:500; color:#8a8a8a; margin-top:-6px; text-align:center; }
+.catCardSkeleton{ width:100%; aspect-ratio:1/1; border-radius:16px; background:#f0f0ee; }
+
+.categoryNavBtn{
+  flex:0 0 auto;
+  width:38px;
+  height:38px;
+  border-radius:999px;
+  border:1px solid #e2e2e2;
+  background:#fff;
+  color:#222;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  cursor:pointer;
+  transition:border-color .15s ease, background .15s ease;
+}
+.categoryNavBtn:hover{ border-color:#c9a35a; background:#fdfbf6; }
+.categoryNavBtn:focus-visible{ outline:2px solid #c9a35a; outline-offset:2px; }
+
+@media (max-width:640px){
+  /* Fluid, container-relative sizing so exactly 4 category cards are
+     visible at once on every phone width (320-430px+): 25% of the row's
+     width minus a share of the 3×10px gaps. This formula is
+     container-relative — it works for the homepage rail AND the
+     Women/Men/brand/lifestyle rails regardless of each page's padding. */
+  .categorySectionInner{ padding:0 20px; }
+  .catRow{ gap:10px; }
+  .catCard{ flex:0 0 calc(25% - 7.5px); width:calc(25% - 7.5px); }
+  .catCardName{ font-size:11px; }
+  .catCardCount{ font-size:10px; margin-top:-5px; }
+  /* Finger-swipe is the primary mobile interaction (native touch
+     scrolling works on .catRow) — the arrow buttons are a desktop/mouse
+     affordance and would only eat into the row width. */
+  .categoryNavBtn{ display:none; }
+}
+@media (prefers-reduced-motion: reduce){
+  .catRow{ scroll-behavior:auto; }
+  .catCard:hover .catCardMedia{ transform:none; }
+  .catCardMedia{ transition:none; }
+}
+
+/* ---- Shop by Brand: editorial card mark (logo/wordmark) ----
+   ONE centered mark per brand card. With a real logo image it renders
+   object-contain at max 42% height; over a campaign photo it is forced to
+   a white silhouette. The order MUST be brightness(0) THEN invert — this
+   lives in hand-written CSS on purpose, because Tailwind's composed filter
+   would apply `invert` before `brightness(0)` and produce pure black.
+   Brands without a logo fall back to the brand NAME as a wide-tracked
+   uppercase wordmark (the dominant real-world case right now).
+   pointer-events:none keeps the mark out of the way of the card link,
+   keyboard focus rings and drag gestures. */
+.brandCardMark{
+  position:absolute; inset:9%;
+  display:flex; align-items:center; justify-content:center;
+  z-index:1; pointer-events:none;
+}
+.brandCardMark img{
+  max-height:42%; max-width:100%; width:auto; height:auto;
+  object-fit:contain; -webkit-user-drag:none;
+}
+.brandCardMark--photo img{
+  filter:brightness(0) invert(1) drop-shadow(0 2px 14px rgba(0,0,0,.3));
+}
+.brandCardMark .brandWord{
+  font-family:Manrope,sans-serif;
+  font-weight:800; text-transform:uppercase;
+  letter-spacing:.11em; text-align:center; line-height:1.2;
+  font-size:clamp(.95rem,2.5vw,1.2rem);
+  /* Mobile shows TWO cards per viewport, so portrait cards are compact; the
+     widest-tracked long names must be able to break into a clean centered
+     two-line lockup instead of clipping at the card edge. */
+  overflow-wrap:anywhere;
+}
+.brandCardMark--photo{ color:#fff; text-shadow:0 1px 18px rgba(0,0,0,.35); }
+.brandCardMark--plain{ color:#161616; }
+@media (min-width:1024px){
+  .brandCardMark .brandWord{ font-size:clamp(1.2rem,1.1vw,1.4rem); letter-spacing:.18em; }
+}
+
+/* ---- PWA install card ---- */
+/* ═══════════════════════════════════════════════════════════════════════
+   Install card — premium floating design. Same component/logic as
+   before (InstallPrompt.tsx); only the presentation layer changed.
+   ═══════════════════════════════════════════════════════════════════════ */
+.installCard{
+  position:fixed;
+  z-index:45;
+  left:50%;
+  width:92%;
+  max-width:400px;
+  transform:translateX(-50%);
+  bottom:calc(env(safe-area-inset-bottom, 0px) + 18px);
+  background:#fff;
+  border-radius:26px;
+  padding:20px 20px calc(20px + env(safe-area-inset-bottom, 0px) * 0);
+  box-shadow:0 20px 50px rgba(0,0,0,.16), 0 4px 14px rgba(0,0,0,.06);
+  animation:installCardIn .32s cubic-bezier(.22,.9,.32,1);
+}
+.installCard--closing{
+  animation:installCardOut .22s ease-in forwards;
+}
+@keyframes installCardIn{
+  from{ opacity:0; transform:translateX(-50%) translateY(16px) scale(.98); }
+  to{ opacity:1; transform:translateX(-50%) translateY(0) scale(1); }
+}
+@keyframes installCardOut{
+  from{ opacity:1; transform:translateX(-50%) translateY(0) scale(1); }
+  to{ opacity:0; transform:translateX(-50%) translateY(16px) scale(.98); }
+}
+
+.installCardClose{
+  position:absolute;
+  top:14px; right:14px;
+  width:26px; height:26px;
+  display:flex; align-items:center; justify-content:center;
+  background:#f5f4f0; border:none;
+  color:#8a8578;
+  cursor:pointer;
+  border-radius:50%;
+  transition:background .15s ease, color .15s ease;
+}
+.installCardClose:hover{ background:#ece9e2; color:#333; }
+.installCardClose:focus-visible{ outline:2px solid #c9a35a; outline-offset:2px; }
+
+.installCardHeader{
+  display:flex;
+  align-items:flex-start;
+  gap:14px;
+  padding-right:22px; /* clears the close button */
+}
+.installCardIcon{
+  flex:0 0 auto;
+  width:58px; height:58px;
+  border-radius:16px;
+  overflow:hidden;
+  background:#111;
+  color:#fff;
+  display:flex; align-items:center; justify-content:center;
+  font:700 22px Manrope;
+  box-shadow:0 4px 12px rgba(0,0,0,.14);
+}
+.installCardIcon img{ width:100%; height:100%; object-fit:cover; }
+.installCardBody{ flex:1 1 auto; min-width:0; padding-top:2px; }
+.installCardTitle{ font:800 16px Manrope; color:#141414; margin:0 0 4px; letter-spacing:-.01em; }
+.installCardDesc{ font-size:12.5px; color:#8a8578; margin:0; line-height:1.4; }
+
+.installCardCta{
+  display:flex; align-items:center; justify-content:center; gap:8px;
+  width:100%;
+  margin-top:18px;
+  height:50px;
+  background:#141414;
+  color:#fff;
+  border:none;
+  border-radius:14px;
+  font:700 13px Manrope;
+  letter-spacing:.02em;
+  cursor:pointer;
+  transition:background .15s ease, transform .08s ease;
+}
+.installCardCta:hover:not(:disabled){ background:#000; }
+.installCardCta:active:not(:disabled){ transform:scale(.98); }
+.installCardCta:focus-visible{ outline:2px solid #c9a35a; outline-offset:2px; }
+.installCardCta:disabled{ opacity:.65; cursor:default; }
+.installCardCta--done{ background:#1f7a45; opacity:1; }
+
+/* Desktop/tablet: a compact floating card at the bottom-right rather than
+   a centered mobile bottom-sheet — never large, never blocking content. */
+@media(min-width:900px){
+  .installCard{
+    left:auto;
+    right:24px;
+    bottom:24px;
+    transform:none;
+    width:auto;
+    max-width:340px;
+    border-radius:20px;
+    padding:18px 18px 18px;
+  }
+  @keyframes installCardIn{
+    from{ opacity:0; transform:translateY(16px) scale(.98); }
+    to{ opacity:1; transform:translateY(0) scale(1); }
+  }
+  @keyframes installCardOut{
+    from{ opacity:1; transform:translateY(0) scale(1); }
+    to{ opacity:0; transform:translateY(16px) scale(.98); }
+  }
+}
+
+@media(prefers-reduced-motion: reduce){
+  .installCard{ animation:none; }
+  .installCard--closing{ animation:none; }
+}
+
+/* Coexistence with the floating WhatsApp button (FloatingWhatsAppButton.tsx):
+   while this card is visible, WhatsApp shifts up out of the way rather than
+   risk sitting underneath a wide, centered bottom-sheet card. The two
+   components have no shared React state, so this is coordinated purely via
+   a body class the install card toggles on mount/unmount. */
+body.install-prompt-visible .waFab{
+  bottom:calc(env(safe-area-inset-bottom, 0px) + 18px + 92px);
+}
+@media(min-width:900px){
+  body.install-prompt-visible .waFab{
+    bottom:calc(24px + 132px);
+  }
+}
+
+/* ---- Shop by Lifestyle: plain/native scroller variant ---- */
+/* Used whenever the drag-physics engine is intentionally bypassed
+   (prefers-reduced-motion, OR too few real items to meaningfully loop —
+   see ShopByLifestyle.tsx's own comment on both cases). This must be
+   UNCONDITIONAL, not nested under any media query: the "few items" case
+   is a JS/React condition evaluated regardless of the visitor's motion
+   preference, so gating native horizontal scrolling behind
+   @media(prefers-reduced-motion) would leave normal mobile visitors
+   with content that can silently overflow with no way to reach it —
+   the base .lsl-vp rule is overflow:hidden with touch-action:pan-y,
+   which is correct ONLY when the JS drag engine is actually attached
+   (it isn't, on this branch). */
+.lsl-vp-plain{
+  overflow-x:auto;
+  overflow-y:hidden;
+  touch-action:pan-x pan-y;
+  cursor:default;
+  -webkit-overflow-scrolling:touch;
+}
+.lsl-track-plain{
+  transform:none !important;
+}
+
+/* ---- Product detail: price row (price + share on one line) ---- */
+.detailPriceRow{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+  margin:8px 0 0;
+}
+.detailPriceRow h2{ margin:0; }
+
+/* ---- Product detail: picture slide + zoom ---- */
+.detailImage{ position:relative; }
+.slideBtn{
+  position:absolute;
+  top:50%;
+  transform:translateY(-50%);
+  width:38px; height:38px; border-radius:999px;
+  border:1px solid rgba(0,0,0,.12);
+  background:rgba(255,255,255,.85); color:#222;
+  display:flex; align-items:center; justify-content:center;
+  cursor:pointer; z-index:3;
+  transition:background .15s ease;
+}
+.slideBtn:hover{ background:#fff; }
+.slidePrev{ left:10px; }
+.slideNext{ right:10px; }
+.imgCount{
+  position:absolute; top:10px; left:12px; z-index:3;
+  font:600 11px Manrope; letter-spacing:.12em; color:#444;
+  background:rgba(255,255,255,.85); border-radius:999px; padding:4px 10px;
+}
+.zoomBtn{
+  position:absolute; bottom:12px; right:12px; z-index:3;
+  display:flex; align-items:center; gap:6px;
+  background:rgba(255,255,255,.9); border:1px solid rgba(0,0,0,.12);
+  border-radius:20px; padding:7px 13px;
+  font:700 10.5px Manrope; letter-spacing:.12em; color:#222;
+  cursor:pointer;
+  transition:background .15s ease, border-color .15s ease;
+}
+.zoomBtn:hover{ background:#fff; border-color:#c9a35a; }
+
+/* ---- Product detail: fullscreen zoom viewer ---- */
+.viewer{
+  position:fixed; inset:0; z-index:400;
+  background:rgba(8,8,8,.94);
+  display:flex; align-items:center; justify-content:center;
+}
+.viewerStage{
+  position:absolute; inset:0; overflow:hidden;
+  cursor:grab; touch-action:none;
+  display:flex; align-items:center; justify-content:center;
+}
+.viewerStage img{
+  max-width:92%; max-height:92%;
+  object-fit:contain; user-select:none; -webkit-user-drag:none;
+  will-change:transform;
+}
+.viewerClose{
+  position:absolute; top:18px; right:18px; z-index:5;
+  width:40px; height:40px; border-radius:999px;
+  background:rgba(255,255,255,.12); color:#fff; border:0;
+  display:flex; align-items:center; justify-content:center; cursor:pointer;
+  transition:background .15s ease;
+}
+.viewerClose:hover{ background:rgba(255,255,255,.25); }
+.viewerNav{
+  position:absolute; top:50%; transform:translateY(-50%); z-index:5;
+  width:46px; height:46px; border-radius:999px;
+  background:rgba(255,255,255,.12); color:#fff; border:0;
+  display:flex; align-items:center; justify-content:center; cursor:pointer;
+  transition:background .15s ease;
+}
+.viewerNav:hover{ background:rgba(255,255,255,.25); }
+.viewerPrev{ left:16px; }
+.viewerNext{ right:16px; }
+.viewerCount{
+  position:absolute; top:26px; left:50%; transform:translateX(-50%); z-index:5;
+  font:600 12px Manrope; letter-spacing:.15em; color:#ddd;
+  background:rgba(255,255,255,.1); border-radius:999px; padding:5px 14px;
+}
+.viewerTools{
+  position:absolute; bottom:22px; left:50%; transform:translateX(-50%); z-index:5;
+  display:flex; align-items:center; gap:6px;
+  background:rgba(255,255,255,.12); border-radius:999px; padding:8px 12px;
+}
+.viewerTools button{
+  width:34px; height:34px; border-radius:999px; border:0;
+  background:rgba(255,255,255,.12); color:#fff;
+  display:flex; align-items:center; justify-content:center; cursor:pointer;
+  transition:background .15s ease;
+}
+.viewerTools button:disabled{ opacity:.35; cursor:default; }
+.viewerTools button:hover:not(:disabled){ background:rgba(255,255,255,.28); }
+.viewerScaleLabel{ min-width:44px; text-align:center; font:600 12px Manrope; color:#fff; letter-spacing:.08em; }
+.shareWrap{ position:relative; flex:0 0 auto; }
+.shareBtn{
+  display:flex;
+  align-items:center;
+  gap:6px;
+  background:none;
+  border:1px solid #e2ded4;
+  border-radius:20px;
+  padding:6px 14px;
+  font:600 11.5px Manrope;
+  color:#444;
+  cursor:pointer;
+  transition:border-color .15s ease, color .15s ease;
+  white-space:nowrap;
+}
+.shareBtn:hover{ border-color:#c9a35a; color:#141414; }
+.shareMenu{
+  position:absolute;
+  top:calc(100% + 8px);
+  right:0;
+  z-index:15;
+  background:#fff;
+  border:1px solid #e5e2da;
+  border-radius:8px;
+  box-shadow:0 8px 24px rgba(0,0,0,.1);
+  padding:6px;
+  min-width:180px;
+}
+.shareMenuItem{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  width:100%;
+  padding:9px 10px;
+  border:none;
+  background:none;
+  border-radius:6px;
+  font:600 12.5px Manrope;
+  color:#222;
+  text-decoration:none;
+  cursor:pointer;
+  text-align:left;
+}
+.shareMenuItem:hover{ background:#f6f4ef; }
+
+@media(max-width:640px){
+  .shareBtn{ padding:6px 12px; font-size:11px; }
+  .shareMenu{ right:0; left:auto; min-width:170px; }
+}
+
+/* ---- Account page ---- */
+.accountPage{ max-width:900px; margin:0 auto; padding:40px 20px 80px; }
+.accHeader{ display:flex; align-items:center; gap:18px; margin-bottom:22px; }
+.accAvatar{
+  width:56px;height:56px;flex:0 0 auto;
+  border-radius:50%;
+  background:#141414;color:#fff;
+  display:flex;align-items:center;justify-content:center;
+  font:800 18px Manrope;
+}
+.accEyebrow{ font:700 10px Manrope; letter-spacing:.16em; color:#999; margin:0; }
+.accHeader h1{ font:800 24px Manrope; margin:4px 0 3px; }
+.accSub{ font-size:12.5px; color:#777; margin:0; }
+
+.accNotice{ background:#fff7e6; border:1px solid #f5d99b; border-radius:8px; padding:14px 16px; margin-bottom:22px; font-size:13px; }
+.accNotice p{ margin:0 0 8px; color:#8a5a00; }
+.accNoticeOk{ color:#38805b; display:flex; align-items:center; gap:6px; margin:0; font-size:12.5px; }
+.accNoticeErr{ color:#c00; display:flex; align-items:center; gap:6px; margin:6px 0 0; font-size:12.5px; }
+
+.accQuickGrid{ display:grid; grid-template-columns:repeat(4,1fr); gap:10px; margin:24px 0 34px; }
+.accQuickCard{
+  display:flex; flex-direction:column; gap:6px;
+  border:1px solid #ece9e2; border-radius:10px;
+  padding:16px 14px;
+  color:#141414; text-decoration:none;
+  transition:border-color .15s ease;
+}
+.accQuickCard:hover{ border-color:#c9a35a; }
+.accQuickCard span{ font:700 12.5px Manrope; }
+.accQuickCard small{ font-size:10.5px; color:#888; line-height:1.4; }
+
+.accSection{ border-top:1px solid #ece9e2; padding:28px 0; scroll-margin-top:80px; }
+.accSectionHead{ display:flex; align-items:center; justify-content:space-between; margin-bottom:16px; }
+.accSectionHead h2, .accHelp h2{ display:flex; align-items:center; gap:8px; font:800 15px Manrope; margin:0; }
+.accViewAll{ font:700 10.5px Manrope; letter-spacing:.06em; color:#666; text-decoration:underline; }
+.accLinkBtn{
+  display:inline-flex; align-items:center; gap:5px;
+  font:700 10.5px Manrope; letter-spacing:.05em;
+  color:#444; background:none; border:none; cursor:pointer; padding:0;
+}
+.accLinkBtn:hover{ color:#141414; }
+.accLinkBtnDanger{ color:#b91c1c; }
+
+.accEmpty{ text-align:center; padding:30px 10px; }
+.accEmpty p{ font-size:13px; color:#777; margin:0 0 14px; }
+
+.accOrderList{ display:flex; flex-direction:column; gap:8px; }
+.accOrderRow{
+  display:grid; grid-template-columns:44px 1fr auto auto; align-items:center; gap:12px;
+  border:1px solid #ece9e2; border-radius:8px; padding:12px 14px;
+  text-decoration:none; color:#141414;
+}
+.accOrderThumb{ width:44px; height:54px; background:#f4f2ee; border-radius:4px; }
+.accOrderInfo{ display:flex; flex-direction:column; gap:2px; min-width:0; }
+.accOrderInfo b{ font:700 12.5px Manrope; }
+.accOrderInfo span{ font-size:11px; color:#888; }
+.accOrderStatus{ font:700 10px Manrope; letter-spacing:.05em; padding:4px 9px; border-radius:20px; background:#f1efe9; color:#666; white-space:nowrap; }
+.accOrderStatus--delivered{ background:#eaf5ee; color:#2f7a45; }
+.accOrderStatus--shipped{ background:#eaf0fb; color:#3457a8; }
+.accOrderStatus--cancelled{ background:#fbeaea; color:#b91c1c; }
+.accOrderTotal{ font:700 12.5px Manrope; white-space:nowrap; }
+
+.accWishGrid{ display:grid; grid-template-columns:repeat(4,1fr); gap:14px; }
+.accWishCard{ text-decoration:none; color:#141414; }
+.accWishImg{ aspect-ratio:3/4; background:#f4f2ee; border-radius:6px; overflow:hidden; margin-bottom:8px; }
+.accWishImg img{ width:100%; height:100%; object-fit:cover; }
+.accWishName{ font:700 11.5px Manrope; margin:0 0 2px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.accWishBrand{ font-size:10px; color:#999; margin:0 0 4px; }
+.accWishPrice{ font:700 12px Manrope; }
+
+.accForm{ display:flex; flex-direction:column; gap:12px; max-width:420px; }
+.accForm label{ display:flex; flex-direction:column; gap:5px; font:600 11px Manrope; color:#555; }
+.accForm input{ padding:11px 12px; border:1px solid #d8d5cd; border-radius:4px; font-size:13px; font-family:inherit; }
+.accForm input:disabled{ background:#f7f6f3; color:#999; }
+.accFormActions{ display:flex; align-items:center; gap:16px; margin-top:2px; }
+
+.accInfoRows div{ display:flex; justify-content:space-between; border-top:1px solid #f0efe9; padding:10px 0; font-size:12.5px; }
+.accInfoRows div:first-child{ border-top:none; }
+.accInfoRows span{ color:#888; }
+
+.accAddressList{ display:flex; flex-direction:column; gap:10px; margin-bottom:14px; }
+.accAddressCard{ border:1px solid #ece9e2; border-radius:8px; padding:14px 16px; font-size:12.5px; }
+.accAddressCardHead{ display:flex; align-items:center; gap:8px; margin-bottom:6px; }
+.accAddressCardHead b{ font:700 11.5px Manrope; letter-spacing:.03em; }
+.accDefaultBadge{ font:700 9px Manrope; letter-spacing:.05em; background:#141414; color:#fff; padding:3px 8px; border-radius:20px; }
+.accAddressCard p{ margin:2px 0; color:#666; }
+.accAddressActions{ display:flex; gap:14px; margin-top:10px; }
+.accAddressForm{ background:#fdfcfa; }
+
+.accHelp{ background:#fdfcfa; border-radius:10px; border-top:none; padding:22px 20px; }
+.accHelpSub{ font-size:12.5px; color:#777; margin:0 0 14px; }
+.accHelpActions{ display:flex; gap:10px; flex-wrap:wrap; }
+.accHelpBtn{ display:inline-flex; align-items:center; gap:8px; width:auto; padding:11px 18px; }
+
+.accLogout{
+  display:flex; align-items:center; gap:8px;
+  margin:30px auto 0;
+  background:none; border:1px solid #e2ded4; border-radius:6px;
+  padding:11px 20px; font:700 11.5px Manrope; letter-spacing:.04em;
+  color:#666; cursor:pointer;
+}
+.accLogout:hover{ border-color:#b91c1c; color:#b91c1c; }
+
+.accSkelBlock{ background:#f1efe9; border-radius:6px; animation:accPulse 1.4s ease-in-out infinite; }
+@keyframes accPulse{ 0%,100%{opacity:1;} 50%{opacity:.55;} }
+
+@media(max-width:768px){
+  .accQuickGrid{ grid-template-columns:repeat(2,1fr); }
+  .accWishGrid{ grid-template-columns:repeat(2,1fr); }
+  .accOrderRow{ grid-template-columns:38px 1fr auto; grid-template-areas:"thumb info total" "thumb status total"; }
+  .accOrderStatus{ grid-area:status; justify-self:start; }
+}
+@media(max-width:480px){
+  .accountPage{ padding:28px 16px 60px; }
+  .accHeader h1{ font-size:20px; }
+}
+@media(prefers-reduced-motion:reduce){
+  .accSkelBlock{ animation:none; }
+}
+
+
+/* ═══════════════════════════════════════════════════════════════════════
+   DESIGN 7 — Checkout & Payment (mobile-first, premium redesign)
+   Placed at the end of the file on purpose: these rules win the cascade
+   and fully redefine the checkout visual language while preserving the
+   existing component names and all business logic in pages/Checkout.tsx.
+   ═══════════════════════════════════════════════════════════════════════ */
+
+.checkout, .checkout *{ box-sizing:border-box; }
+.checkout{ max-width:1180px; margin:0 auto; padding:26px 4% 72px; display:block; }
+.checkout h1{ font:800 clamp(25px,2.6vw + 14px,32px) Manrope; letter-spacing:.01em; margin:0; color:#141414; }
+.checkoutSub{ font-size:13.5px; color:#8a8578; margin:6px 0 0; font-weight:400; }
+
+.checkoutForm{ display:grid; grid-template-columns:minmax(0,1.55fr) minmax(0,.8fr); gap:30px 48px; align-items:start; }
+.checkoutSection{ min-width:0; display:flex; flex-direction:column; gap:22px; }
+.checkoutAside{ min-width:0; }
+.checkoutFooter{ grid-column:1 / -1; display:flex; align-items:center; justify-content:space-between; gap:18px; padding-top:22px; margin-top:6px; border-top:1px solid #ece9e2; }
+.secureTag{ display:inline-flex; align-items:center; gap:7px; font-size:11.5px; color:#8a8578; letter-spacing:.02em; }
+.secureTag svg{ color:#5c9771; }
+
+/* ── Stepper ─────────────────────────────────────────── */
+.checkoutSteps{ display:flex; align-items:center; gap:10px; margin:0 0 14px; padding:0; border:0; font:600 12px Manrope; text-transform:uppercase; letter-spacing:.1em; }
+.coStep{ display:inline-flex; align-items:center; gap:8px; padding:8px 13px; border:1px solid #e6e2d9; border-radius:999px; background:#fff; color:#a29b8a; }
+.coStepNum{ display:grid; place-items:center; width:19px; height:19px; border-radius:50%; background:#e8e4d9; color:#7b7666; font:700 10px Manrope; }
+.coStep.done{ color:#6f6a5e; }
+.coStep.done .coStepNum{ background:#5c9771; color:#fff; }
+.coStep.active{ border-color:#141414; color:#141414; box-shadow:0 1px 3px rgba(0,0,0,.06); }
+.coStep.active .coStepNum{ background:#141414; color:#e9d9b8; }
+.coStepArrow{ color:#d5d0c2; font-size:13px; }
+
+/* ── Section titles / cards ──────────────────────────── */
+.coBlockTitle{ font:700 12px Manrope; text-transform:uppercase; letter-spacing:.1em; color:#6f6a5e; grid-column:1 / -1; margin:26px 0 0; }
+.coBlockTitle:first-child{ margin-top:0; }
+
+/* ── Form fields ─────────────────────────────────────── */
+.fieldGrid{ display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:14px 12px; }
+.coField{ display:flex; flex-direction:column; gap:6px; min-width:0; }
+.coField.full{ grid-column:1 / -1; }
+.coField label{ font:700 10.5px Manrope; text-transform:uppercase; letter-spacing:.09em; color:#6f6a5e; }
+.coField label span{ color:#c0392b; }
+.coField input{ width:100%; height:48px; padding:0 14px; border:1px solid #ddd8cd; border-radius:8px; background:#fff; font:400 14px var(--font-sans); color:#141414; transition:border-color .15s ease, box-shadow .15s ease; }
+.coField input::placeholder{ color:#b9b4a6; }
+.coField input:focus{ outline:none; border-color:#c9a35a; box-shadow:0 0 0 3px rgba(201,163,90,.16); }
+
+/* ── Error banner ────────────────────────────────────── */
+.coError{ grid-column:1 / -1; padding:12px 14px; border:1px solid #f0c9c9; border-radius:8px; background:#fdf4f4; }
+.coError p{ margin:0; font-size:12.5px; color:#b3261e; line-height:1.5; }
+.coError .coErrorOk{ color:#2e7d32; }
+.coErrorLink{ margin-top:8px; padding:0; background:none; border:0; font:700 11px Manrope; color:#b3261e; text-decoration:underline; cursor:pointer; }
+.coErrorLink:disabled{ opacity:.6; }
+
+/* ── Payment & delivery option cards ─────────────────── */
+.pmSection{ margin-bottom:0; }
+.pmSectionTitle{ font:700 12px Manrope; text-transform:uppercase; letter-spacing:.1em; color:#141414; margin:0 0 6px; }
+.pmSectionDesc{ font-size:13px; color:#8a8578; margin:0 0 16px; line-height:1.5; }
+.pmCards{ display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; }
+.pmCard{
+  display:flex; align-items:center; gap:12px; width:100%;
+  padding:15px 14px; background:#fff; text-align:left;
+  border:1.5px solid #e6e2d9; border-radius:10px; cursor:pointer;
+  color:#141414; font-family:var(--font-sans);
+  transition:border-color .18s ease, background .18s ease, box-shadow .18s ease;
+}
+.pmCard:hover{ border-color:#c9b98f; }
+.pmCard:focus-visible{ outline:2px solid #c9a35a; outline-offset:2px; }
+.pmCard.active{ border-color:#141414; background:#fcfaf6; }
+.pmCardIcon{ display:grid; place-items:center; width:40px; height:40px; border-radius:9px; background:#f5f2ea; color:#555; flex-shrink:0; transition:background .18s ease, color .18s ease; }
+.pmCard.active .pmCardIcon{ background:#141414; color:#e9d9b8; }
+.pmCardBody{ flex:1 1 auto; min-width:0; }
+.pmCardName{ font:700 13.5px Manrope; color:#141414; margin-bottom:2px; display:block; }
+.pmCardDesc{ font-size:12px; color:#8a8578; line-height:1.4; display:block; }
+.pmCardIndicator{ display:grid; place-items:center; width:21px; height:21px; border-radius:50%; border:1.5px solid #ddd; flex:0 0 auto; background:#fff; }
+.pmCard.active .pmCardIndicator{ border-color:#141414; background:#141414; }
+.pmCardCheck{ color:#e9d9b8; opacity:0; transition:opacity .15s ease; }
+.pmCard.active .pmCardCheck{ opacity:1; }
+
+/* ── Payment network rows ────────────────────────────── */
+.opSection, .codSection{ margin-top:6px; }
+.opSectionLabel{ font:700 11px Manrope; text-transform:uppercase; letter-spacing:.09em; color:#6f6a5e; margin:18px 0 8px; }
+.networkRows{ display:flex; flex-direction:column; gap:8px; }
+.networkRow{ display:flex; align-items:center; gap:10px; border:1px solid #e6e2d9; background:#fff; border-radius:10px; padding:11px 12px; cursor:pointer; position:relative; transition:border-color .15s ease, background .15s ease; }
+.networkRow:focus-within{ outline:2px solid #c9a35a; outline-offset:1px; }
+.networkRow:hover{ border-color:#c9b98f; }
+.networkRow.active{ border-color:#141414; background:#fcfaf6; }
+.networkRowRadio{ position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; border:0; }
+.networkRowLogo{ width:32px; height:32px; border-radius:8px; object-fit:contain; flex:0 0 auto; background:#fff; }
+.networkRowLogoFallback{ display:flex; align-items:center; justify-content:center; background:#141414; color:#e9d9b8; font:700 13px Manrope; text-transform:uppercase; }
+.networkRowBody{ display:flex; flex-direction:column; gap:1px; flex:1 1 auto; min-width:0; }
+.networkRowName{ font:700 13px Manrope; color:#141414; }
+.networkRowNumber{ font-size:12.5px; color:#666; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.networkRowCheck{ display:grid; place-items:center; width:20px; height:20px; border-radius:50%; border:1.5px solid #ddd; flex:0 0 auto; background:#fff; transition:border-color .15s ease, background .15s ease; }
+.networkRow.active .networkRowCheck{ border-color:#141414; background:#141414; }
+.networkRowCheck svg{ color:#e9d9b8; opacity:0; transition:opacity .15s ease; }
+.networkRow.active .networkRowCheck svg{ opacity:1; }
+.copyBtn{ display:inline-flex; align-items:center; gap:5px; flex:0 0 auto; border:1px solid #ddd8cd; border-radius:7px; background:#fff; padding:7px 10px; font:700 10.5px Manrope; letter-spacing:.05em; text-transform:uppercase; color:#4a463a; cursor:pointer; transition:border-color .15s ease, color .15s ease, background .15s ease; }
+.copyBtn:hover{ border-color:#141414; color:#141414; }
+.copyBtn:focus-visible{ outline:2px solid #c9a35a; outline-offset:1px; }
+.copyBtn svg{ width:13px; height:13px; }
+.opPayNumHint{ font-size:12px; color:#8a8578; margin-top:12px; line-height:1.55; background:#faf7f0; border:1px solid #efe9db; border-radius:8px; padding:11px 13px; }
+
+/* ── COD ─────────────────────────────────────────────── */
+.codFeeBox{ display:flex; justify-content:space-between; align-items:center; border:1px solid #e6e2d9; padding:15px 16px; background:#fff; border-radius:10px; margin-top:12px; }
+.codFeeLabel{ font-size:13px; color:#4a463a; font-weight:600; }
+.codFeeAmount{ font:800 16px Manrope; color:#141414; }
+.codFeeNote{ font-size:12.5px; color:#8a8578; line-height:1.55; }
+
+/* ── Order summary ───────────────────────────────────── */
+.summary{ border:1px solid #ece9e2; border-top:2px solid #141414; border-radius:12px; padding:20px; background:#fff; }
+.summaryHead{ display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:16px; }
+.summary h3, .summaryHead h3{ font:700 12px Manrope; text-transform:uppercase; letter-spacing:.1em; color:#141414; margin:0; }
+.summaryToggle{ display:inline-flex; align-items:center; gap:5px; background:none; border:0; font:700 10.5px Manrope; text-transform:uppercase; letter-spacing:.06em; color:#6f6a5e; cursor:pointer; padding:4px 0; }
+.summaryToggle:hover{ color:#141414; }
+.summaryToggle:focus-visible{ outline:2px solid #c9a35a; outline-offset:2px; }
+.summaryItems{ display:flex; flex-direction:column; gap:13px; padding:0 0 16px; margin:0 0 14px; border-bottom:1px solid #ece9e2; list-style:none; }
+.summaryItem{ display:flex; align-items:flex-start; gap:12px; }
+.summaryItemImg{ width:50px; height:62px; flex:0 0 auto; border-radius:8px; overflow:hidden; background:#f4f2ee; }
+.summaryItemImg img{ width:100%; height:100%; object-fit:cover; }
+.summaryItemImgFallback{ width:100%; height:100%; background:#f4f2ee; }
+.summaryItemInfo{ flex:1 1 auto; min-width:0; }
+.summaryItemName{ font:700 12.5px Manrope; color:#141414; margin:0 0 3px; overflow:hidden; text-overflow:ellipsis; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; }
+.summaryItemMeta{ font-size:11.5px; color:#8a8578; margin:0; text-transform:capitalize; }
+.summaryItemWarn{ font-size:11px; color:#b45309; margin:4px 0 0; }
+.summaryItemPrice{ font:800 12.5px Manrope; color:#141414; flex:0 0 auto; white-space:nowrap; }
+.summaryTotals{ margin:0; }
+.summaryTotals > div{ display:flex; justify-content:space-between; align-items:baseline; padding:5px 0; font-size:12.5px; }
+.summaryTotals dt{ color:#6f6a5e; font-weight:500; }
+.summaryTotals dd{ margin:0; color:#141414; font-weight:700; }
+.summaryTotal{ display:flex !important; justify-content:space-between; align-items:center; margin-top:10px; padding:12px 14px !important; background:#141414; border-radius:9px; }
+.summaryTotal dt{ color:#e9d9b8 !important; font-weight:600 !important; }
+.summaryTotal dd{ color:#fff !important; font:800 15px Manrope; }
+.summaryNote{ font-size:12px; color:#8a8578; line-height:1.5; margin:8px 0 0; padding:10px 12px; background:#faf7f0; border:1px solid #efe9db; border-radius:8px; width:100%; }
+.secure{ display:flex; justify-content:center; align-items:center; gap:6px; text-align:center; font-size:11px; color:#a29b8a; margin-top:14px; letter-spacing:.02em; }
+.secure svg{ width:12px; height:12px; }
+
+/* ── Cart load error card ────────────────────────────── */
+.coCartError{ border:1px solid #f0c9c9; border-radius:12px; background:#fdf4f4; padding:20px; text-align:center; }
+.coCartError p{ color:#b3261e; font-size:13px; margin:0 0 14px; line-height:1.5; }
+
+/* ── Empty cart ──────────────────────────────────────── */
+.checkoutEmpty{ text-align:center; padding:56px 0; }
+.checkoutEmpty h1{ font:800 24px Manrope; margin:0 0 10px; }
+.checkoutEmpty p{ color:#8a8578; font-size:13px; margin:0 0 24px; }
+
+/* ── Primary CTA ─────────────────────────────────────── */
+.btnCheckout{
+  display:inline-flex; align-items:center; justify-content:center; gap:9px;
+  min-height:50px; padding:0 30px;
+  background:#141414; color:#fff; border:0; border-radius:9px;
+  font:700 12.5px Manrope; letter-spacing:.08em; text-transform:uppercase;
+  cursor:pointer; min-width:230px; text-decoration:none;
+  transition:background .15s ease, transform .08s ease, opacity .15s ease;
+}
+.btnCheckout:hover{ background:#000; }
+.btnCheckout:active{ transform:translateY(1px); }
+.btnCheckout:focus-visible{ outline:2px solid #c9a35a; outline-offset:2px; }
+.btnCheckout:disabled{ opacity:.45; cursor:not-allowed; }
+.btnCheckout .spin{ animation:coSpin .9s linear infinite; }
+@keyframes coSpin{ to{ transform:rotate(360deg); } }
+
+/* ── Payment loading / empty states ──────────────────── */
+.payLoading{ padding:16px; font-size:13px; color:#5c9771; border:1px solid #dcebdd; background:#f3faf3; border-radius:8px; }
+.payEmpty{ padding:16px; font-size:13px; color:#6f6a5e; border:1px solid #e6e2d9; background:#faf7f0; border-radius:8px; line-height:1.6; }
+
+/* ── Responsive ──────────────────────────────────────── */
+@media(min-width:1024px){ .checkoutForm{ grid-template-columns:minmax(0,1.55fr) minmax(0,.8fr); } }
+@media(max-width:1023px){
+  .checkoutForm{ grid-template-columns:1fr; gap:26px; }
+  .checkoutFooter{ grid-column:1; }
+}
+@media(max-width:767px){
+  .checkout{ padding:20px 14px 56px; }
+  .fieldGrid{ grid-template-columns:1fr; gap:13px; }
+  .coField input{ font-size:16px; }
+  .checkoutFooter{ flex-direction:column; align-items:stretch; padding-top:18px; }
+  .btnCheckout{ width:100%; min-width:0; min-height:54px; }
+  .summary{ padding:18px; }
+}
+@media(max-width:599px){
+  .pmCards{ grid-template-columns:1fr; }
+  .pmCard{ padding:14px 13px; }
+  .networkRow{ padding:10px; gap:9px; }
+  .copyBtn{ padding:8px 11px; }
+  .checkoutSteps{ letter-spacing:.06em; }
+  .coStepArrow{ display:none; }
+}
+@media(prefers-reduced-motion:reduce){
+  .pmCard, .networkRow, .copyBtn, .btnCheckout, .coField input{ transition:none; }
+  .opSection, .codSection{ animation:none; }
+  .btnCheckout .spin{ animation:none; }
+}
+
+/* ═══════════════════════════════════════════════════════════
+   BRAND WORDMARK — one Superadmin-managed asset, sized per
+   placement. `default` is sized inline by BrandLogo; the
+   responsive `header`/`footer` variants scale the same asset
+   with clamp() so it stays balanced from 320px phones up to
+   large desktops, always preserving the original aspect ratio.
+   ═══════════════════════════════════════════════════════════ */
+.plug-brand-logo{ display:block; width:auto; height:auto; max-width:100%; object-fit:contain; }
+.plug-brand-logo--header{ height:clamp(22px, 1.2vw + 15px, 30px); max-width:min(52vw, 240px); }
+.plug-brand-logo--footer{ height:clamp(26px, 1.3vw + 18px, 40px); max-width:min(100%, 420px); }
+
+/* Text fallback (shown until/unless a logo is uploaded) mirrors the exact
+   sizes above so swapping logo→text never changes the header/footer layout. */
+.plug-brand-wordmark{ display:block; line-height:1; white-space:nowrap; letter-spacing:.08em; }
+.plug-brand-wordmark--header{ font:800 clamp(22px, 1.2vw + 15px, 30px) Manrope; color:#141414; }
+.plug-brand-wordmark--footer{ font:800 clamp(26px, 1.3vw + 18px, 40px) Manrope; color:#f3f3f1; }
+
+/* Focus visibility on the logo home-links (custom ring so keyboard users
+   can see the target on both the white header and the dark footer). */
+.storeHeader .logo:focus-visible{ outline:2px solid #111; outline-offset:4px; border-radius:2px; }
+.plug-brand-link:focus-visible{ outline:2px solid #e8e8e8; outline-offset:4px; }
+@media(max-width:480px){
+  .plug-brand-logo--header{ height:22px; }
+  .plug-brand-wordmark--header{ font-size:22px; }
+  .plug-brand-logo--footer{ height:30px; }
+  .plug-brand-wordmark--footer{ font-size:30px; }
+}
+
+/* The wordmark is a single Superadmin-uploaded asset, usually BLACK (it was
+   designed for the white storefront header). Colorising text only can't fix
+   the dark surfaces, so on the three dark placements — footer, auth pages and
+   the backoffice sidebar — the SAME image is forced WHITE with a CSS filter
+   (black → pure white; the header keeps its normal black on white).
+   Text-fallback wordmarks on those surfaces already set `color:#fff`. */
+.plug-brand-link .plug-brand-logo,
+.authLogo .plug-brand-logo,
+.adminLogo .plug-brand-logo{ filter:brightness(0) invert(1); }
+/* On the auth visual the white mark also gets a soft dark halo so it stays
+   legible even over the lighter side of the background photo. */
+.authLogo .plug-brand-logo{ filter:brightness(0) invert(1) drop-shadow(0 1px 2px rgba(0,0,0,.45)); }
+
+/* ---- Cart & wishlist: responsive from 320px phones up to desktops ---- */
+@media(max-width:1200px){
+  .cartPage,.checkout{ gap:36px; }
+}
+/* Small laptops & tablets: keep the 5-column row but tighten it so nothing
+   overflows the ~700-900px window. */
+@media(max-width:900px){
+  .cartItem{ grid-template-columns:78px 1fr 92px 96px 28px; gap:14px; }
+}
+/* Phones: turn each cart row into a compact two-row card —
+      image  |  info            |  ✕
+      image  |  total           |  qty
+   The image column spans both rows; nothing gets squashed below 320px wide. */
+@media(max-width:640px){
+  .cartPage,.checkout{ margin:26px auto; gap:24px; padding:0 16px; }
+  .cartItem{
+    grid-template-columns:88px 1fr 34px;
+    grid-template-areas:
+      "img info remove"
+      "img price qty";
+    grid-template-rows:auto auto;
+    gap:4px 14px;
+    padding:14px 2px;
+  }
+  .cartItem>img{ grid-area:img; width:88px; height:106px; }
+  .cartItem>div:not(.qty){ grid-area:info; }
+  .cartItem>b{ grid-area:price; }
+  .cartItem>.qty{ grid-area:qty; width:96px; max-width:96px; justify-self:end; }
+  .cartItem>.iconBtn{ grid-area:remove; justify-self:end; }
+  .summary{ padding:18px 16px; }
+  .cartRecs{ margin-top:26px; }
+  .pageTitle h1{ font-size:20px; }
+  .productGrid{ gap:12px; }
+}
+
+/* ---- Notification bell + panel ---- */
+.notifWrap{ position:relative; }
+.notifBellBtn{ position:relative; }
+.notifBadge{
+  position:absolute; top:-2px; right:-4px;
+  min-width:15px; height:15px; padding:0 3px;
+  background:#c9302c; color:#fff;
+  border-radius:20px;
+  font:700 9px Manrope;
+  display:flex; align-items:center; justify-content:center;
+  line-height:1;
+}
+.notifPanel{
+  position:absolute; top:calc(100% + 12px); right:0;
+  width:340px; max-width:90vw;
+  background:#fff;
+  border:1px solid #e5e2da;
+  border-radius:10px;
+  box-shadow:0 12px 32px rgba(0,0,0,.12);
+  z-index:40;
+  overflow:hidden;
+}
+/* Hidden by default (desktop dropdown has no drag handle); the
+   max-width:900px block below turns this on for the mobile drawer. This
+   MUST come before that media query in source order — media queries add
+   a condition, not specificity, so whichever same-specificity rule is
+   LATER in the file wins regardless of which one is inside a query. */
+.notifDrawerHandle{ display:none; }
+.notifPanelHead{
+  display:flex; align-items:center; justify-content:space-between;
+  padding:14px 16px;
+  border-bottom:1px solid #f0efe9;
+}
+.notifPanelHead b{ font:800 12.5px Manrope; letter-spacing:.03em; text-transform:uppercase; }
+.notifMarkAll{
+  font:700 10.5px Manrope; color:#666; background:none; border:none; cursor:pointer; text-decoration:underline;
+}
+.notifList{ max-height:380px; overflow-y:auto; }
+.notifLoading, .notifEmpty{ padding:36px 20px; text-align:center; color:#888; font-size:12.5px; }
+.notifEmpty p{ font:700 13px Manrope; color:#333; margin:0 0 4px; }
+.notifEmpty span{ font-size:11.5px; }
+.notifItem{
+  display:flex; align-items:flex-start; gap:11px;
+  width:100%; text-align:left;
+  padding:12px 16px;
+  border:none; border-bottom:1px solid #f5f4ef;
+  background:#fff; cursor:pointer;
+}
+.notifItem:hover{ background:#faf9f6; }
+.notifItem.unread{ background:#fdfaf3; }
+.notifItemIcon{
+  width:32px; height:32px; flex:0 0 auto;
+  border-radius:8px; overflow:hidden;
+  background:#f4f2ee; color:#666;
+  display:flex; align-items:center; justify-content:center;
+}
+.notifItemIcon img{ width:100%; height:100%; object-fit:cover; }
+.notifItemBody{ flex:1 1 auto; min-width:0; display:flex; flex-direction:column; gap:2px; }
+.notifItemTitle{ font:700 12.5px Manrope; color:#141414; }
+.notifItemMsg{ font-size:11.5px; color:#777; line-height:1.4; }
+.notifItemTime{ font-size:10px; color:#aaa; margin-top:1px; }
+.notifDot{ width:7px; height:7px; border-radius:50%; background:#c9a35a; flex:0 0 auto; margin-top:5px; }
+.notifViewAll{
+  display:block; width:100%;
+  padding:11px; text-align:center;
+  font:700 10.5px Manrope; letter-spacing:.04em; color:#666;
+  background:#faf9f6; border:none; border-top:1px solid #f0efe9;
+  cursor:pointer;
+}
+.notifViewAll:hover{ color:#141414; }
+
+@media(max-width:900px){
+  /* Mobile: a proper bottom-sheet drawer, not a shrunk desktop dropdown.
+     Slides up from the bottom with a dimming backdrop behind it — the
+     standard, well-understood mobile pattern for this kind of panel,
+     rather than a small floating box anchored near the header. */
+  .notifBackdrop{
+    position:fixed; inset:0;
+    background:rgba(0,0,0,.35);
+    z-index:39;
+    animation:notifBackdropIn .2s ease-out;
+  }
+  .notifPanel{
+    position:fixed;
+    top:auto; left:0; right:0; bottom:0;
+    width:auto; max-width:none;
+    border-radius:16px 16px 0 0;
+    max-height:80vh;
+    display:flex;
+    flex-direction:column;
+    padding-bottom:env(safe-area-inset-bottom, 0px);
+    animation:notifDrawerIn .25s ease-out;
+  }
+  .notifDrawerHandle{
+    display:block;
+    width:36px; height:4px;
+    background:#ddd; border-radius:4px;
+    margin:10px auto 2px;
+  }
+  .notifList{ flex:1 1 auto; max-height:none; }
+}
+@keyframes notifBackdropIn{ from{ opacity:0; } to{ opacity:1; } }
+@keyframes notifDrawerIn{ from{ transform:translateY(100%); } to{ transform:translateY(0); } }
+@media(prefers-reduced-motion:reduce){
+  .notifBackdrop, .notifPanel{ animation:none; }
+}
+
+/* ---- Dedicated /notifications page ---- */
+.notifPage{ max-width:720px; margin:0 auto; padding:40px 20px 80px; }
+.notifPageHead{ display:flex; align-items:center; justify-content:space-between; margin-bottom:20px; }
+.notifPageHead h1{ font:800 22px Manrope; margin:0; }
+.notifTabs{ display:flex; gap:6px; overflow-x:auto; padding-bottom:14px; margin-bottom:14px; border-bottom:1px solid #ece9e2; }
+.notifTab{
+  flex:0 0 auto;
+  padding:8px 14px;
+  border:1px solid #e5e2da; border-radius:20px;
+  background:#fff; color:#666;
+  font:700 11px Manrope; letter-spacing:.03em;
+  cursor:pointer; white-space:nowrap;
+}
+.notifTab.active{ background:#141414; color:#fff; border-color:#141414; }
+.notifPageList{ display:flex; flex-direction:column; gap:8px; }
+.notifPageItem{
+  display:flex; align-items:flex-start; gap:12px;
+  width:100%; text-align:left;
+  padding:14px 16px;
+  border:1px solid #ece9e2; border-radius:10px;
+  background:#fff; cursor:pointer;
+}
+.notifPageItem.unread{ background:#fdfaf3; border-color:#f0e4c8; }
+.notifPageItem .notifItemTitle{ font-size:13.5px; }
+.notifPageItem .notifItemMsg{ font-size:12.5px; }
+.notifPageEmpty{
+  display:flex; flex-direction:column; align-items:center; gap:8px;
+  padding:70px 20px; color:#999; text-align:center;
+}
+.notifPageEmpty p{ font:700 14px Manrope; color:#333; margin:6px 0 0; }
+.notifPageEmpty span{ font-size:12.5px; }
+
+@media(max-width:480px){
+  .notifPage{ padding:24px 14px 60px; }
+  .notifPageHead h1{ font-size:19px; }
+}
+
+/* ---- Notification toasts ---- */
+.toastStack{
+  position:fixed;
+  bottom:20px; right:20px;
+  z-index:60;
+  display:flex; flex-direction:column-reverse;
+  gap:10px;
+  max-width:340px;
+}
+.toastCard{
+  display:flex; align-items:flex-start; gap:8px;
+  background:#141414; color:#fff;
+  border-radius:10px;
+  padding:14px 12px 14px 16px;
+  box-shadow:0 12px 28px rgba(0,0,0,.25);
+  animation:toastIn .22s ease-out;
+}
+.toastBody{
+  flex:1 1 auto; min-width:0; text-align:left;
+  background:none; border:none; cursor:pointer;
+  display:flex; flex-direction:column; gap:3px;
+  color:#fff; padding:0;
+}
+.toastTitle{ font:700 12.5px Manrope; }
+.toastMsg{ font-size:11.5px; color:#ccc; line-height:1.4; }
+.toastClose{
+  flex:0 0 auto; background:none; border:none; color:#999; cursor:pointer;
+  padding:2px; margin-top:1px;
+}
+.toastClose:hover{ color:#fff; }
+@keyframes toastIn{ from{ opacity:0; transform:translateY(8px); } to{ opacity:1; transform:translateY(0); } }
+
+@media(max-width:640px){
+  .toastStack{
+    left:12px; right:12px; bottom:calc(56px + env(safe-area-inset-bottom, 0px) + 12px);
+    max-width:none;
+  }
+}
+@media(prefers-reduced-motion:reduce){
+  .toastCard{ animation:none; }
+}
+
+/* ---- Floating WhatsApp chat button ---- */
+.waFab{
+  position:fixed;
+  /* Sits above the mobile bottom nav (56px + safe-area), the same
+     clearance pattern already established for the toast stack and PWA
+     install prompt earlier — never stacked directly at the raw viewport
+     edge, which would collide with it on phones. */
+  bottom:calc(56px + env(safe-area-inset-bottom, 0px) + 18px);
+  right:calc(18px + env(safe-area-inset-right, 0px));
+  z-index:55;
+  display:inline-flex;
+  align-items:center;
+  height:56px;
+  width:56px;
+  padding:0;
+  border-radius:28px;
+  overflow:hidden;
+  text-decoration:none;
+  background:linear-gradient(155deg, #25d366 0%, #1fae54 65%, #128c3e 100%);
+  box-shadow:0 6px 18px rgba(18,140,62,.35), 0 2px 6px rgba(0,0,0,.18);
+  /* A slight overshoot-then-settle curve, not a linear or plain ease —
+     this is what makes the shape feel like it's settling into place
+     rather than mechanically snapping to its new size. */
+  transition:width .55s cubic-bezier(.34,1.4,.44,1), box-shadow .4s ease;
+  cursor:pointer;
+}
+.waFab:hover{ box-shadow:0 8px 22px rgba(18,140,62,.42), 0 3px 8px rgba(0,0,0,.2); }
+.waFab:focus-visible{ outline:3px solid #fff; outline-offset:3px; box-shadow:0 0 0 5px rgba(37,211,102,.4); }
+
+.waFabIcon{
+  flex:0 0 56px;
+  height:56px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  color:#fff;
+}
+
+.waFabLabel{
+  flex:0 0 auto;
+  white-space:nowrap;
+  padding-right:20px;
+  font:700 13.5px Manrope;
+  letter-spacing:.01em;
+  color:#fff;
+  opacity:0;
+  transform:translateX(-4px);
+  /* Fades in slightly AFTER the shape starts widening, and (via the
+     collapsed-state rule below) fades out slightly BEFORE the shape
+     starts shrinking — offsetting the label's own transition timing
+     from the width transition is what makes this read as layered
+     choreography rather than one mechanical resize. */
+  transition:opacity .35s ease .15s, transform .35s ease .15s;
+}
+
+.waFab--expanded{
+  width:212px;
+}
+.waFab--expanded .waFabLabel{
+  opacity:1;
+  transform:translateX(0);
+}
+
+/* Collapsing back to a circle: the label must finish fading out BEFORE
+   the width transition starts shrinking, so the text never looks
+   clipped mid-word. A shorter, undelayed fade-out achieves that. */
+.waFab:not(.waFab--expanded) .waFabLabel{
+  transition:opacity .2s ease, transform .2s ease;
+}
+
+/* At rest (settled): a slow, soft breathing pulse so the button still
+   reads as alive/clickable without being distracting — subtle glow and
+   scale, not a flashing or bouncing effect. */
+.waFab--settled{
+  animation:waBreathe 3.2s ease-in-out infinite;
+}
+@keyframes waBreathe{
+  0%, 100%{ box-shadow:0 6px 18px rgba(18,140,62,.35), 0 2px 6px rgba(0,0,0,.18); transform:scale(1); }
+  50%{ box-shadow:0 6px 24px rgba(37,211,102,.55), 0 2px 10px rgba(0,0,0,.2); transform:scale(1.035); }
+}
+
+/* Reduced motion: no eased shape/scale animation at all — the label
+   still appears briefly (so the affordance isn't lost for these users
+   entirely) via a plain, instant width change, and no breathing pulse. */
+.waFab--reduced{
+  transition:none;
+}
+.waFab--reduced .waFabLabel{
+  transition:opacity .15s linear;
+  transform:none;
+}
+.waFab--reduced.waFab--settled{
+  animation:none;
+}
+@media(prefers-reduced-motion:reduce){
+  .waFab{ transition:none; }
+  .waFab--settled{ animation:none; }
+  .waFabLabel{ transition:opacity .15s linear; transform:none; }
+}
+
+@media(max-width:480px){
+  .waFab{ height:52px; }
+  .waFab--expanded{ width:190px; }
+  .waFabIcon{ flex-basis:52px; height:52px; }
+  .waFabLabel{ font-size:12.5px; padding-right:16px; }
+}
+@media(min-width:900px){
+  /* The mobile bottom nav doesn't exist at this width, so there's no
+     need to clear it — sit closer to the corner, matching typical
+     floating-action-button conventions on larger screens. */
+  .waFab{ bottom:26px; }
+}
+
+/* ---- Checkout: coupon box ---- */
+.couponBox{ margin:16px 0; }
+.couponInputRow{ display:flex; gap:8px; }
+.couponInputRow input{
+  flex:1; padding:11px 13px;
+  border:1px solid #d8d5cd; border-radius:2px;
+  font-size:12.5px; font-family:inherit; letter-spacing:.02em;
+  text-transform:uppercase;
+}
+.couponInputRow input:focus{ outline:none; border-color:#141414; }
+.couponApplyBtn{
+  padding:11px 18px;
+  background:#141414; color:#fff; border:none; border-radius:2px;
+  font:700 11px Manrope; letter-spacing:.04em;
+  cursor:pointer; white-space:nowrap;
+}
+.couponApplyBtn:disabled{ opacity:.45; cursor:not-allowed; }
+.couponApplied{
+  display:flex; align-items:center; justify-content:space-between;
+  padding:11px 14px;
+  background:#f0fdf4; border:1px solid #bbf7d0; border-radius:4px;
+  font-size:12.5px; color:#166534;
+}
+.couponApplied b{ letter-spacing:.03em; }
+.couponRemoveBtn{
+  background:none; border:none; color:#166534;
+  font:700 11px Manrope; text-decoration:underline; cursor:pointer; padding:0;
+}
+.couponError{ font-size:11.5px; color:#b91c1c; margin:6px 0 0; }
+.summaryDiscount dt, .summaryDiscount dd{ color:#166534; }
+
+@media(max-width:480px){
+  .couponInputRow{ flex-direction:column; }
+  .couponApplyBtn{ width:100%; }
+}

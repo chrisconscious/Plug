@@ -1,0 +1,11 @@
+{
+  "extends": "next/core-web-vitals",
+  "rules": {
+    "no-restricted-imports": ["error", {
+      "patterns": [{
+        "group": ["**/web/src/**", "../../web/**", "../../../web/**"],
+        "message": "api must never import frontend files — the backend is HTTP-only and knows nothing about the frontend's implementation."
+      }]
+    }]
+  }
+}

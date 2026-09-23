@@ -1,0 +1,549 @@
+openapi: 3.0.3
+info:
+  title: PLUG API
+  version: "1.0"
+  description: >
+    Canonical API contract. This is a genuine, schema-validating OpenAPI
+    document, not prose documentation — see docs/openapi/README.md for
+    scope, how it's kept in sync, and honest limitations (it does not yet
+    cover all ~74 endpoints in docs/api/CONTRACT.md; see that file for the
+    complete endpoint inventory with auth/permission/rate-limit details
+    this document does not repeat).
+servers:
+  - url: /api/v1
+
+components:
+  securitySchemes:
+    sessionCookie:
+      type: apiKey
+      in: cookie
+      name: vv_access
+      description: HttpOnly session cookie set by /auth/login, /auth/register, or /auth/refresh. See docs/SECURITY.md for cookie attributes.
+
+  schemas:
+    ErrorResponse:
+      type: object
+      required: [error, message, requestId]
+      properties:
+        error:
+          type: string
+          enum: [VALIDATION_ERROR, AUTHENTICATION_ERROR, AUTHORIZATION_ERROR, NOT_FOUND, CONFLICT, RATE_LIMITED, EMAIL_NOT_VERIFIED, CSRF_ERROR, INTERNAL_ERROR]
+        message:
+          type: string
+        fields:
+          type: object
+          additionalProperties: { type: string }
+          description: Present only for VALIDATION_ERROR — field name to human-readable message.
+        requestId:
+          type: string
+          description: Correlation id — see src/lib/logger.ts. Safe to show to the user as a support reference; never a secret.
+
+    PublicUser:
+      type: object
+      required: [id, email, role, emailVerified, mfaEnabled, createdAt]
+      properties:
+        id: { type: string, format: uuid }
+        email: { type: string, format: email }
+        fullName: { type: string, nullable: true }
+        role: { type: string, enum: [CUSTOMER, ADMIN, SUPER_ADMIN] }
+        emailVerified: { type: boolean }
+        mfaEnabled: { type: boolean }
+        createdAt: { type: string, format: date-time }
+
+    Brand:
+      type: object
+      required: [id, slug, name]
+      properties:
+        id: { type: string, format: uuid }
+        slug: { type: string }
+        name: { type: string }
+        logoUrl: { type: string, nullable: true }
+
+    Category:
+      type: object
+      required: [id, slug, name]
+      properties:
+        id: { type: string, format: uuid }
+        slug: { type: string }
+        name: { type: string }
+        parentId: { type: string, format: uuid, nullable: true }
+        icon: { type: string, nullable: true }
+
+    ProductImage:
+      type: object
+      required: [id, url]
+      properties:
+        id: { type: string, format: uuid }
+        url: { type: string }
+        position: { type: integer }
+        altText: { type: string, nullable: true }
+
+    ProductVariant:
+      type: object
+      required: [id, size, color]
+      properties:
+        id: { type: string, format: uuid }
+        size: { type: string }
+        color: { type: string }
+        stockQty:
+          type: integer
+          description: Admin-only field — omitted from public storefront serialization.
+
+    Product:
+      type: object
+      required: [id, slug, name, priceCents, onSale, images, active, variants]
+      properties:
+        id: { type: string, format: uuid }
+        slug: { type: string }
+        name: { type: string }
+        brand: { $ref: "#/components/schemas/Brand" }
+        category: { $ref: "#/components/schemas/Category" }
+        priceCents: { type: integer, minimum: 0 }
+        compareAtPriceCents: { type: integer, nullable: true }
+        onSale: { type: boolean }
+        images:
+          type: array
+          items: { $ref: "#/components/schemas/ProductImage" }
+        variants:
+          type: array
+          items: { $ref: "#/components/schemas/ProductVariant" }
+        active: { type: boolean }
+        tags:
+          type: array
+          items: { type: string }
+          description: Admin-only. Collection/campaign tags — drives homepage featured-product sections (see catalog.service.ts).
+
+    CartItem:
+      type: object
+      required: [id, quantity]
+      properties:
+        id: { type: string, format: uuid }
+        quantity: { type: integer, minimum: 1, maximum: 20 }
+        available:
+          type: boolean
+          description: False if the product has gone inactive or the variant is out of stock since being added — see cart.service.ts.
+        product:
+          type: object
+          nullable: true
+          properties:
+            name: { type: string }
+            slug: { type: string }
+            priceCents: { type: integer }
+            image: { type: string, nullable: true }
+        variant:
+          type: object
+          nullable: true
+          properties:
+            id: { type: string, format: uuid }
+            size: { type: string }
+            color: { type: string }
+            inStock: { type: boolean }
+        lineTotalCents: { type: integer }
+
+    Cart:
+      type: object
+      required: [items, subtotalCents]
+      properties:
+        items:
+          type: array
+          items: { $ref: "#/components/schemas/CartItem" }
+        subtotalCents:
+          type: integer
+          description: Computed from only the AVAILABLE lines — server-authoritative, never trusts a client-supplied value.
+
+    OrderItem:
+      type: object
+      description: Fully snapshotted at order-creation time (name/brand/price) — immutable to later catalog changes. See docs/DATABASE.md.
+      properties:
+        id: { type: string, format: uuid }
+        nameSnapshot: { type: string }
+        brandSnapshot: { type: string }
+        unitPriceCentsSnapshot: { type: integer }
+        quantity: { type: integer }
+        lineTotalCents: { type: integer }
+
+    Order:
+      type: object
+      required: [id, status, subtotalCents, totalCents, items]
+      properties:
+        id: { type: string, format: uuid }
+        status: { type: string, enum: [PENDING, PAID, SHIPPED, DELIVERED, CANCELLED] }
+        subtotalCents: { type: integer }
+        discountCents: { type: integer }
+        shippingCents: { type: integer }
+        totalCents:
+          type: integer
+          description: "DB-enforced: total = subtotal - discount + shipping (see migration 0005)."
+        items:
+          type: array
+          items: { $ref: "#/components/schemas/OrderItem" }
+        createdAt: { type: string, format: date-time }
+
+    HeroSlide:
+      type: object
+      required: [id, headline, imageUrl, isActive]
+      properties:
+        id: { type: string, format: uuid }
+        campaignLabel: { type: string }
+        headline: { type: string }
+        description: { type: string }
+        ctaText: { type: string }
+        ctaUrl: { type: string }
+        heroType: { type: string, enum: [promotional, lifestyle, editorial] }
+        imageUrl: { type: string }
+        displayOrder: { type: integer }
+        isActive: { type: boolean }
+        startDate: { type: string, format: date-time, nullable: true }
+        endDate: { type: string, format: date-time, nullable: true }
+
+  responses:
+    ValidationError:
+      description: Request failed validation.
+      content: { application/json: { schema: { $ref: "#/components/schemas/ErrorResponse" } } }
+    AuthenticationError:
+      description: Not authenticated.
+      content: { application/json: { schema: { $ref: "#/components/schemas/ErrorResponse" } } }
+    AuthorizationError:
+      description: Authenticated, but not permitted.
+      content: { application/json: { schema: { $ref: "#/components/schemas/ErrorResponse" } } }
+    NotFound:
+      description: Resource not found.
+      content: { application/json: { schema: { $ref: "#/components/schemas/ErrorResponse" } } }
+    Conflict:
+      description: Conflicts with existing state (e.g. duplicate slug/SKU).
+      content: { application/json: { schema: { $ref: "#/components/schemas/ErrorResponse" } } }
+
+paths:
+  /auth/register:
+    post:
+      summary: Register a new customer account
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email: { type: string, format: email }
+                password: { type: string }
+                fullName: { type: string }
+      responses:
+        "200":
+          description: Account created; session cookies set.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  user: { $ref: "#/components/schemas/PublicUser" }
+        "400": { $ref: "#/components/responses/ValidationError" }
+        "409": { $ref: "#/components/responses/Conflict" }
+
+  /auth/login:
+    post:
+      summary: Log in with email/password
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email: { type: string, format: email }
+                password: { type: string }
+      responses:
+        "200":
+          description: Either a completed session (cookies set) or an MFA challenge.
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - type: object
+                    properties:
+                      mfaRequired: { type: boolean, enum: [false] }
+                      user: { $ref: "#/components/schemas/PublicUser" }
+                  - type: object
+                    properties:
+                      mfaRequired: { type: boolean, enum: [true] }
+                      mfaToken: { type: string }
+        "401": { $ref: "#/components/responses/AuthenticationError" }
+
+  /auth/logout:
+    post:
+      summary: Log out (clears session cookies; safe to call with no active session)
+      responses:
+        "200": { description: Always succeeds. }
+
+  /auth/me:
+    get:
+      summary: Resolve the current session — the source of truth for frontend auth state
+      responses:
+        "200":
+          description: Authenticated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties: { user: { $ref: "#/components/schemas/PublicUser" } }
+        "401": { $ref: "#/components/responses/AuthenticationError" }
+
+  /auth/refresh:
+    post:
+      summary: Rotate the refresh token and issue a new access token
+      security: []
+      responses:
+        "200": { description: New cookies set. }
+        "401": { $ref: "#/components/responses/AuthenticationError" }
+
+  /auth/forgot-password:
+    post:
+      summary: Request a password reset (never reveals whether the email exists)
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object, required: [email], properties: { email: { type: string, format: email } } }
+      responses:
+        "200": { description: Always the same response regardless of whether the email is registered. }
+
+  /auth/reset-password:
+    post:
+      summary: Consume a reset token and set a new password (revokes all existing sessions)
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [token, password]
+              properties: { token: { type: string }, password: { type: string } }
+      responses:
+        "200": { description: Password changed. }
+        "400": { $ref: "#/components/responses/ValidationError" }
+
+  /products:
+    get:
+      summary: List/filter/search products (public storefront)
+      security: []
+      parameters:
+        - { name: page, in: query, schema: { type: integer } }
+        - { name: pageSize, in: query, schema: { type: integer } }
+        - { name: collection, in: query, schema: { type: string }, description: "Tag filter — see Product.tags." }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items: { type: array, items: { $ref: "#/components/schemas/Product" } }
+
+  /products/{id}:
+    get:
+      summary: Get one product (the "{id}" path segment is actually treated as the product slug — see products/[id]/route.ts's own comment; documented here to match the real route path, not renamed to avoid implying a route change that hasn't happened)
+      security: []
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string }, description: "The product's slug, despite the parameter name." }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { type: object, properties: { product: { $ref: "#/components/schemas/Product" } } }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /categories:
+    get:
+      summary: List categories (public)
+      security: []
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { type: object, properties: { categories: { type: array, items: { $ref: "#/components/schemas/Category" } } } }
+
+  /brands:
+    get:
+      summary: List brands (public)
+      security: []
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { type: object, properties: { brands: { type: array, items: { $ref: "#/components/schemas/Brand" } } } }
+
+  /hero-slides:
+    get:
+      summary: List active, currently-scheduled hero slides (public)
+      security: []
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { type: object, properties: { slides: { type: array, items: { $ref: "#/components/schemas/HeroSlide" } } } }
+
+  /cart:
+    get:
+      summary: Get the current user's cart
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { type: object, properties: { cart: { $ref: "#/components/schemas/Cart" } } }
+        "401": { $ref: "#/components/responses/AuthenticationError" }
+
+  /cart/items:
+    post:
+      summary: Add a variant to the cart
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [variantId, quantity]
+              properties:
+                variantId: { type: string, format: uuid }
+                quantity: { type: integer, minimum: 1, maximum: 20 }
+      responses:
+        "201":
+          description: Updated cart
+          content:
+            application/json:
+              schema: { type: object, properties: { cart: { $ref: "#/components/schemas/Cart" } } }
+        "409":
+          description: Out of stock, or product no longer active.
+          content: { application/json: { schema: { $ref: "#/components/schemas/ErrorResponse" } } }
+
+  /orders:
+    post:
+      summary: Create an order from the current cart (idempotent)
+      description: >
+        Requires the Idempotency-Key header. A reused key with an identical
+        payload returns the original order; a reused key with a genuinely
+        different payload is rejected (see migration 0027). Never trusts a
+        client-supplied price or quantity — everything is recomputed
+        server-side inside a single transaction with row-level locking.
+      parameters:
+        - name: Idempotency-Key
+          in: header
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [shippingAddress, paymentMethodId]
+              properties:
+                shippingAddress:
+                  type: object
+                  required: [label, line1, city, region, postalCode, country]
+                  properties:
+                    label: { type: string }
+                    line1: { type: string }
+                    line2: { type: string }
+                    city: { type: string }
+                    region: { type: string }
+                    postalCode: { type: string }
+                    country: { type: string }
+                    phone: { type: string }
+                paymentMethodId: { type: string }
+                transportPaymentNumber: { type: string, nullable: true }
+      responses:
+        "201":
+          description: Order created (or the original order, if this is a genuine replay).
+          content:
+            application/json:
+              schema: { type: object, properties: { order: { $ref: "#/components/schemas/Order" } } }
+        "400": { $ref: "#/components/responses/ValidationError" }
+        "403":
+          description: Email not verified (EMAIL_NOT_VERIFIED), or the idempotency key was already used for a different request.
+          content: { application/json: { schema: { $ref: "#/components/schemas/ErrorResponse" } } }
+        "409": { description: Order is already being processed (concurrent retry) — see docs/DATABASE.md. }
+
+  /orders/{id}:
+    get:
+      summary: Get one of the caller's own orders
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { type: object, properties: { order: { $ref: "#/components/schemas/Order" } } }
+        "403": { $ref: "#/components/responses/AuthorizationError" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /admin/products:
+    post:
+      summary: Create a product (admin)
+      security: [{ sessionCookie: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [slug, name, brandId, categoryId, priceCents]
+              properties:
+                slug: { type: string }
+                name: { type: string }
+                brandId: { type: string, format: uuid }
+                categoryId: { type: string, format: uuid }
+                priceCents: { type: integer, minimum: 0 }
+                tags: { type: array, items: { type: string } }
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema: { type: object, properties: { product: { $ref: "#/components/schemas/Product" } } }
+        "401": { $ref: "#/components/responses/AuthenticationError" }
+        "403": { $ref: "#/components/responses/AuthorizationError" }
+        "409": { $ref: "#/components/responses/Conflict" }
+
+  /admin/products/{id}/images:
+    post:
+      summary: Upload a product image (admin)
+      security: [{ sessionCookie: [] }]
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties: { file: { type: string, format: binary } }
+      responses:
+        "201":
+          description: Uploaded. Validated by content inspection (magic bytes), never trusting filename/extension/Content-Type — see security/image.ts.
+          content:
+            application/json:
+              schema: { type: object, properties: { image: { $ref: "#/components/schemas/ProductImage" } } }
+        "400":
+          description: Validation failed — unsupported format, oversized dimensions/pixel count, or file too large.
+          content: { application/json: { schema: { $ref: "#/components/schemas/ErrorResponse" } } }
+
+  /admin/media/orphans:
+    get:
+      summary: Scan (read-only) for orphaned storage objects / media records across all upload categories
+      security: [{ sessionCookie: [] }]
+      description: SUPER_ADMIN only (system.manage permission).
+      responses:
+        "200": { description: OK }
+
+security:
+  - sessionCookie: []

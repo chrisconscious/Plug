@@ -1,5 +1,5 @@
 import { withRoute, json } from "@/lib/http";
-import { validateBody, required, optional, nullable, isString, isNonNegativeInt, isArrayOfStrings } from "@/lib/validate";
+import { validateBody, required, optional, nullable, isString, isNonNegativeInt, isArrayOfStrings, isStringArray } from "@/lib/validate";
 import { RateLimitRules } from "@/lib/security/rateLimiter";
 import { listProducts, createProduct } from "@/lib/services/catalog.service";
 
@@ -17,7 +17,10 @@ export const GET = withRoute({ permission: "products.read", rateLimit: RateLimit
 export const POST = withRoute({ permission: "products.create", rateLimit: RateLimitRules.adminGeneral }, async ({ req, user }) => {
   const body = await req.json().catch(() => ({}));
   const input = validateBody(body, {
-    slug: required(isString),
+    // Optional: when omitted the server derives it from `name`, and a slug
+    // already taken by another product gets a short unique suffix instead
+    // of failing the whole create (see createProduct).
+    slug: optional(isString),
     name: required(isString),
     brandId: required(isString),
     categoryId: required(isString),
@@ -26,12 +29,15 @@ export const POST = withRoute({ permission: "products.create", rateLimit: RateLi
     // service layer also enforces this as a safety rail.
     genderAudiences: optional(isArrayOfStrings),
     // Optional lifestyle memberships (migration 0019) — validated against the
-    // join FK; empty/absent = not assigned to any lifestyle.
-    lifestyleIds: optional(isArrayOfStrings),
+    // join FK; empty/absent = not assigned to any lifestyle. `[]` must be
+    // accepted here exactly as PATCH accepts it.
+    lifestyleIds: optional(isStringArray),
     // Collection/campaign tags — drives homepage "featured products"
     // sections and collection pages (see PremiumProducts.tsx's
     // `collection: "premium"` filter, matched via products.tags @> ARRAY[...]).
-    tags: optional(isArrayOfStrings),
+    // `[]` (no tags typed in the form) is valid — rejecting it made every
+    // untagged product fail with "Validation failed.".
+    tags: optional(isStringArray),
     sku: nullable(isString),
     shortDescription: nullable(isString),
     fullDescription: nullable(isString),

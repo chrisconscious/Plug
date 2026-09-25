@@ -734,9 +734,24 @@ async function assertUnderProductLimit(adminUserId: string): Promise<void> {
   }
 }
 
+/** URL-safe slug: lowercase ASCII letters/digits separated by single dashes. */
+export function slugifyProduct(value: string): string {
+  return value
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 120)
+    .replace(/-+$/g, "");
+}
+
+const SLUG_INSERT_ATTEMPTS = 5;
+
 export async function createProduct(
   actor: { id: string; role: Role },
-  input: { slug: string; name: string; brandId: string; categoryId: string; priceCents: number; genderAudiences?: string[]; lifestyleIds?: string[]; tags?: string[] } & ProductOfferInput
+  input: { slug?: string; name: string; brandId: string; categoryId: string; priceCents: number; genderAudiences?: string[]; lifestyleIds?: string[]; tags?: string[] } & ProductOfferInput
 ) {
   // Product-posting limits — enforced here, server-side, never just a
   // disabled button on the frontend (a direct API call must be rejected
@@ -755,7 +770,22 @@ export async function createProduct(
   validateOfferInput(input, input.priceCents);
   // insertProduct now persists the full offer/description set and assigns
   // audiences atomically (rollback on any failure — no orphaned rows).
-  const product = await catalogRepo.insertProduct(input, audiences, actor.id);
+  // The slug is only a URL key, so it must never be the reason a product
+  // can't be saved: normalize it (or derive it from the name), and when it is
+  // already taken — common with many similarly-named products — retry with a
+  // short random suffix. The unique index stays the source of truth, so this
+  // is also safe under concurrent creates.
+  const baseSlug = slugifyProduct(input.slug?.trim() ? input.slug : input.name) || "product";
+  let product: Product | undefined;
+  for (let attempt = 0; attempt < SLUG_INSERT_ATTEMPTS && !product; attempt++) {
+    const slug = attempt === 0 ? baseSlug : `${baseSlug}-${randomUUID().slice(0, 8)}`;
+    try {
+      product = await catalogRepo.insertProduct({ ...input, slug }, audiences, actor.id);
+    } catch (err) {
+      if (!(err instanceof catalogRepo.ProductSlugConflictError) || attempt === SLUG_INSERT_ATTEMPTS - 1) throw err;
+    }
+  }
+  if (!product) throw new Error("Product insert did not return a row.");
 
   // Lifestyle membership is optional (a product may belong to none), but when
   // submitted the set is persisted atomically afterwards — same shape as

@@ -498,20 +498,23 @@ paths:
           application/json:
             schema:
               type: object
-              required: [slug, name, brandId, categoryId, priceCents]
+              required: [name, brandId, categoryId, priceCents]
               properties:
-                slug: { type: string }
+                slug: { type: string, description: "Optional. Normalized to a URL-safe key; derived from name when omitted; a short suffix is added when already taken." }
                 name: { type: string }
                 brandId: { type: string, format: uuid }
                 categoryId: { type: string, format: uuid }
                 priceCents: { type: integer, minimum: 0 }
-                tags: { type: array, items: { type: string } }
+                tags: { type: array, items: { type: string }, description: "May be empty." }
       responses:
         "201":
           description: Created
           content:
             application/json:
               schema: { type: object, properties: { product: { $ref: "#/components/schemas/Product" } } }
+        "400":
+          description: Validation failed — the `fields` object names each invalid field.
+          content: { application/json: { schema: { $ref: "#/components/schemas/ErrorResponse" } } }
         "401": { $ref: "#/components/responses/AuthenticationError" }
         "403": { $ref: "#/components/responses/AuthorizationError" }
         "409": { $ref: "#/components/responses/Conflict" }

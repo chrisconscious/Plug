@@ -40,13 +40,17 @@ function uxpilotCanvasVhBridge(): Plugin {
 /**
  * Generic HTML-shell chrome injection.
  *
- * - Always wires Alpine.js from the CDN into <head> (global scripting layer).
+ * - Wires Alpine.js from the CDN into <head> ONLY when VITE_ENABLE_ALPINE=true.
+ *   The React app never uses it; loading it unconditionally cost every visitor
+ *   an extra third-party request (a floating "3.x.x" version) and triggered
+ *   browser "Tracking Prevention blocked access to storage" console warnings.
+ *   Enable it only if VITE_SITE_CHROME_* markup relies on x-data directives.
  * - VITE_SITE_CHROME_HEADER / VITE_SITE_CHROME_FOOTER carry raw markup that is
  *   injected into <body> top/bottom VERBATIM (never escaped) so an operator can
  *   drop in site chrome (top bar, live-chat widget, analytics tags) without
  *   touching React source. When unset the sections are simply absent.
  */
-const ALPINE_CDN = "https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js";
+const ALPINE_CDN = "https://cdn.jsdelivr.net/npm/alpinejs@3.14.9/dist/cdn.min.js";
 
 function siteChromeInjection(): Plugin {
   const headerHtml = process.env.VITE_SITE_CHROME_HEADER || "";
@@ -55,7 +59,7 @@ function siteChromeInjection(): Plugin {
     name: "fashioned-site-chrome-injection",
     transformIndexHtml(html) {
       const tags: HtmlTagDescriptor[] = [];
-      if (!html.includes("alpinejs")) {
+      if (process.env.VITE_ENABLE_ALPINE === "true" && !html.includes("alpinejs")) {
         tags.push({ tag: "script", attrs: { src: ALPINE_CDN, defer: "true" }, injectTo: "head" });
       }
       if (headerHtml) {

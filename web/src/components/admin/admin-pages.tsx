@@ -49,6 +49,26 @@ function slugifyCatalog(name: string): string {
     .replace(/^-+|-+$/g, "");
 }
 
+/**
+ * Parses a TZS amount typed by an admin ("25000", "25,000", "25 000",
+ * "TZS 25,000", "25000.00") into a whole number. Returns undefined for
+ * anything that isn't a non-negative whole amount, so callers can show a
+ * clear message instead of silently sending 0 or NaN.
+ */
+function parseTzsAmount(raw: string | undefined): number | undefined {
+  const cleaned = (raw ?? "").replace(/tzs|tsh/gi, "").replace(/[\s,]/g, "").replace(/\.0+$/, "");
+  if (!/^\d+$/.test(cleaned)) return undefined;
+  const n = Number(cleaned);
+  return Number.isSafeInteger(n) ? n : undefined;
+}
+
+/** Turns an API error into one readable line, including the per-field reasons the backend sends with "Validation failed.". */
+function describeApiError(e: unknown, fallback: string): string {
+  if (!(e instanceof api.ApiError)) return fallback;
+  const details = Object.entries(e.fields ?? {}).map(([field, msg]) => `${field}: ${msg}`);
+  return details.length > 0 ? `${e.message} ${details.join(" · ")}` : e.message;
+}
+
 // Any admin API call that answers 401 means the session is no longer valid
 // (access token expired and refresh couldn't recover it). Redirect the user to
 // sign back in with a clear note instead of leaving a bare failed action.
@@ -350,10 +370,26 @@ export function FunctionalManagementPage({ title, desc, withHeroOverride = false
         const cats = catalogOptionsRef.current.categories;
         const brandId = brands.find((b) => b.name === formData.brandId)?.id ?? "";
         const categoryId = cats.find((c) => c.name === formData.categoryId)?.id ?? "";
+        // Catch every input the backend would reject *before* POSTing, with a
+        // message naming the field, instead of a generic "Validation failed.".
+        const fail = (message: string) => {
+          setBanner(message);
+          setTimeout(() => setBanner(""), 5000);
+        };
+        if (!(formData.name ?? "").trim()) return fail("Enter a product name.");
+        if (!brandId) return fail("Select a brand for the product.");
+        if (!categoryId) return fail("Select a category for the product.");
+        const price = parseTzsAmount(formData.priceCents);
+        if (price == null) return fail("Enter the price as a whole number of TZS, e.g. 25000 or 25,000.");
+        const compareAt = (formData.compareAtPriceCents ?? "").trim() !== "" ? parseTzsAmount(formData.compareAtPriceCents) : null;
+        if (compareAt === undefined) return fail("Enter the compare-at price as a whole number of TZS, or leave it empty.");
+        if (compareAt != null && compareAt < price) return fail("The compare-at price must be greater than the selling price.");
+        for (const [key, label] of [["offerStartDate", "Offer start"], ["offerEndDate", "Offer end"]] as const) {
+          const v = (formData[key] ?? "").trim();
+          if (v && !/^\d{4}-\d{2}-\d{2}$/.test(v)) return fail(`${label} date must look like 2026-12-31, or be left empty.`);
+        }
         // Skip empty optional fields entirely on create so the DB defaults win.
         const norm = (v: string | undefined) => (v != null && v.trim() !== "" ? v.trim() : undefined);
-        const priceRaw = formData.priceCents ?? "";
-        const compareRaw = formData.compareAtPriceCents ?? "";
         // The backend requires at least one gender/audience on create. Validate
         // before POSTing so an empty selection never fires a 400 (same pattern
         // the admins/catalog branches use below).
@@ -364,13 +400,14 @@ export function FunctionalManagementPage({ title, desc, withHeroOverride = false
           return;
         }
         const created = await api.createAdminProduct({
-          slug: formData.slug || formData.name.toLowerCase().replace(/[^a-z0-9]+/g, "-"),
-          name: formData.name,
+          // Blank slug → the server derives a unique one from the name.
+          slug: norm(formData.slug),
+          name: formData.name.trim(),
           brandId,
           categoryId,
-          priceCents: Number(priceRaw) || 0,
+          priceCents: price,
           genderAudiences,
-          compareAtPriceCents: compareRaw.trim() !== "" ? Number(compareRaw) : undefined,
+          compareAtPriceCents: compareAt ?? undefined,
           badgeText: norm(formData.badgeText),
           offerLabel: norm(formData.offerLabel),
           offerStartDate: norm(formData.offerStartDate),
@@ -478,8 +515,8 @@ export function FunctionalManagementPage({ title, desc, withHeroOverride = false
       await load();
     } catch (e) {
       if (handleAuthError(e, setBanner)) return; // session expired -> redirect to login
-      setBanner(e instanceof api.ApiError ? e.message : "Could not save");
-      setTimeout(() => setBanner(""), 3500);
+      setBanner(describeApiError(e, "Could not save"));
+      setTimeout(() => setBanner(""), 6000);
     }
   };
 
@@ -1406,14 +1443,21 @@ function ProductEditorModal({ product, onClose, onSaved }: {
     // Empty optional fields are sent as null so they explicitly clear the row;
     // PATCH semantics distinguish omitted (undefined) from cleared (null).
     const trimOrNull = (v: string) => (v.trim() !== "" ? v.trim() : null);
+    const parsedPrice = parseTzsAmount(price);
+    const parsedCompareAt = compareAt.trim() !== "" ? parseTzsAmount(compareAt) : null;
+    if (parsedPrice == null || parsedCompareAt === undefined) {
+      setError("Enter prices as whole numbers of TZS, e.g. 25000 or 25,000.");
+      setBusy(false);
+      return;
+    }
     try {
       await api.updateAdminProduct(product.id, {
         name: name.trim() || undefined,
-        priceCents: Number(price) > 0 ? Number(price) : undefined,
+        priceCents: parsedPrice,
         active,
         genderAudiences: audiences,
         lifestyleIds: selectedLifestyleIds,
-        compareAtPriceCents: compareAt.trim() !== "" ? Number(compareAt) : null,
+        compareAtPriceCents: parsedCompareAt,
         badgeText: trimOrNull(badgeText),
         offerLabel: trimOrNull(offerLabel),
         offerStartDate: trimOrNull(offerStart),
@@ -1439,7 +1483,7 @@ function ProductEditorModal({ product, onClose, onSaved }: {
       await onSaved();
       onClose();
     } catch (e) {
-      setError(e instanceof api.ApiError ? e.message : "Could not save");
+      setError(describeApiError(e, "Could not save"));
     } finally { setBusy(false); }
   };
 

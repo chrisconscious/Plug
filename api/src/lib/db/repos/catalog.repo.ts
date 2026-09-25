@@ -725,6 +725,13 @@ export async function updateProductImageFile(
   return row ? toProductImage(row) : null;
 }
 
+/** Thrown by insertProduct when the slug (not the SKU) is already taken, so createProduct can retry with a suffixed slug. */
+export class ProductSlugConflictError extends ConflictError {
+  constructor() {
+    super("A product with this slug already exists.");
+  }
+}
+
 export async function insertProduct(
   input: {
     slug: string;
@@ -790,7 +797,7 @@ export async function insertProduct(
         if (err.constraint === "products_sku_unique_idx") {
           throw new ConflictError("A product with this SKU already exists.");
         }
-        throw new ConflictError("A product with this slug already exists.");
+        throw new ProductSlugConflictError();
       }
       if (isPgErrorCode(err, PG_ERROR_CODES.FOREIGN_KEY_VIOLATION)) {
         throw new ConflictError("The specified brand or category does not exist.");

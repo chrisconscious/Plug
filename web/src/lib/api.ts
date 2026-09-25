@@ -550,7 +550,8 @@ export function updateOrderStatus(
 }
 
 export function createAdminProduct(input: {
-  slug: string;
+  /** Omit to let the server derive a unique slug from the name. */
+  slug?: string;
   name: string;
   brandId: string;
   categoryId: string;

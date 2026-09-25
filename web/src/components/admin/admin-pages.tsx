@@ -399,9 +399,13 @@ export function FunctionalManagementPage({ title, desc, withHeroOverride = false
           setTimeout(() => setBanner(""), 4000);
           return;
         }
+        const tags = (formData.tags ?? "").split(",").map((s) => s.trim()).filter(Boolean);
         const created = await api.createAdminProduct({
-          // Blank slug → the server derives a unique one from the name.
-          slug: norm(formData.slug),
+          // Always send a clean URL-safe slug (the server also normalizes it
+          // and adds a suffix if taken). Never omit it: an API build from
+          // before slug became optional rejects a missing slug with a
+          // generic "Validation failed.".
+          slug: slugifyCatalog(formData.slug || formData.name) || "product",
           name: formData.name.trim(),
           brandId,
           categoryId,
@@ -415,7 +419,9 @@ export function FunctionalManagementPage({ title, desc, withHeroOverride = false
           sku: norm(formData.sku),
           shortDescription: norm(formData.shortDescription),
           fullDescription: norm(formData.fullDescription),
-          tags: (formData.tags ?? "").split(",").map((s) => s.trim()).filter(Boolean),
+          // Omit when empty rather than sending [] — older API builds reject
+          // an empty tags array on create.
+          tags: tags.length > 0 ? tags : undefined,
         });
         // The category's attributes were picked in the same dialog — persist the
         // selections onto the fresh product now (empty list = clear/none). A

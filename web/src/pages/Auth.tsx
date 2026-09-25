@@ -81,12 +81,12 @@ function Auth({ register = false }: { register?: boolean }) {
     try {
       if (register) {
         const res = await doRegister(phone, password, name);
-        goToRoleHome(res.user.role);
+        if ('user' in res) goToRoleHome(res.user.role);
         return;
       }
       const res = await login(phone, password);
-      if (res.mfaRequired === true) { setMfaToken(res.mfaToken); return; }
-      goToRoleHome(res.user.role);
+      if (res.mfaRequired) { setMfaToken(res.mfaToken); return; }
+      if ('user' in res) goToRoleHome(res.user.role);
     } catch (e) { setError(e instanceof api.ApiError ? e.message : 'Something went wrong'); } finally { setBusy(false); }
   }
   async function submitMfa(ev: any) {
@@ -94,7 +94,7 @@ function Auth({ register = false }: { register?: boolean }) {
     try {
       const res = await api.mfaVerifyLogin(mfaToken!, mfaCode);
       await refresh(); // re-resolve AuthContext state from the server now that the session exists
-      goToRoleHome(res.user.role);
+      if ('user' in res) goToRoleHome(res.user.role);
     } catch (e) { setError(e instanceof api.ApiError ? e.message : 'Something went wrong'); } finally { setBusy(false); }
   }
   return (

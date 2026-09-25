@@ -17,7 +17,7 @@ const mockedLogout = vi.mocked(api.logout);
 
 function fakeUser(overrides: Partial<api.PublicUser> = {}): api.PublicUser {
   return {
-    id: "user-1", email: "test@example.com", fullName: null, role: "CUSTOMER",
+    id: "user-1", email: "test@example.com", phoneNumber: null, fullName: null, role: "CUSTOMER",
     emailVerified: true, mfaEnabled: false, createdAt: "2026-01-01T00:00:00Z",
     ...overrides,
   };

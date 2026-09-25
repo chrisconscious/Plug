@@ -694,7 +694,7 @@ export function ProductListingPage({ lifestyle: lifestyleSlug }: { lifestyle?: s
             {data ? (
               <FilterSidebar
                 facets={data.facets}
-                categories={data.facets.categories.map((c) => ({ id: c.parentId ?? c.slug, slug: c.slug, name: c.name, parentId: c.parentId }))}
+                categories={data.facets.categories.map((c) => ({ id: c.parentId ?? c.slug, slug: c.slug, name: c.name, parentId: c.parentId, active: true, displayOrder: 0 }))}
                 values={values}
                 onChange={(next) => commitParams(next)}
                 attributeGroups={attributeGroups}
@@ -807,7 +807,7 @@ export function ProductListingPage({ lifestyle: lifestyleSlug }: { lifestyle?: s
             {data && (
               <FilterSidebar
                 facets={data.facets}
-                categories={data.facets.categories.map((c) => ({ id: c.parentId ?? c.slug, slug: c.slug, name: c.name, parentId: c.parentId }))}
+                categories={data.facets.categories.map((c) => ({ id: c.parentId ?? c.slug, slug: c.slug, name: c.name, parentId: c.parentId, active: true, displayOrder: 0 }))}
                 values={draft}
                 onChange={(next) => setDraft(next)}
                 attributeGroups={attributeGroups}

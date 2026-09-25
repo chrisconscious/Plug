@@ -51,9 +51,7 @@ export function RolesPermissionsPage() {
   if (loading) return <p style={{ padding: 24 }}>Loading…</p>;
   if (error && permissions.length === 0) return <p style={{ padding: 24, color: "#c00" }}>{error}</p>;
 
-  const adminRoles: (api.RbacRoleInfo & { role: "ADMIN" | "SUPER_ADMIN" })[] = roles.filter(
-    (r): r is api.RbacRoleInfo & { role: "ADMIN" | "SUPER_ADMIN" } => r.admin
-  );
+  const adminRoles = roles.filter((r) => r.admin);
 
   return (
     <div style={{ fontFamily: 'ui-sans-serif, system-ui, sans-serif' }}>
@@ -140,13 +138,13 @@ export function RolesPermissionsPage() {
                   <div style={{ fontSize: 13, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{m.email ?? "(no email)"}</div>
                   <div style={{ fontSize: 11, color: m.disabled ? '#b45309' : '#0b6b3a' }}>{m.disabled ? "Suspended" : "Active"}</div>
                 </div>
-                {m.disabled ? (
-                  <span style={{ fontSize: 12, color: '#aaa' }} title="Re-activate this admin in Admin Management before changing their role">No role change</span>
+                {m.disabled || (r.role !== "ADMIN" && r.role !== "SUPER_ADMIN") ? (
+                  <span style={{ fontSize: 12, color: '#aaa' }} title={m.disabled ? "Re-activate this admin in Admin Management before changing their role" : "Customer accounts cannot be changed from this role panel"}>No role change</span>
                 ) : (
                   <button
                     className="blackButton"
                     disabled={busyId === m.id}
-                    onClick={() => toggleRole(m, r.role)}
+                    onClick={() => toggleRole(m, r.role === "CUSTOMER" ? "ADMIN" : r.role)}
                     title={`Change ${m.email} to ${r.role === "SUPER_ADMIN" ? "ADMIN" : "SUPER_ADMIN"}`}
                     style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 12, padding: '7px 12px' }}
                   >

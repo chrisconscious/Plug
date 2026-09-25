@@ -33,10 +33,13 @@ function makeSlide(overrides: Partial<PublicHeroSlide> = {}): PublicHeroSlide {
     description: "Default test description.",
     ctaText: "Shop Now",
     ctaUrl: "/shop",
+    cta2Text: null,
+    cta2Url: null,
     badgeText: null,
     editorialText: null,
     heroType: "promotional",
     imageUrl: "/uploads/hero/test-image.jpg",
+    videoUrl: null,
     ...overrides,
   };
 }

@@ -1,5 +1,5 @@
 import { query, queryOne } from "../client";
-import type { Role } from "../rbac";
+import type { Role } from "../../rbac";
 
 export type NotificationCategory =
   | "ORDER" | "PAYMENT" | "PRODUCT" | "PROMOTION" | "WISHLIST"

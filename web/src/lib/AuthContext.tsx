@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
+import { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from 'react';
 import * as api from './api';
 import { setWishlistAuthMode } from './wishlist';
 import { refreshCartCount, clearCartCount } from './cartCount';
@@ -84,7 +84,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const login = useCallback(async (phoneNumber: string, password: string) => {
     const result = await api.login(phoneNumber, password);
-    if (!result.mfaRequired) {
+    if (result.mfaRequired === false) {
       setState({ status: 'authenticated', user: result.user });
       setWishlistAuthMode(true);
       refreshCartCount();

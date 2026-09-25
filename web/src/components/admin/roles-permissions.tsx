@@ -51,7 +51,9 @@ export function RolesPermissionsPage() {
   if (loading) return <p style={{ padding: 24 }}>Loading…</p>;
   if (error && permissions.length === 0) return <p style={{ padding: 24, color: "#c00" }}>{error}</p>;
 
-  const adminRoles = roles.filter((r) => r.admin);
+  const adminRoles: (api.RbacRoleInfo & { role: "ADMIN" | "SUPER_ADMIN" })[] = roles.filter(
+    (r): r is api.RbacRoleInfo & { role: "ADMIN" | "SUPER_ADMIN" } => r.admin
+  );
 
   return (
     <div style={{ fontFamily: 'ui-sans-serif, system-ui, sans-serif' }}>

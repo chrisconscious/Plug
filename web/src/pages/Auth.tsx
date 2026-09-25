@@ -85,7 +85,7 @@ function Auth({ register = false }: { register?: boolean }) {
         return;
       }
       const res = await login(phone, password);
-      if (res.mfaRequired) { setMfaToken(res.mfaToken); return; }
+      if (res.mfaRequired === true) { setMfaToken(res.mfaToken); return; }
       goToRoleHome(res.user.role);
     } catch (e) { setError(e instanceof api.ApiError ? e.message : 'Something went wrong'); } finally { setBusy(false); }
   }

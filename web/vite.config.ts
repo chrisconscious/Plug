@@ -1,5 +1,5 @@
 
-import type { Plugin } from "vite";
+import type { HtmlTagDescriptor, Plugin } from "vite";
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react-swc";
 import path from "path";
@@ -54,7 +54,7 @@ function siteChromeInjection(): Plugin {
   return {
     name: "fashioned-site-chrome-injection",
     transformIndexHtml(html) {
-      const tags: Array<{ tag: string; attrs?: Record<string, string>; children?: string; injectTo?: string }> = [];
+      const tags: HtmlTagDescriptor[] = [];
       if (!html.includes("alpinejs")) {
         tags.push({ tag: "script", attrs: { src: ALPINE_CDN, defer: "true" }, injectTo: "head" });
       }

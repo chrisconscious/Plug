@@ -52,12 +52,12 @@ function hotp(secret: Buffer, counter: number): string {
   const counterBuf = Buffer.alloc(8);
   counterBuf.writeBigUInt64BE(BigInt(counter));
   const hmac = createHmac("sha1", secret).update(counterBuf).digest();
-  const offset = hmac[hmac.length - 1] & 0x0f;
+  const offset = (hmac[hmac.length - 1] ?? 0) & 0x0f;
   const binCode =
-    ((hmac[offset] & 0x7f) << 24) |
-    ((hmac[offset + 1] & 0xff) << 16) |
-    ((hmac[offset + 2] & 0xff) << 8) |
-    (hmac[offset + 3] & 0xff);
+    ((hmac[offset] ?? 0) & 0x7f) << 24 |
+    ((hmac[offset + 1] ?? 0) & 0xff) << 16 |
+    ((hmac[offset + 2] ?? 0) & 0xff) << 8 |
+    ((hmac[offset + 3] ?? 0) & 0xff);
   return String(binCode % 10 ** CODE_DIGITS).padStart(CODE_DIGITS, "0");
 }
 

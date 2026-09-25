@@ -1,5 +1,5 @@
 import { useState, type ReactNode } from "react";
-import type { Category, ProductFacets, AttributeGroup } from "../../lib/api";
+import type { ProductFacets, AttributeGroup } from "../../lib/api";
 import { formatTZS } from "../../lib/currency";
 import { colorHex, isNumericSizeSet, sortSizeValues, SORT_OPTIONS } from "../../lib/shop";
 import type { ShopFilters } from "../../lib/shop";
@@ -28,7 +28,7 @@ export type HideableSection = "brand" | "gender" | "collection" | "category";
 
 interface FilterSidebarProps {
   facets: ProductFacets;
-  categories: Category[];
+  categories: { id?: string | null; slug: string; name: string; parentId?: string | null }[];
   values: ShopFilters;
   onChange: (next: ShopFilters) => void;
   /** Category-specific attribute groups (e.g. Fit/Rise for Jeans) — fetched once by the parent page and passed down, so the sidebar and the active-filter chips both resolve option ids to names from the same data instead of each fetching it independently. */

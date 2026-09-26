@@ -8,6 +8,7 @@ import { formatTZS } from '../lib/currency';
 import { PLACEHOLDER_IMG, resolveImage } from '../lib/imagePlaceholder';
 import { getProductUrl } from '../lib/links';
 import { whatsappHref as buildWhatsappHref } from '../lib/contactLinks';
+import { loginUrl, currentLocation } from '../lib/returnTo';
 
 const ORDER_STATUS_LABEL: Record<string, string> = {
   PENDING: 'Pending', PAID: 'Confirmed', SHIPPED: 'Shipped', DELIVERED: 'Delivered', CANCELLED: 'Cancelled',
@@ -82,7 +83,7 @@ function Profile() {
       <div>
         <StoreHeader />
         <main className="accountPage">
-          <p>Please <Link to="/login">sign in</Link> to view your account.</p>
+          <p>Please <Link to={loginUrl(currentLocation())}>sign in</Link> to view your account.</p>
         </main>
       </div>
     );

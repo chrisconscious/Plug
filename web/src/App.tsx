@@ -22,6 +22,7 @@ import AdminOrderDetail from './pages/AdminOrderDetail';
 import Wishlist from './pages/Wishlist';
 import Notifications from './pages/Notifications';
 import Brands from './pages/Brands';
+import Lifestyles from './pages/Lifestyles';
 import Backoffice from './pages/Backoffice';
 import { ProductListingPage } from './components/shop/ProductListingPage';
 import { LifestylePage } from './components/lifestyle/LifestylePage';
@@ -105,6 +106,7 @@ function App() {
         <Route path="/shop" element={<ProductListingPage />} />
         <Route path="/brands" element={<Brands />} />
         <Route path="/brands/:slug" element={<ProductListingPage />} />
+        <Route path="/lifestyles" element={<Lifestyles />} />
         <Route path="/lifestyle/:lifestyleSlug" element={<LifestylePage />} />
         <Route path="/product/:id" element={<ProductDetail />} />
         <Route path="/cart" element={<Cart />} />

@@ -4,7 +4,7 @@ import { getLifestyleBySlugPublic } from "@/lib/services/lifestyles.service";
 
 // `[slug]` is the readable, SEO-friendly lifestyle URL (/lifestyle/:slug).
 // Inactive or unknown slugs 404 (deactivated lifestyles vanish from links).
-const PAGE_CACHE = "public, max-age=60";
+const PAGE_CACHE = "no-cache"; // admin edits/deactivation must show immediately
 
 export const GET = withRoute({ auth: "none", rateLimit: RateLimitRules.general }, async ({ params }) => {
   const lifestyle = await getLifestyleBySlugPublic(params.slug!);

@@ -4,6 +4,7 @@ import { Home, Heart, ShoppingBag, User } from 'lucide-react';
 import { useAuth } from '../lib/AuthContext';
 import { getWishlist, onWishlistChange } from '../lib/wishlist';
 import { getCartCount, onCartCountChange, refreshCartCount } from '../lib/cartCount';
+import { loginUrl } from '../lib/returnTo';
 
 /**
  * Fixed bottom navigation for smartphones — Home / Wishlist / Cart /
@@ -55,7 +56,8 @@ export function MobileBottomNav() {
         return (
           <Link
             key={item.label}
-            to={item.path}
+            // Signing in from any page returns the customer to that page.
+            to={item.path === '/login' ? loginUrl(location.pathname + location.search) : item.path}
             className={`mobileBottomNavItem${active ? ' active' : ''}`}
             aria-label={item.label}
             aria-current={active ? 'page' : undefined}

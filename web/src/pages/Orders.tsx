@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import * as api from '../lib/api';
 import { formatTZS } from '../lib/currency';
 import { StoreHeader } from '../components/shop/StoreHeader';
+import { loginUrl, currentLocation } from '../lib/returnTo';
 
 function OrdersPage() {
   const [orders, setOrders] = useState<api.Order[] | null>(null);
@@ -46,7 +47,7 @@ function OrdersPage() {
               <button type="button" className="blackButton" onClick={loadOrders}>RETRY</button>
             </div>
           ) : status === 'unauthenticated' ? (
-            <p style={{ padding: '20px 0' }}>Please <Link to="/login">sign in</Link> to view your orders.</p>
+            <p style={{ padding: '20px 0' }}>Please <Link to={loginUrl(currentLocation())}>sign in</Link> to view your orders.</p>
           ) : orders === null ? (
             <p style={{ padding: '20px 0' }}>Loading your orders...</p>
           ) : orders.length === 0 ? (

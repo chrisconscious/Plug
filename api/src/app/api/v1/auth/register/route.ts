@@ -3,6 +3,7 @@ import { validateBody, isEmail, isPhoneNumber, isStrongPassword, isString, maxLe
 import { ValidationError } from "@/lib/errors";
 import { RateLimitRules } from "@/lib/security/rateLimiter";
 import { registerCustomer, registerCustomerByPhone } from "@/lib/services/auth.service";
+import { touchLastLogin } from "@/lib/db/repos/users.repo";
 import { createAccessToken, createRefreshToken, setAuthCookies, type SessionUser } from "@/lib/security/tokens";
 import { config } from "@/lib/config";
 
@@ -42,5 +43,6 @@ export const POST = withRoute({ auth: "none", rateLimit: RateLimitRules.register
   const { token: refreshToken } = await createRefreshToken(sessionUser);
   const res = json({ user, accessTokenTtlSeconds: config.auth.accessTokenTtlSeconds }, { status: 201 });
   setAuthCookies(res, accessToken, refreshToken);
+  await touchLastLogin(user.id).catch(() => undefined); // registration signs the customer in
   return res;
 });

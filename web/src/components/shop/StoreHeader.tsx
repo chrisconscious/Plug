@@ -1,11 +1,12 @@
 import { Search, Users, Heart, ShoppingBag, X, Menu, LogOut, ChevronDown } from "lucide-react";
 import { useState, useEffect, useMemo } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../../lib/AuthContext";
 import { usePlatformSettings } from "../../lib/PlatformSettingsContext";
 import { BrandLogo } from "../BrandLogo";
 import { NotificationBell } from "../NotificationBell";
 import * as api from "../../lib/api";
+import { loginUrl } from "../../lib/returnTo";
 import {
   getCategoryUrl,
   getNewInUrl,
@@ -34,6 +35,7 @@ const MENU_LABEL: Record<MenuKind, string> = { women: "WOMEN", men: "MEN" };
  */
 export function StoreHeader() {
   const nav = useNavigate();
+  const location = useLocation();
   const { status, logout } = useAuth();
   const { platformName } = usePlatformSettings();
   const [searchOpen, setSearchOpen] = useState(false);
@@ -212,7 +214,7 @@ export function StoreHeader() {
           <button type="button" className="iconBtn" aria-label="Search" onClick={() => setSearchOpen(true)}>
             <Search size={19} />
           </button>
-          <Link to={status === 'authenticated' ? '/profile' : '/login'} aria-label={status === 'authenticated' ? 'Account' : 'Sign in'} className="desktopOnlyIcon"><Users size={19} /></Link>
+          <Link to={status === 'authenticated' ? '/profile' : loginUrl(location.pathname + location.search)} aria-label={status === 'authenticated' ? 'Account' : 'Sign in'} className="desktopOnlyIcon"><Users size={19} /></Link>
           {status === 'authenticated' && (
             <button type="button" className="iconBtn desktopOnlyIcon" aria-label="Sign out" onClick={() => { logout(); nav('/'); }}>
               <LogOut size={19} />

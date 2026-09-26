@@ -156,6 +156,7 @@ async function completePasswordLogin(user: User) {
   const sessionUser: SessionUser = { id: user.id, email: user.email, role: user.role };
   const accessToken = createAccessToken(sessionUser);
   const { token: refreshToken } = await createRefreshToken(sessionUser);
+  await usersRepo.touchLastLogin(user.id).catch(() => undefined); // best-effort bookkeeping
 
   await recordAuditEvent({
     actorId: user.id,
@@ -185,6 +186,7 @@ export async function completeMfaLogin(mfaToken: string, code: string) {
   const sessionUser: SessionUser = { id: user.id, email: user.email, role: user.role };
   const accessToken = createAccessToken(sessionUser);
   const { token: refreshToken } = await createRefreshToken(sessionUser);
+  await usersRepo.touchLastLogin(user.id).catch(() => undefined); // best-effort bookkeeping
 
   await recordAuditEvent({
     actorId: user.id,

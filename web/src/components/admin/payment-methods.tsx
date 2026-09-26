@@ -5,6 +5,7 @@ import { Plus, X, Check, Banknote, Smartphone, GripVertical, ShieldAlert, Power,
 import * as api from "../../lib/api";
 import { formatTZS } from "../../lib/currency";
 import { usePlatformSettings } from "../../lib/PlatformSettingsContext";
+import { redirectToLoginExpired } from "../../lib/returnTo";
 
 type EditorState =
   | { mode: "create" }
@@ -14,7 +15,7 @@ type EditorState =
 function handleAuthError(e: unknown): boolean {
   if (e instanceof api.ApiError && e.status === 401) {
     api.logout().catch(() => {});
-    window.location.assign("/login?reason=expired");
+    redirectToLoginExpired();
     return true;
   }
   return false;

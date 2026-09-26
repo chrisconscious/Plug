@@ -9,6 +9,7 @@ import { ProductCard } from '../components/shop/ProductCard';
 import { getProductUrl } from '../lib/links';
 import { useAsyncAction } from '../hooks/useAsyncAction';
 import { setCartCountFromItems } from '../lib/cartCount';
+import { loginUrl } from '../lib/returnTo';
 
 /**
  * One cart row, with its OWN independent pending/error state via
@@ -103,7 +104,7 @@ function Cart() {
             <p style={{ color: '#c00', marginBottom: 12 }}>Couldn't load your cart right now.</p>
             <button type="button" className="blackButton" onClick={loadCart}>RETRY</button>
           </div>
-        ) : status === 'unauthenticated' ? (<p style={{ padding: '20px 0' }}>Please <Link to="/login">sign in</Link> to view and manage your cart.</p>)
+        ) : status === 'unauthenticated' ? (<p style={{ padding: '20px 0' }}>Please <Link to={loginUrl('/cart')}>sign in</Link> to view and manage your cart.</p>)
           : items && items.length > 0 ? (items.map((it, i) => (
               <CartItemRow key={it.id ?? i} item={it} onUpdated={(updated) => { setItems(updated); setCartCountFromItems(updated); }} />
             )))

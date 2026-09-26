@@ -16,7 +16,8 @@
     "db:migrate": "tsx db/scripts/migrate.ts",
     "db:seed": "psql \"$DATABASE_URL\" -f db/seed.sql",
     "db:create-super-admin": "tsx db/scripts/create-super-admin.ts",
-    "media:cleanup-orphans": "tsx db/scripts/cleanup-orphaned-media.ts"
+    "media:cleanup-orphans": "tsx db/scripts/cleanup-orphaned-media.ts",
+    "media:analyze-logo-tones": "tsx db/scripts/analyze-logo-tones.ts"
   },
   "dependencies": {
     "next": "^14.2.5",

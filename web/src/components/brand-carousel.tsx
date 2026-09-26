@@ -12,9 +12,9 @@ import {
   type BrandSectionSpeed,
 } from "../lib/api";
 import { useAutoScrollCarousel } from "../hooks/useAutoScrollCarousel";
-import { useVisibleCount } from "../hooks/useVisibleCount";
-import { getBrandUrl } from "../lib/links";
+import { getBrandUrl, getBrandsUrl } from "../lib/links";
 import { ExploreAllLink, ExploreMoreRow } from "./explore-more";
+import { BrandMark } from "./shop/BrandMark";
 
 /**
  * "SHOP BY BRAND" — a single horizontal, editorial carousel row of large
@@ -97,8 +97,10 @@ export function ShopByBrands() {
 
   // "EXPLORE ALL" only when the rail shows a window of a larger catalogue:
   // more ACTIVE brands exist than the viewport fits in one screen.
-  const visibleCount = useVisibleCount(trackRef, "[data-brand-card]");
-  const moreBrands = loaded && brandItems.length > 0 && brandItems.length > visibleCount;
+  // EXPLORE ALL always leads to the full /brands page (search, A–Z, every
+  // active brand) — shown whenever there is at least one brand, not only when
+  // the row overflows.
+  const moreBrands = loaded && brandItems.length > 0;
 
   const reducedScrollBehavior = (): "smooth" | "auto" =>
     typeof window.matchMedia === "function" && window.matchMedia("(prefers-reduced-motion: reduce)").matches
@@ -157,7 +159,7 @@ export function ShopByBrands() {
             <h2 className="text-4xl font-black uppercase leading-none tracking-[-.02em] md:text-5xl">Shop by brand</h2>
           </div>
           <div className="hidden shrink-0 items-center gap-3 md:flex">
-            {moreBrands ? <ExploreAllLink to="/brands" /> : null}
+            {moreBrands ? <ExploreAllLink to={getBrandsUrl()} /> : null}
             <div className="ml-4 flex items-center gap-2">
               <button
                 type="button"
@@ -220,18 +222,7 @@ export function ShopByBrands() {
                         <div className="absolute inset-0 border border-black/[0.05]" />
                       )}
                       <span className={`brandCardMark ${photo ? "brandCardMark--photo" : "brandCardMark--plain"}`}>
-                        {b.logo?.url ? (
-                          <img
-                            src={assetUrl(b.logo.url)}
-                            alt=""
-                            aria-hidden="true"
-                            draggable={false}
-                            loading="lazy"
-                            decoding="async"
-                          />
-                        ) : (
-                          <span className="brandWord">{b.name}</span>
-                        )}
+                        <BrandMark brand={b} surface={photo ? "photo" : "light"} alt="" wordmarkClassName="brandWord" />
                       </span>
                     </Link>
                   </li>
@@ -239,7 +230,7 @@ export function ShopByBrands() {
               })}
         </ul>
 
-        {moreBrands ? <ExploreMoreRow to="/brands" /> : null}
+        {moreBrands ? <ExploreMoreRow to={getBrandsUrl()} /> : null}
       </div>
     </section>
   );

@@ -3,11 +3,12 @@
 import { useEffect, useState } from "react";
 import { ShieldCheck, ShieldAlert, Copy, Check } from "lucide-react";
 import * as api from "../../lib/api";
+import { redirectToLoginExpired } from "../../lib/returnTo";
 
 function handleAuthError(e: unknown): boolean {
   if (e instanceof api.ApiError && e.status === 401) {
     api.logout().catch(() => {});
-    window.location.assign("/login?reason=expired");
+    redirectToLoginExpired();
     return true;
   }
   return false;

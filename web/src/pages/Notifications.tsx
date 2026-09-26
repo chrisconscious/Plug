@@ -4,6 +4,7 @@ import { Package, CreditCard, Tag, Megaphone, Heart, Boxes, Users, ShieldAlert, 
 import * as api from '../lib/api';
 import { StoreHeader } from '../components/shop/StoreHeader';
 import { useAuth } from '../lib/AuthContext';
+import { loginUrl, currentLocation } from '../lib/returnTo';
 
 const CATEGORY_ICON: Record<api.NotificationCategory, React.ReactNode> = {
   ORDER: <Package size={16} />,
@@ -103,7 +104,7 @@ function Notifications() {
       <div>
         <StoreHeader />
         <main className="notifPage">
-          <p>Please <Link to="/login">sign in</Link> to view your notifications.</p>
+          <p>Please <Link to={loginUrl(currentLocation())}>sign in</Link> to view your notifications.</p>
         </main>
       </div>
     );

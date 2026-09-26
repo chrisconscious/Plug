@@ -107,6 +107,8 @@ export type BrandLogo = {
   height: number;
   createdAt: string;
   updatedAt: string;
+  /** Presentation hint (migration 0054): "light" logos get a dark treatment on light surfaces. */
+  tone?: "light" | "dark" | null;
 };
 
 /** Same shape as BrandLogo (deliberately) — see migration 0045's header for why this is a separate table/type rather than reusing BrandLogo. */

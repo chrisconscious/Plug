@@ -225,6 +225,8 @@ export interface BrandLogo {
   height: number;
   createdAt: string;
   updatedAt: string;
+  /** "light" = white/near-white mark on transparency (shown dark on light surfaces); null = not analyzed. */
+  tone?: "light" | "dark" | null;
 }
 
 /** Same shape as BrandLogo (deliberately) — see the backend's migration 0045 for why this is a separate type: a large lifestyle photo, not the small logo mark. */
@@ -393,6 +395,9 @@ export interface CategoryFacet extends FacetValue {
   slug: string;
   name: string;
   parentId: string | null;
+  /** The category's real uploaded image / icon key (so facet-driven category rails can render them). */
+  imageUrl?: string | null;
+  icon?: string | null;
 }
 
 export interface BrandFacet extends FacetValue {
@@ -672,7 +677,7 @@ export function createAdminBrand(input: { name: string; slug?: string }): Promis
 
 export function updateAdminBrand(
   id: string,
-  patch: Partial<{ name: string; slug: string; active: boolean }>
+  patch: Partial<{ name: string; slug: string; active: boolean; logoTone: "auto" | "light" | "dark" }>
 ): Promise<{ brand: Brand }> {
   return request<{ brand: Brand }>(`/api/v1/admin/brands/${encodeURIComponent(id)}`, {
     method: "PATCH",

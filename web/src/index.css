@@ -232,7 +232,9 @@ html{scroll-behavior:smooth}.font-display{font-family:Manrope,sans-serif}button,
 .detailBrand{justify-content:flex-start;margin-bottom:8px;color:#111}
 .detailBrand span{font-size:11px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:#38805b;border-bottom:1px solid #38805b;padding-bottom:1px}
 .detailLogo{width:22px;height:22px}
-.brandLogoImg{width:48px;height:48px;object-fit:contain}
+.brandMark{min-height:56px;display:flex;align-items:center;justify-content:center}
+.brandLogoImg{width:auto;height:auto;max-width:120px;max-height:56px;object-fit:contain}
+.linkButton{background:none;border:0;padding:0;color:inherit;text-decoration:underline;cursor:pointer;font:inherit}
 
 /* ---- Canonical storefront header (search + mobile menu) ---- */
 .storeHeader .menuToggle{display:none;background:none;border:0;color:#171717;padding:4px;cursor:pointer}
@@ -715,9 +717,33 @@ html{scroll-behavior:smooth}.font-display{font-family:Manrope,sans-serif}button,
   max-height:42%; max-width:100%; width:auto; height:auto;
   object-fit:contain; -webkit-user-drag:none;
 }
-.brandCardMark--photo img{
-  filter:brightness(0) invert(1) drop-shadow(0 2px 14px rgba(0,0,0,.3));
-}
+/* Shared brand-logo treatments (components/shop/BrandMark.tsx). The stored
+   logo file is never altered — these are presentation-only filters:
+   - onPhoto: every logo reads white over a campaign photo;
+   - lightOnLight: a logo the API classified as light (white on transparency)
+     becomes a dark silhouette so it stays visible on light surfaces.
+   Dark / unanalyzed logos are rendered exactly as uploaded. */
+.brandMarkImg{ object-fit:contain; -webkit-user-drag:none; }
+.brandMarkImg--onPhoto{ filter:brightness(0) invert(1) drop-shadow(0 2px 14px rgba(0,0,0,.3)); }
+.brandMarkImg--lightOnLight{ filter:brightness(0); }
+.adminBrandThumbImg{ width:100%; height:100%; }
+/* /lifestyles — "Shop by Lifestyle → EXPLORE ALL" grid (same card grammar as the homepage rail). */
+.lifestylesPage{max-width:1440px;margin:0 auto;padding:28px 4% 70px}
+.lifestylesIntro{font-size:12px;color:#666;margin:10px 0 26px;max-width:520px}
+.lifestyleGrid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px}
+.lifestyleGridCard{position:relative;display:block;aspect-ratio:3/4;overflow:hidden;background:#f4f2ee;color:#fff;text-decoration:none}
+.lifestyleGridCard img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;transition:transform 900ms cubic-bezier(.25,1,.35,1)}
+.lifestyleGridCard:hover img{transform:scale(1.05)}
+.lifestyleGridCard--skeleton{animation:pulse 1.6s ease-in-out infinite}
+.lifestyleGridScrim{position:absolute;inset:0;background:linear-gradient(to top,rgba(0,0,0,.62),rgba(0,0,0,.05) 55%)}
+.lifestyleGridBody{position:absolute;left:14px;right:14px;bottom:14px;display:flex;flex-direction:column;gap:4px}
+.lifestyleGridName{font:800 18px Manrope;letter-spacing:-.01em;text-transform:uppercase;line-height:1.1}
+.lifestyleGridDesc{font-size:11px;opacity:.85;line-height:1.4;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.lifestyleGridCount{font-size:10px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;opacity:.8}
+@media(max-width:900px){.lifestyleGrid{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.lifestyleGridName{font-size:15px}}
+.brandPageLogo{ height:44px; margin-bottom:10px; display:flex; align-items:center; }
+.brandPageLogo .brandMarkImg{ max-height:44px; max-width:180px; width:auto; height:auto; }
+.brandWordmark{ font-family:Manrope,sans-serif; font-weight:800; text-transform:uppercase; letter-spacing:.08em; line-height:1.15; overflow-wrap:anywhere; }
 .brandCardMark .brandWord{
   font-family:Manrope,sans-serif;
   font-weight:800; text-transform:uppercase;

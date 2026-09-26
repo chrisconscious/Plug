@@ -186,3 +186,8 @@ export async function setMfaEnabled(id: string, enabled: boolean): Promise<void>
 export async function clearMfa(id: string): Promise<void> {
   await query("UPDATE users SET mfa_enabled = false, totp_secret = NULL WHERE id = $1", [id]);
 }
+
+/** Stamps a successful sign-in (migration 0054) — same user row every time, never a new record. */
+export async function touchLastLogin(id: string): Promise<void> {
+  await query("UPDATE users SET last_login_at = now() WHERE id = $1", [id]);
+}

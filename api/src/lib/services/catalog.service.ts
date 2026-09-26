@@ -15,6 +15,7 @@ import { randomUUID } from "crypto";
 import * as mediaService from "./media.service";
 import * as mediaRepo from "../db/repos/media.repo";
 import { logger } from "../logger";
+import { analyzeLogoTone } from "../security/image-tone";
 
 /**
  * "Live sale" test shared by the public serializers and the storefront sale
@@ -1219,12 +1220,19 @@ export async function createCategory(
 export async function updateBrand(
   actor: { id: string; role: Role },
   brandId: string,
-  patch: Partial<{ name: string; slug: string; active: boolean }>
+  patch: Partial<{ name: string; slug: string; active: boolean; logoTone: "light" | "dark" | "auto" }>
 ): Promise<Brand> {
   const before = await catalogRepo.findBrandById(brandId);
   if (!before) throw new NotFoundError("Brand not found.");
 
-  const normalized: typeof patch = { ...patch };
+  const { logoTone, ...fields } = patch;
+  if (logoTone !== undefined) {
+    if (!before.logo) throw new ValidationError("This brand has no logo yet.", { logoTone: "Upload a logo first." });
+    // "auto" clears the override back to "render as uploaded".
+    await catalogRepo.setLogoTone(brandId, logoTone === "auto" ? null : logoTone);
+  }
+
+  const normalized: Partial<{ name: string; slug: string; active: boolean }> = { ...fields };
   if (normalized.name !== undefined) normalized.name = normalized.name.trim() || before.name;
   if (normalized.slug !== undefined) {
     normalized.slug = slugify(normalized.slug) || before.slug;
@@ -1271,6 +1279,16 @@ async function storeLogo(actor: { id: string; role: Role }, brandId: string, fil
     entityId: brandId,
   });
 
+  // Presentation hint only: a white-on-transparent logo is flagged "light"
+  // so the storefront can show it with a dark treatment on light surfaces.
+  // The uploaded file itself is stored untouched.
+  let tone: "light" | "dark" | null = null;
+  try {
+    tone = analyzeLogoTone(file.data, media.contentType);
+  } catch {
+    tone = null; // analysis is best-effort — never block an upload on it
+  }
+
   try {
     await catalogRepo.upsertLogo({
       brandId,
@@ -1280,6 +1298,7 @@ async function storeLogo(actor: { id: string; role: Role }, brandId: string, fil
       sizeBytes: media.sizeBytes,
       width: media.width!,
       height: media.height!,
+      tone,
     });
   } catch (err) {
     // The media registry row (and its storage object) are now unreferenced
@@ -1295,7 +1314,7 @@ async function storeLogo(actor: { id: string; role: Role }, brandId: string, fil
     action: "brand.logo.uploaded",
     targetType: "brand",
     targetId: brandId,
-    metadata: { url: media.url, width: media.width, height: media.height, sizeBytes: media.sizeBytes },
+    metadata: { url: media.url, width: media.width, height: media.height, sizeBytes: media.sizeBytes, tone },
   });
 
   return catalogRepo.findLogoByBrandId(brandId);

@@ -268,7 +268,8 @@ export type FacetValue = { value: string; count: number };
 
 export type ProductFacets = {
   brands: (FacetValue & { name: string })[]; // brand slug -> count (context minus brand)
-  categories: (FacetValue & { name: string; slug: string; parentId: string | null })[];
+  /** imageUrl/icon travel with the facet so every "Shop by Category" rail (brand, lifestyle, search) shows the category's REAL uploaded image — previously only the icon key was looked up separately and the image was dropped. */
+  categories: (FacetValue & { name: string; slug: string; parentId: string | null; imageUrl: string | null; icon: string | null })[];
   sizes: FacetValue[];
   colors: FacetValue[];
   genders: FacetValue[];
@@ -296,8 +297,9 @@ export async function getProductFacets(filters: ProductFilters): Promise<Product
   );
 
   const catWhere = buildProductWhere(filters, ["categoryIds", "exactCategoryIds"]);
-  const catRows = await query<{ slug: string; name: string; parent_id: string | null; count: string }>(
-    `SELECT c.slug AS slug, min(c.name) AS name, min(c.parent_id::text) AS parent_id, count(*)::text AS count
+  const catRows = await query<{ slug: string; name: string; parent_id: string | null; image_url: string | null; icon: string | null; count: string }>(
+    `SELECT c.slug AS slug, min(c.name) AS name, min(c.parent_id::text) AS parent_id,
+            min(c.image_url) AS image_url, min(c.icon) AS icon, count(*)::text AS count
      FROM products p
      JOIN categories c ON c.id = p.category_id
      WHERE ${catWhere.clause}
@@ -380,6 +382,8 @@ export async function getProductFacets(filters: ProductFilters): Promise<Product
       name: r.name,
       slug: r.slug,
       parentId: r.parent_id,
+      imageUrl: r.image_url,
+      icon: r.icon,
       count: Number(r.count),
     })),
     sizes: sizeRows.map((r) => ({ value: r.value, count: Number(r.count) })),

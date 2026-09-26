@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { render, screen, waitFor, cleanup } from "@testing-library/react";
+import { render, screen, waitFor, cleanup, fireEvent } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { ShopByBrands } from "./brand-carousel";
 import * as api from "../lib/api";
@@ -28,7 +28,6 @@ vi.mock("framer-motion", async () => {
 
 // Force the rail to "fit exactly 2 cards": gating is then observable in jsdom
 // (which has no ResizeObserver, so the real hook stays at Infinity).
-vi.mock("../hooks/useVisibleCount", () => ({ useVisibleCount: () => 2 }));
 
 const mockedListBrands = vi.mocked(api.listBrands);
 const mockedSettings = vi.mocked(api.getBrandSectionSettings);
@@ -147,6 +146,34 @@ describe("ShopByBrands — content is entirely API-driven", () => {
     expect(card.querySelector(".brandCardMark--photo")).toBeInTheDocument();
   });
 
+  it("renders a LIGHT (white) logo as a dark silhouette on the plain tile, and leaves dark logos untouched", async () => {
+    mockedListBrands.mockResolvedValue({
+      brands: [
+        makeBrand({ id: "w", name: "White Mark", logo: { ...LOGO, tone: "light" } }),
+        makeBrand({ id: "d", name: "Dark Mark", logo: { ...LOGO, tone: "dark" } }),
+        makeBrand({ id: "p", name: "Photo White", logo: { ...LOGO, tone: "light" }, campaignImage: CAMPAIGN }),
+      ],
+    });
+    renderBrands();
+    const white = (await screen.findByRole("link", { name: "Shop White Mark" })).querySelector(".brandCardMark img")!;
+    const dark = screen.getByRole("link", { name: "Shop Dark Mark" }).querySelector(".brandCardMark img")!;
+    const onPhoto = screen.getByRole("link", { name: "Shop Photo White" }).querySelector(".brandCardMark img")!;
+    expect(white.className).toContain("brandMarkImg--lightOnLight");
+    expect(dark.className).not.toContain("brandMarkImg--lightOnLight");
+    expect(onPhoto.className).toContain("brandMarkImg--onPhoto");
+  });
+
+  it("falls back to the brand name when the logo image fails to load (broken URL is not hidden silently)", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    mockedListBrands.mockResolvedValue({ brands: [makeBrand({ id: "x", name: "Broken House", logo: LOGO })] });
+    renderBrands();
+    const card = await screen.findByRole("link", { name: "Shop Broken House" });
+    fireEvent.error(card.querySelector(".brandCardMark img")!);
+    await waitFor(() => expect(card.querySelector(".brandWord")).toHaveTextContent("Broken House"));
+    expect(warn).toHaveBeenCalledWith(expect.stringContaining("Broken House"));
+    warn.mockRestore();
+  });
+
   it("uses the API-provided logo URL as the mark and falls back to a NAME wordmark when there is no logo", async () => {
     mockedListBrands.mockResolvedValue({
       brands: [
@@ -185,15 +212,15 @@ describe("ShopByBrands — loading, empty, and error states", () => {
   });
 });
 
-describe("ShopByBrands — EXPLORE ALL gating", () => {
-  it("hides EXPLORE ALL when every active brand already fits on screen", async () => {
+describe("ShopByBrands — EXPLORE ALL", () => {
+  it("shows EXPLORE ALL to the All Brands page even when a single brand exists", async () => {
     mockedListBrands.mockResolvedValue({ brands: [makeBrand({ slug: "solo", name: "Solo House" })] });
     renderBrands();
     await screen.findByRole("link", { name: "Shop Solo House" });
-    expect(screen.queryByRole("link", { name: "EXPLORE ALL" })).not.toBeInTheDocument();
+    for (const link of screen.getAllByRole("link", { name: "EXPLORE ALL" })) expect(link.getAttribute("href")).toBe("/brands");
   });
 
-  it("shows EXPLORE ALL (desktop + mobile placement) pointing at /brands when more brands exist than fit", async () => {
+  it("shows EXPLORE ALL (desktop + mobile placement) pointing at /brands with many brands", async () => {
     mockedListBrands.mockResolvedValue({
       brands: Array.from({ length: 5 }).map((_, i) =>
         makeBrand({ slug: `brand-${i}`, name: `Brand ${i}`, displayOrder: i })

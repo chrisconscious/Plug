@@ -22,6 +22,7 @@ import {
   DeleteObjectCommand,
   HeadObjectCommand,
   ListObjectsV2Command,
+  GetObjectCommand,
 } from "@aws-sdk/client-s3";
 import type { StorageProvider, StoredObject } from "./provider";
 
@@ -88,6 +89,18 @@ export class S3StorageProvider implements StorageProvider {
 
   async delete(key: string): Promise<void> {
     await this.client.send(new DeleteObjectCommand({ Bucket: this.bucket, Key: this.fullKey(key) }));
+  }
+
+  async get(key: string): Promise<Buffer | null> {
+    try {
+      const out = await this.client.send(new GetObjectCommand({ Bucket: this.bucket, Key: this.fullKey(key) }));
+      const bytes = await out.Body?.transformToByteArray();
+      return bytes ? Buffer.from(bytes) : null;
+    } catch (err: unknown) {
+      const statusCode = (err as { $metadata?: { httpStatusCode?: number } })?.$metadata?.httpStatusCode;
+      if (statusCode === 404 || (err as { name?: string })?.name === "NoSuchKey") return null;
+      throw err;
+    }
   }
 
   async exists(key: string): Promise<boolean> {

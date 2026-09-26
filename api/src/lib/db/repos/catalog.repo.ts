@@ -17,6 +17,7 @@ type BrandRow = {
   logo_height: number | null;
   logo_created_at: string | null;
   logo_updated_at: string | null;
+  logo_tone: "light" | "dark" | null;
   campaign_image_id: string | null;
   campaign_image_storage_key: string | null;
   campaign_image_url: string | null;
@@ -86,6 +87,8 @@ type LogoRow = {
   height: number;
   created_at: string;
   updated_at: string;
+  /** brand_logos only (migration 0054); campaign-image rows reuse this type without it. */
+  tone?: "light" | "dark" | null;
 };
 
 const toLogo = (r: LogoRow): BrandLogo => ({
@@ -99,6 +102,7 @@ const toLogo = (r: LogoRow): BrandLogo => ({
   height: r.height,
   createdAt: r.created_at,
   updatedAt: r.updated_at,
+  tone: r.tone ?? null,
 });
 
 const toBrand = (r: BrandRow): Brand => ({
@@ -119,6 +123,7 @@ const toBrand = (r: BrandRow): Brand => ({
         height: r.logo_height!,
         createdAt: r.logo_created_at!,
         updatedAt: r.logo_updated_at!,
+        tone: r.logo_tone ?? null,
       }
     : null,
   campaignImage: r.campaign_image_id
@@ -152,6 +157,7 @@ const BRAND_SELECT = `
   l.height AS logo_height,
   l.created_at AS logo_created_at,
   l.updated_at AS logo_updated_at,
+  l.tone AS logo_tone,
   ci.id   AS campaign_image_id,
   ci.storage_key AS campaign_image_storage_key,
   ci.url  AS campaign_image_url,
@@ -348,7 +354,7 @@ export async function updateBrandFields(
 
 export async function findLogoByBrandId(brandId: string): Promise<BrandLogo | null> {
   const row = await queryOne<LogoRow>(
-    `SELECT id, brand_id, storage_key, url, content_type, size_bytes, width, height, created_at, updated_at
+    `SELECT id, brand_id, storage_key, url, content_type, size_bytes, width, height, created_at, updated_at, tone
      FROM brand_logos WHERE brand_id = $1`,
     [brandId]
   );
@@ -363,18 +369,21 @@ export async function upsertLogo(input: {
   sizeBytes: number;
   width: number;
   height: number;
+  /** Detected on upload (image-tone.ts); a new file always replaces the previous tone. */
+  tone?: "light" | "dark" | null;
 }): Promise<BrandLogo> {
   const row = await queryOne<LogoRow>(
-    `INSERT INTO brand_logos (brand_id, storage_key, url, content_type, size_bytes, width, height)
-     VALUES ($1, $2, $3, $4, $5, $6, $7)
+    `INSERT INTO brand_logos (brand_id, storage_key, url, content_type, size_bytes, width, height, tone)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
      ON CONFLICT (brand_id) DO UPDATE SET
        storage_key = EXCLUDED.storage_key,
        url = EXCLUDED.url,
        content_type = EXCLUDED.content_type,
        size_bytes = EXCLUDED.size_bytes,
        width = EXCLUDED.width,
-       height = EXCLUDED.height
-     RETURNING id, brand_id, storage_key, url, content_type, size_bytes, width, height, created_at, updated_at`,
+       height = EXCLUDED.height,
+       tone = EXCLUDED.tone
+     RETURNING id, brand_id, storage_key, url, content_type, size_bytes, width, height, created_at, updated_at, tone`,
     [
       input.brandId,
       input.storageKey,
@@ -383,6 +392,7 @@ export async function upsertLogo(input: {
       input.sizeBytes,
       input.width,
       input.height,
+      input.tone ?? null,
     ]
   );
   return toLogo(row!);
@@ -391,7 +401,7 @@ export async function upsertLogo(input: {
 export async function deleteLogoByBrandId(brandId: string): Promise<BrandLogo | null> {
   const row = await queryOne<LogoRow>(
     `DELETE FROM brand_logos WHERE brand_id = $1
-     RETURNING id, brand_id, storage_key, url, content_type, size_bytes, width, height, created_at, updated_at`,
+     RETURNING id, brand_id, storage_key, url, content_type, size_bytes, width, height, created_at, updated_at, tone`,
     [brandId]
   );
   return row ? toLogo(row) : null;
@@ -1156,4 +1166,14 @@ export async function listCategoriesByGender(genderCode: string): Promise<Catego
      ORDER BY c.name`,
     [genderCode]
   );
+}
+
+/** Admin override of a logo's presentation tone (NULL = back to "unknown / render as uploaded"). */
+export async function setLogoTone(brandId: string, tone: "light" | "dark" | null): Promise<BrandLogo | null> {
+  const row = await queryOne<LogoRow>(
+    `UPDATE brand_logos SET tone = $2 WHERE brand_id = $1
+     RETURNING id, brand_id, storage_key, url, content_type, size_bytes, width, height, created_at, updated_at, tone`,
+    [brandId, tone]
+  );
+  return row ? toLogo(row) : null;
 }

@@ -45,6 +45,16 @@ export function getBrandCategoryUrl(brandSlug: string, categorySlug: string): st
   return `/brands/${encodeURIComponent(brandSlug)}?category=${encodeURIComponent(categorySlug)}`;
 }
 
+/** The "Shop by Brand → EXPLORE ALL" page: every active brand. */
+export function getBrandsUrl(): string {
+  return "/brands";
+}
+
+/** The "Shop by Lifestyle → EXPLORE ALL" page: every active lifestyle. */
+export function getLifestylesUrl(): string {
+  return "/lifestyles";
+}
+
 /** Every live product, newest publish first — "NEW IN" / Latest Drop "VIEW ALL". Not tag-based. */
 export function getNewInUrl(): string {
   return "/shop?sort=newest";

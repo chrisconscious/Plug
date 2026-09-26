@@ -12,6 +12,8 @@ import { LifestyleManagementPage } from "./lifestyle-content";
 import { MfaSettingsPage } from "./mfa-settings";
 import { AdminPermissionsEditor } from "./admin-permissions-editor";
 import { ProductManagementTable } from "./product-management";
+import { BrandMark } from "../shop/BrandMark";
+import { redirectToLoginExpired } from "../../lib/returnTo";
 
 export type AdminRow = {
   id: string;
@@ -76,7 +78,7 @@ function describeApiError(e: unknown, fallback: string): string {
 function handleAuthError(e: unknown, setBanner: (m: string) => void): boolean {
   if (e instanceof api.ApiError && e.status === 401) {
     api.logout().catch(() => {});
-    window.location.assign("/login?reason=expired");
+    redirectToLoginExpired();
     return true;
   }
   return false;
@@ -447,10 +449,15 @@ export function FunctionalManagementPage({ title, desc, withHeroOverride = false
         msg = "Admin created ✓";
       } else if (kind === "catalog") {
         if (editingBrand) {
+          // Tone override only when changed and no new logo is being uploaded
+          // (a fresh upload is re-analyzed automatically).
+          const pickedTone = (Object.entries(LOGO_TONE_LABELS).find(([, label]) => label === formData.logoTone)?.[0] ?? null) as "auto" | "light" | "dark" | null;
+          const toneChanged = !!editingBrand.logo && !logoFile && pickedTone != null && formData.logoTone !== logoToneLabel(editingBrand);
           const { brand } = await api.updateAdminBrand(editingBrand.id, {
             name: formData.name || undefined,
             slug: formData.slug || undefined,
             active: formData.active ? formData.active === "true" : undefined,
+            logoTone: toneChanged ? pickedTone! : undefined,
           });
           if (logoFile) await api.uploadBrandLogo(brand.id, logoFile);
           else if (logoRemove) await api.removeBrandLogo(brand.id);
@@ -561,6 +568,7 @@ export function FunctionalManagementPage({ title, desc, withHeroOverride = false
         { name: "name", label: "Brand name", kind: "text" },
         { name: "slug", label: "Slug (URL key, optional)", kind: "text" },
         { name: "active", label: "Status", kind: "select", options: ["true", "false"] },
+        ...(brand.logo ? [{ name: "logoTone", label: "Logo tone (how the logo is shown on light backgrounds)", kind: "select" as const, options: Object.values(LOGO_TONE_LABELS) }] : []),
       ],
     });
   };
@@ -799,7 +807,7 @@ export function FunctionalManagementPage({ title, desc, withHeroOverride = false
           fields={add.fields}
           initial={
             editingBrand
-              ? { name: editingBrand.name, slug: editingBrand.slug, active: String(editingBrand.active) }
+              ? { name: editingBrand.name, slug: editingBrand.slug, active: String(editingBrand.active), ...(editingBrand.logo ? { logoTone: logoToneLabel(editingBrand) } : {}) }
               : editingCategory
               ? { name: editingCategory.name, slug: editingCategory.slug, displayOrder: String(editingCategory.displayOrder), active: String(editingCategory.active) }
               : undefined
@@ -1143,11 +1151,23 @@ function CatalogPanels({ loading, error, load, query, setQuery, brands, categori
   );
 }
 
+const LOGO_TONE_LABELS = {
+  auto: "Auto-detect (recommended)",
+  light: "Light / white logo — shown dark on light backgrounds",
+  dark: "Dark logo — shown as uploaded",
+} as const;
+
+function logoToneLabel(brand: api.Brand): string {
+  const tone = brand.logo?.tone;
+  return tone === "light" ? LOGO_TONE_LABELS.light : tone === "dark" ? LOGO_TONE_LABELS.dark : LOGO_TONE_LABELS.auto;
+}
+
+/** Admin preview = exactly what the storefront shows (same BrandMark + tone treatment). */
 function BrandLogoThumb({ brand }: { brand: api.Brand }) {
   if (brand.logo?.url) {
     return (
-      <div style={{ width: 40, height: 40, borderRadius: 6, overflow: 'hidden', border: '1px solid #eee', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#fff' }}>
-        <img src={api.assetUrl(brand.logo.url)} alt={`${brand.name} logo`} style={{ width: '100%', height: '100%', objectFit: 'contain', padding: 3 }} />
+      <div title={brand.logo.tone === "light" ? "Light logo — shown dark on the storefront" : undefined} style={{ width: 40, height: 40, borderRadius: 6, overflow: 'hidden', border: '1px solid #eee', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#f4f2ee', padding: 3 }}>
+        <BrandMark brand={brand} className="adminBrandThumbImg" />
       </div>
     );
   }

@@ -5,8 +5,7 @@ import { useInView, useReducedMotion } from "framer-motion";
 import { Link } from "react-router-dom";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { listLifestyles, assetUrl, type Lifestyle } from "../../lib/api";
-import { getLifestyleUrl } from "../../lib/links";
-import { useVisibleCount } from "../../hooks/useVisibleCount";
+import { getLifestyleUrl, getLifestylesUrl } from "../../lib/links";
 import { ExploreAllLink, ExploreMoreRow } from "../explore-more";
 
 // "SHOP BY LIFESTYLE" — the storefront lifestyle showcase (migration 0019).
@@ -351,10 +350,9 @@ export function ShopByLifestyle() {
   // Defer the fetch until the section is near the viewport (below the fold).
   const load = useInView(sectionRef, { once: true, margin: "800px 0px" });
 
-  // "EXPLORE ALL" only when the row shows a window of a larger taxonomy:
-  // more ACTIVE lifestyles exist than fit in one viewport screen.
-  const visibleCount = useVisibleCount(innerRef, ".lsl-slide", 14);
-  const moreLifestyles = !loading && items.length > 0 && items.length > visibleCount;
+  // "EXPLORE ALL" opens the dedicated /lifestyles page listing EVERY active
+  // lifestyle (it used to link to the first lifestyle's products instead).
+  const moreLifestyles = !loading && items.length > 0;
 
   useEffect(() => {
     if (!load) return;
@@ -382,7 +380,7 @@ export function ShopByLifestyle() {
       </div>
       {moreLifestyles ? (
         <ExploreAllLink
-          to={getLifestyleUrl(items[0].slug)}
+          to={getLifestylesUrl()}
           label="EXPLORE ALL"
           className="hidden shrink-0 md:inline-flex"
         />
@@ -409,7 +407,7 @@ export function ShopByLifestyle() {
         ) : (
           <FlowingRows key={bp} items={items} arrows={bp !== "mobile"} />
         )}
-        {moreLifestyles ? <ExploreMoreRow to={getLifestyleUrl(items[0].slug)} label="EXPLORE ALL" /> : null}
+        {moreLifestyles ? <ExploreMoreRow to={getLifestylesUrl()} label="EXPLORE ALL" /> : null}
       </div>
     </section>
   );

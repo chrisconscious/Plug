@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { X, Lock, Key, Save, ShieldCheck } from "lucide-react";
 import * as api from "../../lib/api";
+import { redirectToLoginExpired } from "../../lib/returnTo";
 
 /** Permissions that a Super Admin may NEVER grant to an Admin — see rbac.ts NON_GRANTABLE_PERMISSIONS. */
 const NON_GRANTABLE = ["admins.manage", "system.manage"];
@@ -10,7 +11,7 @@ const NON_GRANTABLE = ["admins.manage", "system.manage"];
 function handleAuthError(e: unknown, setError: (m: string) => void): boolean {
   if (e instanceof api.ApiError && e.status === 401) {
     api.logout().catch(() => {});
-    window.location.assign("/login?reason=expired");
+    redirectToLoginExpired();
     return true;
   }
   return false;

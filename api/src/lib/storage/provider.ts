@@ -29,6 +29,8 @@ export interface StorageProvider {
    * it's part of the interface rather than bolted on separately.
    */
   list(prefix?: string): Promise<string[]>;
+  /** Reads an object back (used by maintenance scripts, e.g. logo tone backfill). Optional so lightweight fakes needn't implement it. */
+  get?(key: string): Promise<Buffer | null>;
   /** Human-readable name for logs/audit metadata (e.g. "local-disk", "s3"). */
   readonly name: string;
 }

@@ -46,6 +46,14 @@ export class LocalDiskStorageProvider implements StorageProvider {
     await rm(full, { force: true });
   }
 
+  async get(key: string): Promise<Buffer | null> {
+    try {
+      return await readFile(this.pathFor(key));
+    } catch {
+      return null;
+    }
+  }
+
   async exists(key: string): Promise<boolean> {
     const full = this.pathFor(key);
     try {

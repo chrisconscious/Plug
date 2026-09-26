@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react';
-import { useNavigate, useSearchParams, Link } from 'react-router-dom';
+import { useNavigate, useSearchParams, Link, Navigate } from 'react-router-dom';
 import { Eye, EyeOff } from 'lucide-react';
 import * as api from '../lib/api';
 import { useAuth } from '../lib/AuthContext';
 import { usePlatformSettings } from '../lib/PlatformSettingsContext';
 import { BrandLogo } from '../components/BrandLogo';
+import { safeReturnTo, loginUrl } from '../lib/returnTo';
 
 /**
  * Google/Apple sign-in: real, correctly-branded buttons, but honest about
@@ -46,10 +47,14 @@ function AppleLogo() {
 
 function Auth({ register = false }: { register?: boolean }) {
   const nav = useNavigate();
-  const { login, register: doRegister, refresh } = useAuth();
+  const { login, register: doRegister, refresh, status, user } = useAuth();
   const { platformName } = usePlatformSettings();
   const [sp] = useSearchParams();
   const sessionExpired = sp.get('reason') === 'expired';
+  // Where the customer was going (e.g. /checkout?buyNow=…). Validated to an
+  // internal path only — see lib/returnTo.ts (open-redirect protection).
+  const returnTo = safeReturnTo(sp.get('returnTo'));
+  const toCheckout = !!returnTo && returnTo.startsWith('/checkout');
   const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -71,10 +76,13 @@ function Auth({ register = false }: { register?: boolean }) {
   // of resubmitting phone/password.
   const [mfaToken, setMfaToken] = useState<string | null>(null);
   const [mfaCode, setMfaCode] = useState('');
+  // After sign-in: back to exactly where the customer was going (replace, so
+  // Back doesn't return to the sign-in form); otherwise the role's home.
   const goToRoleHome = (role: api.PublicUser['role']) => {
-    if (role === 'SUPER_ADMIN') nav('/super-admin');
-    else if (role === 'ADMIN') nav('/admin');
-    else nav('/shop');
+    if (returnTo) nav(returnTo, { replace: true });
+    else if (role === 'SUPER_ADMIN') nav('/super-admin', { replace: true });
+    else if (role === 'ADMIN') nav('/admin', { replace: true });
+    else nav('/shop', { replace: true });
   };
   async function submit(ev: any) {
     ev.preventDefault(); setBusy(true); setError('');
@@ -96,6 +104,11 @@ function Auth({ register = false }: { register?: boolean }) {
       await refresh(); // re-resolve AuthContext state from the server now that the session exists
       if ('user' in res) goToRoleHome(res.user.role);
     } catch (e) { setError(e instanceof api.ApiError ? e.message : 'Something went wrong'); } finally { setBusy(false); }
+  }
+  // Already signed in (e.g. a stale /login?returnTo=… tab, or Back from the
+  // destination): don't show the form again — continue to the destination.
+  if (status === 'authenticated' && user && !mfaToken) {
+    return <Navigate to={returnTo ?? (user.role === 'SUPER_ADMIN' ? '/super-admin' : user.role === 'ADMIN' ? '/admin' : '/shop')} replace />;
   }
   return (
     <div className="auth">
@@ -120,6 +133,7 @@ function Auth({ register = false }: { register?: boolean }) {
             <h1>{register ? 'CREATE ACCOUNT' : 'WELCOME BACK'}</h1>
             <p>{register ? `Join ${platformName} today` : 'Sign in to your account'}</p>
             {!register && sessionExpired && <p style={{ color: '#b45309', fontSize: 13, margin: 0 }}>Your session expired. Please sign in again to continue.</p>}
+            {toCheckout && <p role="status" data-role="checkout-return-note" style={{ fontSize: 13, margin: 0, color: '#333' }}>{register ? 'Create an account' : 'Sign in'} to continue to checkout — you'll go straight back to your order.</p>}
             <form className="formGrid" onSubmit={submit}>
               {register && <input aria-label="Full name" placeholder="Full name" value={name} onChange={(e) => setName(e.target.value)} />}
               <div>
@@ -199,7 +213,7 @@ function Auth({ register = false }: { register?: boolean }) {
               )}
             </div>
 
-            <p style={{ marginTop: 18 }}>{register ? 'Already have an account?' : 'New here?'} <Link to={register ? '/login' : '/register'}>{register ? 'Sign in' : 'Create an account'}</Link></p>
+            <p style={{ marginTop: 18 }}>{register ? 'Already have an account?' : 'New here?'} <Link to={loginUrl(returnTo, { page: register ? 'login' : 'register' })}>{register ? 'Sign in' : 'Create an account'}</Link></p>
             <p><Link to="/forgot-password" style={{ color: '#666' }}>Forgot password?</Link></p>
           </>
         )}

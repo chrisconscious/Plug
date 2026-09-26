@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { useParams, useNavigate, Link } from 'react-router-dom';
+import { useParams, useNavigate, Link, useSearchParams } from 'react-router-dom';
 import { Truck, Lock, Minus, Plus, ChevronLeft, ChevronRight, X, ZoomIn, ZoomOut, Maximize2 } from 'lucide-react';
 import * as api from '../lib/api';
 import { setCartCountFromItems } from '../lib/cartCount';
@@ -8,6 +8,9 @@ import { PLACEHOLDER_IMG, resolveImage } from '../lib/imagePlaceholder';
 import { StoreHeader } from '../components/shop/StoreHeader';
 import { ProductCard } from '../components/shop/ProductCard';
 import { ShareButton } from '../components/ShareButton';
+import { BrandMark } from '../components/shop/BrandMark';
+import { useAuth } from '../lib/AuthContext';
+import { loginUrl } from '../lib/returnTo';
 import { getBrandUrl, getProductUrl } from '../lib/links';
 import { sortSizeStrings } from '../lib/shop';
 
@@ -26,6 +29,8 @@ function ProductDetail() {
   const params = useParams();
   const nav = useNavigate();
   const slug = (params.id ?? '').toLowerCase();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const { status: authStatus } = useAuth();
   const [prod, setProd] = useState<api.Product | null>(null);
   const [notFound, setNotFound] = useState(false);
   const [loadError, setLoadError] = useState(false);
@@ -182,6 +187,29 @@ function ProductDetail() {
   };
   useEffect(loadProduct, [slug]);
 
+  /** This product with a specific variant + quantity preselected (used as a sign-in return destination). */
+  const selectionUrl = (variantId: string) =>
+    `/product/${encodeURIComponent(prod?.slug ?? slug)}?variant=${encodeURIComponent(variantId)}&qty=${qty}`;
+
+  // Restore a selection carried in the URL (?variant=<id>&qty=<n>) — e.g. the
+  // customer tried Add to Cart while signed out and has just signed in. Only
+  // an in-stock variant of THIS product is restored; the params are then
+  // dropped from the URL so a refresh doesn't keep re-applying them.
+  useEffect(() => {
+    if (!prod) return;
+    const variantId = searchParams.get('variant');
+    if (!variantId) return;
+    const v = prod.variants.find((x) => x.id === variantId && x.inStock);
+    if (v) {
+      if (v.color && v.color.toLowerCase() !== 'default') setColor(v.color);
+      setSize(v.size);
+      const q = Number(searchParams.get('qty'));
+      if (Number.isInteger(q) && q >= 1) setQty(Math.min(20, q));
+    }
+    setSearchParams({}, { replace: true });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [prod]);
+
   useEffect(() => {
     if (!prod) return;
     let on = true;
@@ -260,7 +288,12 @@ function ProductDetail() {
     setBusy(true); setFeedback('');
     try { const r = await api.addToCart(selectedVariant.id, qty); setCartCountFromItems(r.cart.items ?? []); setFeedback('Added to cart ✓'); nav('/cart'); }
     catch (e) {
-      if (e instanceof api.ApiError && e.status === 401) { setFeedback('Please sign in to add items to your cart.'); setTimeout(() => nav('/login'), 700); }
+      if (e instanceof api.ApiError && e.status === 401) {
+        // Sign in, then come back to THIS product with the same color, size
+        // and quantity already selected (restored by the effect above).
+        setFeedback('Please sign in to add items to your cart.');
+        nav(loginUrl(selectionUrl(selectedVariant.id)));
+      }
       else setFeedback(e instanceof api.ApiError ? e.message : 'Could not add to cart');
     }
     finally { setBusy(false); }
@@ -278,7 +311,10 @@ function ProductDetail() {
       return;
     }
     setFeedback('');
-    nav(`/checkout?buyNow=${encodeURIComponent(selectedVariant.id)}&qty=${qty}`);
+    const checkoutUrl = `/checkout?buyNow=${encodeURIComponent(selectedVariant.id)}&qty=${qty}`;
+    // Known signed-out → straight to sign-in, returning to this exact
+    // checkout. (Checkout also enforces this itself for any other path in.)
+    nav(authStatus === 'unauthenticated' ? loginUrl(checkoutUrl) : checkoutUrl);
   };
 
   if (loadError) {
@@ -349,7 +385,7 @@ function ProductDetail() {
             <div className="breadcrumb">HOME / {prod.category?.name ? prod.category.name.toUpperCase() : 'SHOP'}</div>
             {prod.brand?.name ? (
               <Link to={getBrandUrl(prod.brand.slug || slugify(prod.brand.name))} className="productBrandRow detailBrand">
-                {prod.brand.logo?.url ? <img className="productBrandLogo detailLogo" src={api.assetUrl(prod.brand.logo.url)} alt={`${prod.brand.name} logo`} loading="lazy" /> : null}
+                {prod.brand.logo?.url ? <BrandMark brand={prod.brand} className="productBrandLogo detailLogo" alt="" fallback="" /> : null}
                 <span>{prod.brand.name.toUpperCase()}</span>
               </Link>
             ) : null}

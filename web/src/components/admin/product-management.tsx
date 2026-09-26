@@ -79,8 +79,8 @@ export function ProductManagementTable({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
-  // Archive/restore need products.delete (Super Admin, or an admin granted
-  // it). Hidden otherwise — the server enforces it either way.
+  // Archive/restore need products.delete (Admins and Super Admins — see
+  // rbac.ts / migration 0055). Hidden otherwise; the server enforces it.
   const [canArchive, setCanArchive] = useState(false);
   const reqSeq = useRef(0);
 

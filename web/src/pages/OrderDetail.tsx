@@ -3,6 +3,7 @@ import { Link, useParams } from 'react-router-dom';
 import * as api from '../lib/api';
 import { formatTZS } from '../lib/currency';
 import { StoreHeader } from '../components/shop/StoreHeader';
+import { loginUrl, currentLocation } from '../lib/returnTo';
 
 const STATUS_LABEL: Record<string, string> = {
   PENDING: 'Pending', PAID: 'Confirmed', SHIPPED: 'Shipped', DELIVERED: 'Delivered', CANCELLED: 'Cancelled',
@@ -49,7 +50,7 @@ function OrderDetailPage() {
         {status === 'loading' && <div className="accSkelBlock" style={{ height: 300 }} />}
 
         {status === 'unauthenticated' && (
-          <p>Please <Link to="/login">sign in</Link> to view this order.</p>
+          <p>Please <Link to={loginUrl(currentLocation())}>sign in</Link> to view this order.</p>
         )}
 
         {status === 'not_found' && (

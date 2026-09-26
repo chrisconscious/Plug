@@ -1,15 +1,17 @@
 import { useState, useEffect } from 'react';
-import { useNavigate, Link, useSearchParams } from 'react-router-dom';
+import { useNavigate, Link, useSearchParams, Navigate, useLocation } from 'react-router-dom';
 import { Lock, Truck, Copy, Check, Loader2, Banknote, Smartphone } from 'lucide-react';
 import * as api from '../lib/api';
 import { clearCartCount } from '../lib/cartCount';
 import { formatTZS } from '../lib/currency';
 import { StoreHeader } from '../components/shop/StoreHeader';
 import { usePlatformSettings } from '../lib/PlatformSettingsContext';
+import { loginUrl } from '../lib/returnTo';
 
 function Checkout() {
   const nav = useNavigate();
   const [searchParams] = useSearchParams();
+  const routerLocation = useLocation();
   const { darEsSalaamFeeTzs, outsideDarFeeTzs, codMessage } = usePlatformSettings();
   // "Buy it now": when the customer arrives at /checkout?buyNow=<variantId>&qty=<n>
   // they are checking out EXACTLY that one product — the order must contain only
@@ -180,18 +182,12 @@ function Checkout() {
     return () => { on = false; };
   }, []);
 
+  // Checkout requires an account. Send the customer to sign in and bring
+  // them back to EXACTLY this checkout (the URL already carries a Buy Now
+  // selection: ?buyNow=<variantId>&qty=<n>; a cart lives server-side on the
+  // account, so it's intact after sign-in). `replace` keeps Back sensible.
   if (authed === false) {
-    return (
-      <div>
-        <StoreHeader />
-        <main className="checkout">
-          <section className="checkoutEmpty">
-            <h1>Checkout</h1>
-            <p>Please <Link to="/login">sign in</Link> to place your order.</p>
-          </section>
-        </main>
-      </div>
-    );
+    return <Navigate to={loginUrl(routerLocation.pathname + routerLocation.search)} replace />;
   }
 
   const cash = methods?.find((m) => m.kind === 'CASH') ?? null;

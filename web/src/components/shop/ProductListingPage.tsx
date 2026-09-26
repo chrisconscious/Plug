@@ -11,7 +11,8 @@ import {
   SORT_OPTIONS,
   type ShopFilters,
 } from "../../lib/shop";
-import { getBrandCategoryUrl, getBrandUrl, getCategoryUrl, getGenderCategoryUrl, getLifestyleCategoryUrl, getLifestyleUrl, getShopAllUrl } from "../../lib/links";
+import { getBrandCategoryUrl, getBrandUrl, getCategoryUrl, getGenderCategoryUrl, getLifestyleCategoryUrl, getLifestyleUrl, getLifestylesUrl, getShopAllUrl } from "../../lib/links";
+import { BrandMark } from "./BrandMark";
 import { StoreHeader } from "./StoreHeader";
 import { ProductCard } from "./ProductCard";
 import { CategoryCard } from "./CategoryCard";
@@ -23,7 +24,6 @@ const PAGE_SIZE = 24;
 // slug -> icon-key map for the storefront category tiles. Built once per app
 // session (lifestyle facet categories don't ship the icon field) and shared by
 // every lifestyle page visit.
-let categoryIconCache: Record<string, string> | null = null;
 
 /** One consistent "Shop by Category" showcase rail (shared CategoryCard in a
  *  `.catRow` scroller — the same design system as the homepage). Rendered by
@@ -263,7 +263,6 @@ export function ProductListingPage({ lifestyle: lifestyleSlug }: { lifestyle?: s
   const [allCats, setAllCats] = useState<api.Category[] | null>(null);
   // Lifestyle category tiles reuse the same icon set — facet categories don't
   // carry `icon`, so build a slug->icon map once per app session (cached below).
-  const [catIconBySlug, setCatIconBySlug] = useState<Record<string, string>>({});
 
   const paramsKey = searchParams.toString() + (lockedBrand ? `|brand:${lockedBrand}` : "") + (lifestyleSlug ? `|lifestyle:${lifestyleSlug}` : "");
 
@@ -340,28 +339,6 @@ export function ProductListingPage({ lifestyle: lifestyleSlug }: { lifestyle?: s
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [showGenderShowcase, filters.gender]);
 
-  useEffect(() => {
-    if (!lifestyleSlug && !lockedBrand) return;
-    let on = true;
-    if (categoryIconCache) {
-      setCatIconBySlug(categoryIconCache);
-      return;
-    }
-    api
-      .listCategories()
-      .then(({ categories }) => {
-        if (!on) return;
-        const map: Record<string, string> = {};
-        for (const c of categories) map[c.slug] = c.icon ?? "box";
-        categoryIconCache = map;
-        setCatIconBySlug(map);
-      })
-      .catch(() => on && setCatIconBySlug({}));
-    return () => {
-      on = false;
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [lifestyleSlug, lockedBrand]);
 
   const total = data?.pagination.total ?? 0;
 
@@ -480,7 +457,7 @@ export function ProductListingPage({ lifestyle: lifestyleSlug }: { lifestyle?: s
       return {
         title: lifestyleInfo.name.toUpperCase(),
         description: `${total} product${total === 1 ? "" : "s"}`,
-        crumb: [HOME, { label: "LIFESTYLES", to: "/" }, { label: lifestyleInfo.name.toUpperCase(), to: getLifestyleUrl(lifestyleInfo.slug) }],
+        crumb: [HOME, { label: "LIFESTYLES", to: getLifestylesUrl() }, { label: lifestyleInfo.name.toUpperCase(), to: getLifestyleUrl(lifestyleInfo.slug) }],
         hidden: [],
         contextual: true,
       };
@@ -577,6 +554,11 @@ export function ProductListingPage({ lifestyle: lifestyleSlug }: { lifestyle?: s
           )}
           <div className="flex flex-wrap items-end justify-between gap-3">
             <div className="min-w-0">
+              {lockedBrand && brandInfo?.logo?.url ? (
+                <div className="brandPageLogo" aria-hidden="true">
+                  <BrandMark brand={brandInfo} alt="" fallback="" />
+                </div>
+              ) : null}
               <h1 className={`font-black text-2xl md:text-3xl tracking-tight break-words ${ctx.accent === "sale" ? "text-red-600" : ""}`}>{ctx.title}</h1>
               {ctx.description && <p className="mt-1 text-xs text-neutral-500">{ctx.description}</p>}
             </div>
@@ -664,7 +646,11 @@ export function ProductListingPage({ lifestyle: lifestyleSlug }: { lifestyle?: s
             cards={data.facets.categories.map((c) => ({
               slug: c.slug,
               to: getBrandCategoryUrl(brandInfo.slug, c.slug),
-              iconKey: catIconBySlug[c.slug],
+              // The facet carries the category's real image + icon (it used
+              // to pass only an icon key looked up separately, so uploaded
+              // category images never showed on brand/lifestyle pages).
+              imageUrl: c.imageUrl,
+              iconKey: c.icon,
               name: c.name,
               count: c.count,
             }))}
@@ -681,7 +667,11 @@ export function ProductListingPage({ lifestyle: lifestyleSlug }: { lifestyle?: s
             cards={data.facets.categories.map((c) => ({
               slug: c.slug,
               to: getLifestyleCategoryUrl(lifestyleSlug, c.slug),
-              iconKey: catIconBySlug[c.slug],
+              // The facet carries the category's real image + icon (it used
+              // to pass only an icon key looked up separately, so uploaded
+              // category images never showed on brand/lifestyle pages).
+              imageUrl: c.imageUrl,
+              iconKey: c.icon,
               name: c.name,
             }))}
           />

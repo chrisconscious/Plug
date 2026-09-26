@@ -308,7 +308,13 @@ html{scroll-behavior:smooth}.font-display{font-family:Manrope,sans-serif}button,
 }
 .sizes button{border:1px solid #d3d3d3;background:#fff;color:#222;min-width:44px;min-height:44px;padding:8px 14px;font-size:12px;font-weight:600;cursor:pointer;border-radius:6px}
 .sizes button.selected{border:2px solid #111;background:#111;color:#fff;padding:7px 13px}
-.sizes button.out{color:#bbb;text-decoration:line-through;border-color:#e5e5e5;background:#f7f7f7;cursor:not-allowed}
+.sizes button.out{position:relative;overflow:hidden;color:#b5b5b5;border-color:#e5e5e5;background:#f7f7f7;cursor:not-allowed}
+/* Unavailable size: a single hairline "X" cancel stroke, same language as the sold-out color swatch. */
+.sizes button.out::after{content:"";position:absolute;top:50%;left:-2px;right:-2px;height:1px;background:#bdb7aa;transform:rotate(-24deg)}
+.sizes button.out.selected{color:#fff}
+.pmAddMobile{display:none!important}
+@media(max-width:900px){.pmAddMobile{display:flex!important}}
+.pdpSoldOut{display:inline-block;margin:6px 0 4px;padding:5px 10px;background:#404040;color:#fff;font-size:10px;font-weight:700;letter-spacing:.14em}
 .lowStockNote{margin:6px 0 0;font-size:11px;font-weight:700;color:#b45309}
 .selHint{margin:8px 0;font-size:11.5px;color:#888}
 

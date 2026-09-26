@@ -34,6 +34,9 @@ const CouponManagement = lazy(() =>
 const PromoBannerManagement = lazy(() =>
   import('../components/admin/promo-banner-management').then((m) => ({ default: m.PromoBannerManagement }))
 );
+const InventoryManagement = lazy(() =>
+  import('../components/admin/inventory-management').then((m) => ({ default: m.InventoryManagement }))
+);
 const ProductAccordionManagement = lazy(() =>
   import('../components/admin/product-accordion-management').then((m) => ({ default: m.ProductAccordionManagement }))
 );
@@ -81,7 +84,7 @@ function PageContent({ current, superRole }: { current: any; superRole: boolean 
           </div>
         )}
       </div>
-      {isDash ? <DynamicDashboard superRole={superRole} /> : title.includes('Branding') ? <PlatformBrandingSettings /> : title.includes('Attributes') ? <AttributeManagement /> : title.includes('Announcements') ? <AnnouncementManagement /> : title.includes('Footer') ? <FooterContactManagement /> : title.includes('Notifications') ? <NotificationBroadcastManagement /> : title.includes('Coupon') ? <CouponManagement /> : title.includes('Promo') ? <PromoBannerManagement /> : title.includes('Accordion') ? <ProductAccordionManagement /> : title.includes('Auth Page') ? <AuthPageSettingsManagement /> : title.includes('Roles') ? <RolesPermissions /> : <FunctionalManagementPage key={current.path} title={title} desc={current.desc} withHeroOverride={title.includes('Content')} withPaymentsOverride={title.includes('Payment')} withLifestylesOverride={title.includes('Lifestyle')} withMfaOverride={title.includes('Account Settings') || title.includes('Account & Security')} superRole={superRole} />}
+      {isDash ? <DynamicDashboard superRole={superRole} /> : title.includes('Branding') ? <PlatformBrandingSettings /> : title.includes('Attributes') ? <AttributeManagement /> : title.includes('Announcements') ? <AnnouncementManagement /> : title.includes('Footer') ? <FooterContactManagement /> : title.includes('Notifications') ? <NotificationBroadcastManagement /> : title.includes('Coupon') ? <CouponManagement /> : title.includes('Promo') ? <PromoBannerManagement /> : title.includes('Accordion') ? <ProductAccordionManagement /> : title.includes('Auth Page') ? <AuthPageSettingsManagement /> : title.includes('Roles') ? <RolesPermissions /> : title.includes('Inventory') ? <InventoryManagement /> : <FunctionalManagementPage key={current.path} title={title} desc={current.desc} withHeroOverride={title.includes('Content')} withPaymentsOverride={title.includes('Payment')} withLifestylesOverride={title.includes('Lifestyle')} withMfaOverride={title.includes('Account Settings') || title.includes('Account & Security')} superRole={superRole} />}
     </>
   );
 }

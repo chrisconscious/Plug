@@ -3,24 +3,29 @@ import type { StorageProvider, StoredObject } from "../storage/provider";
 import type { HeroSlide } from "../db/types";
 import type { MediaRecord } from "../db/repos/media.repo";
 
-class FakeStorageProvider implements StorageProvider {
-  readonly name = "fake-hero-images";
-  objects = new Map<string, Buffer>();
-  async put(key: string, data: Buffer): Promise<StoredObject> {
-    this.objects.set(key, data);
-    return { storageKey: key, url: `https://fake.example/heroes/${key}` };
+// vi.mock factories are hoisted above everything else, so the fake they
+// return must be created with vi.hoisted (a plain top-level const is
+// still uninitialized when the factory runs).
+const fakeHeroImageStorage = vi.hoisted(() => {
+  class FakeStorageProvider implements StorageProvider {
+    readonly name = "fake-hero-images";
+    objects = new Map<string, Buffer>();
+    async put(key: string, data: Buffer): Promise<StoredObject> {
+      this.objects.set(key, data);
+      return { storageKey: key, url: `https://fake.example/heroes/${key}` };
+    }
+    async delete(key: string): Promise<void> {
+      this.objects.delete(key);
+    }
+    async exists(key: string): Promise<boolean> {
+      return this.objects.has(key);
+    }
+    async list(): Promise<string[]> {
+      return [...this.objects.keys()];
+    }
   }
-  async delete(key: string): Promise<void> {
-    this.objects.delete(key);
-  }
-  async exists(key: string): Promise<boolean> {
-    return this.objects.has(key);
-  }
-  async list(): Promise<string[]> {
-    return [...this.objects.keys()];
-  }
-}
-const fakeHeroImageStorage = new FakeStorageProvider();
+  return new FakeStorageProvider();
+});
 
 vi.mock("../storage/storage", () => ({
   heroImageStorage: fakeHeroImageStorage,
@@ -121,7 +126,11 @@ describe("storeHeroImage", () => {
 
   it("cleans up the uploaded object if the DB write fails", async () => {
     vi.mocked(heroRepo.findHeroSlideById).mockResolvedValue(fakeHeroSlide({ storageKey: null }));
-    vi.mocked(mediaRepo.insertMedia).mockResolvedValue(fakeMedia());
+    // The media row records the REAL (random) key the upload was stored
+    // under, and cleanup looks that row up — mirror both like the database would.
+    let inserted: ReturnType<typeof fakeMedia> | null = null;
+    vi.mocked(mediaRepo.insertMedia).mockImplementation(async (input) => (inserted = fakeMedia({ storageKey: input.storageKey })));
+    vi.mocked(mediaRepo.findMediaById).mockImplementation(async () => inserted);
     vi.mocked(mediaRepo.deleteMedia).mockResolvedValue(true);
     vi.mocked(heroRepo.updateHeroSlide).mockRejectedValue(new Error("simulated DB failure"));
 

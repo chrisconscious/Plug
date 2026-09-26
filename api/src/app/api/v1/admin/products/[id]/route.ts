@@ -1,12 +1,22 @@
 import { withRoute, json } from "@/lib/http";
 import { validateBody, optional, nullable, required, isString, isNonNegativeInt, isArrayOfStrings, isStringArray, isArray, isBoolean } from "@/lib/validate";
 import { RateLimitRules } from "@/lib/security/rateLimiter";
-import { updateProduct, deleteProduct, replaceProductVariants } from "@/lib/services/catalog.service";
+import { updateProduct, deleteProduct, replaceProductVariants, getAdminProduct } from "@/lib/services/catalog.service";
+
+/** Admin product detail — any status, including stock, SKUs, dates and images. */
+export const GET = withRoute({ permission: "products.read", rateLimit: RateLimitRules.adminGeneral }, async ({ params }) => {
+  return json({ product: await getAdminProduct(params.id!) });
+});
 
 export const PATCH = withRoute({ permission: "products.update", rateLimit: RateLimitRules.adminGeneral }, async ({ req, user, params }) => {
   const body = await req.json().catch(() => ({}));
   const patch = validateBody(body, {
     name: optional(isString),
+    // Editable URL key / catalog placement — normalized and validated in
+    // updateProduct (slug) and by the FK constraints (brand/category).
+    slug: optional(isString),
+    brandId: optional(isString),
+    categoryId: optional(isString),
     priceCents: optional(isNonNegativeInt),
     // Strict boolean — a `"true"`/`"false"` *string* payload would otherwise be
     // coerced by the predicate into `active = false` (silently taking the

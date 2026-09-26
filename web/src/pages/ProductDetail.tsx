@@ -199,41 +199,56 @@ function ProductDetail() {
     return () => { on = false; };
   }, []);
 
-  const pickColor = (c: string) => {
-    setColor(c);
-    // A brand-new color forces a fresh size choice — never keep a size (or
-    // variant) that has no row for the currently selected color.
-    if (size) {
-      const hasSizeInColor = (prod?.variants ?? []).some((v) => v.color.toLowerCase() === c.toLowerCase() && v.size === size);
-      if (!hasSizeInColor) { setSize(null); }
-    }
-    setFeedback('');
-  };
-
+  // ---- Variant availability matrix (color × size), driven purely by the
+  // per-variant inStock flags the API derives from live stock. Nothing here
+  // knows about specific colors or sizes — any value an admin creates works.
   const variants = prod?.variants ?? [];
   const hasVariants = variants.length > 0;
-  const distinctColors: string[] = Array.from(new Set(variants.map((v) => v.color).filter((c) => c && c.toLowerCase() !== 'default')));
-  // A color is sold out when EVERY size under it is out of stock — per
-  // this feature's own explicit logic: "a colour should automatically
-  // become SOLD OUT when ALL sizes belonging to that colour have zero
-  // available stock." Computed directly from the existing per-variant
-  // stock data (no separate "Colour" entity needed — color is already
-  // a field on each variant row, so this is pure aggregation).
-  const colorInStock = (c: string) => variants.filter((v) => v.color === c).some((v) => v.inStock);
+  const same = (a: string, b: string) => a.toLowerCase() === b.toLowerCase();
+  const distinctColors: string[] = Array.from(
+    new Map(variants.filter((v) => v.color && !same(v.color, 'default')).map((v) => [v.color.toLowerCase(), v.color])).values()
+  );
   const multiColor = distinctColors.length > 1;
-  // Single-color products collapse straight to the size selector using that
-  // one real color; multi-color products demand an explicit swatch choice.
-  const selectedColor = color ?? (multiColor ? null : distinctColors[0] ?? 'default');
-  const colorVariants = selectedColor
-    ? variants.filter((v) => v.color.toLowerCase() === selectedColor.toLowerCase())
-    : [];
-  const sizeMap = new Map<string, (typeof colorVariants)[number]>(colorVariants.map((v) => [v.size.toLowerCase(), v]));
-  const sizeOptions = sortSizeStrings([...sizeMap.values()].map((v) => v.size)).map((s) => sizeMap.get(s.toLowerCase())!);
-  const selectedVariant = size ? sizeOptions.find((v) => v.size === size && v.inStock) : undefined;
+  // Single-color products preselect that color; colorless ("Default")
+  // products skip color entirely.
+  const selectedColor: string | null = color ?? (distinctColors.length === 1 ? distinctColors[0] : null);
+  const needsColor = distinctColors.length > 0;
+  /** Any variant matching the given color and/or size with stock left. */
+  const hasStock = (c: string | null, sz: string | null) =>
+    variants.some((v) => (!c || same(v.color, c)) && (!sz || same(v.size, sz)) && v.inStock);
+  const colorSoldOut = (c: string) => !hasStock(c, null);
+  // A color is selectable when it still has stock — in the chosen size, if
+  // one is chosen (e.g. picking M leaves only the colors that have M).
+  const colorAvailable = (c: string) => hasStock(c, size);
+  // Sizes shown: those that exist for the chosen color, or every size of the
+  // product before a color is picked (so a customer can start from size).
+  const sizeSource = selectedColor ? variants.filter((v) => same(v.color, selectedColor)) : variants;
+  const sizeOptions: string[] = sortSizeStrings(
+    Array.from(new Map(sizeSource.map((v) => [v.size.toLowerCase(), v.size])).values())
+  );
+  const sizeAvailable = (sz: string) => hasStock(selectedColor, sz);
+  const selectedVariant =
+    size && (selectedColor || !needsColor)
+      ? variants.find((v) => (!selectedColor || same(v.color, selectedColor)) && same(v.size, size) && v.inStock)
+      : undefined;
+  const productSoldOut = prod ? api.isSoldOut(prod) : false;
+
+  const pickColor = (c: string) => {
+    setFeedback('');
+    if (color && same(color, c)) { setColor(null); return; } // tap again to clear
+    if (!colorAvailable(c)) return; // never selectable — no stock in this (color, size)
+    setColor(c);
+  };
+  const pickSize = (sz: string) => {
+    setFeedback('');
+    if (size && same(size, sz)) { setSize(null); return; } // tap again to clear
+    if (!sizeAvailable(sz)) return;
+    setSize(sz);
+  };
 
   const addToCart = async () => {
     if (!selectedVariant) {
-      setFeedback(multiColor && !color ? 'Select a color.' : 'Select a size.');
+      setFeedback(needsColor && !selectedColor ? (size ? 'Select a color.' : 'Select a color and a size.') : 'Select a size.');
       return;
     }
     // No client-side isAuthed() pre-check here: the local flag only tracks
@@ -259,7 +274,7 @@ function ProductDetail() {
   // buy-now mode; the checkout page handles the sign-in gate itself.
   const buyItNow = () => {
     if (!selectedVariant) {
-      setFeedback(multiColor && !color ? 'Select a color.' : 'Select a size.');
+      setFeedback(needsColor && !selectedColor ? (size ? 'Select a color.' : 'Select a color and a size.') : 'Select a size.');
       return;
     }
     setFeedback('');
@@ -297,9 +312,8 @@ function ProductDetail() {
 
   // A single customer-facing description — short and long copy are no
   // longer shown as two separate paragraphs on the storefront.
-  const description =
-    [...new Set([prod?.shortDescription, prod?.fullDescription].filter(Boolean))].join(" ") ||
-    "Refined everyday tailoring with a relaxed silhouette. Designed for effortless styling and premium comfort.";
+  // Only the admin's own text — never an invented fallback description.
+  const description = [...new Set([prod?.shortDescription, prod?.fullDescription].filter(Boolean))].join(" ");
 
   return (
     <div>
@@ -358,64 +372,80 @@ function ProductDetail() {
                 text={`Check out this product on PLUG: ${prod.name}`}
               />
             </div>
-            <p>{description}</p>
+            {description ? <p>{description}</p> : null}
+            {productSoldOut ? <p className="pdpSoldOut" role="status">SOLD OUT</p> : null}
             {multiColor ? (
               <>
                 <h4>COLOR: {color ? color.toUpperCase() : 'SELECT'}</h4>
                 <div className="colorDots">
                   {distinctColors.map((c) => {
-                    const available = colorInStock(c);
+                    const available = colorAvailable(c);
+                    const selected = !!color && same(color, c);
+                    const why = colorSoldOut(c) ? 'sold out' : `not available in ${size}`;
                     return (
                       <button
                         key={c}
                         type="button"
-                        title={available ? c : `${c} — sold out`}
-                        aria-label={`Color ${c}${available ? '' : ', sold out'}`}
-                        aria-disabled={!available}
-                        disabled={!available}
-                        className={`vSwatch ${color === c ? 'vSwatch--active' : ''} ${available ? '' : 'vSwatch--soldOut'}`}
+                        title={available ? c : `${c} — ${why}`}
+                        aria-label={`Color ${c}${available ? '' : `, ${why}`}`}
+                        aria-pressed={selected}
+                        aria-disabled={!available && !selected}
+                        disabled={!available && !selected}
+                        className={`vSwatch ${selected ? 'vSwatch--active' : ''} ${available ? '' : 'vSwatch--soldOut'}`}
                         style={{ background: apiColor(c) }}
-                        onClick={() => { if (available) pickColor(c); }}
+                        onClick={() => pickColor(c)}
                       />
                     );
                   })}
                 </div>
               </>
             ) : null}
-            {selectedColor ? (
+            {hasVariants ? (
               <>
                 <div className="sizeTitle"><h4>SELECT SIZE</h4></div>
                 {sizeOptions.length > 0 ? (
                   <>
                     <div className="sizes">
-                      {sizeOptions.map((v) => (
-                        <button key={v.id} type="button" className={`${size === v.size ? 'selected' : ''} ${v.inStock ? '' : 'out'}`} disabled={!v.inStock} aria-disabled={!v.inStock} onClick={() => { setSize(v.size); setFeedback(''); }}>
-                          {v.size}
-                        </button>
-                      ))}
+                      {sizeOptions.map((sz) => {
+                        const available = sizeAvailable(sz);
+                        const selected = !!size && same(size, sz);
+                        return (
+                          <button
+                            key={sz}
+                            type="button"
+                            title={available ? sz : `${sz} — sold out${selectedColor ? ` in ${selectedColor}` : ''}`}
+                            aria-label={`Size ${sz}${available ? '' : ', sold out'}`}
+                            aria-pressed={selected}
+                            className={`${selected ? 'selected' : ''} ${available ? '' : 'out'}`}
+                            disabled={!available && !selected}
+                            aria-disabled={!available && !selected}
+                            onClick={() => pickSize(sz)}
+                          >
+                            {sz}
+                          </button>
+                        );
+                      })}
                     </div>
                     {selectedVariant?.lowStock ? <p className="lowStockNote">Low stock — only a few left.</p> : null}
                   </>
                 ) : (
-                  <p className="selHint">{multiColor && !color ? 'Select a color to see available sizes.' : 'No sizes available for this option.'}</p>
+                  <p className="selHint">No sizes available for this color.</p>
                 )}
-              </>
-            ) : null}
-            {hasVariants ? (
-              <>
                 <div className="sizeTitle" style={{ marginTop: 12 }}><h4>QUANTITY</h4></div>
                 <div className="qty" style={{ maxWidth: 120, marginBottom: 18 }}>
                   <button onClick={() => setQty((q) => Math.max(1, q - 1))} disabled={qty <= 1} aria-disabled={qty <= 1}><Minus /></button>
                   <span>{qty}</span>
                   <button onClick={() => setQty((q) => Math.min(20, q + 1))} disabled={qty >= 20} aria-disabled={qty >= 20}><Plus /></button>
                 </div>
-                <button className="blackButton" disabled={busy || !selectedVariant} onClick={addToCart}>ADD TO CART</button>
+                <button className="blackButton" disabled={busy || !selectedVariant} onClick={addToCart}>{productSoldOut ? 'SOLD OUT' : 'ADD TO CART'}</button>
                 <button className="outlineButton" disabled={busy || !selectedVariant} onClick={buyItNow}>BUY IT NOW</button>
                 {!selectedVariant ? (
                   <p className="selHint">
-                    {sizeOptions.length === 0
-                      ? 'This product is currently unavailable — check back soon.'
-                      : multiColor && !color ? 'Select a color, then a size.' : 'Select a size.'}
+                    {productSoldOut
+                      ? 'Every size and color is sold out right now — check back soon.'
+                      : needsColor && !selectedColor
+                      ? size ? 'Now select a color.' : 'Select a color and a size.'
+                      : 'Select a size.'}
                   </p>
                 ) : null}
               </>

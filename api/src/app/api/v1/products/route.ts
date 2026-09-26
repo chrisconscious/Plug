@@ -2,9 +2,9 @@ import { withRoute, json } from "@/lib/http";
 import { RateLimitRules } from "@/lib/security/rateLimiter";
 import { listProductsV2 } from "@/lib/services/catalog.service";
 
-// Public catalog listing is cacheable; a short TTL lets CDNs/browsers serve
-// repeats without hitting Postgres while still reflecting fresh inventory.
-const PAGE_CACHE = "public, max-age=60";
+// Always revalidate: admin edits (price, stock, publish/archive) must show
+// up on the very next storefront load, never from a stale browser/CDN copy.
+const PAGE_CACHE = "no-cache";
 
 const splitMulti = (v: string | null): string[] | undefined => {
   if (!v) return undefined;

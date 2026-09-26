@@ -85,7 +85,9 @@ export function ProductCard({ product }: { product: Product }) {
   // Cart/Buy Now) and independently re-validated server-side regardless
   // of what the frontend shows — this is purely about not letting the
   // LISTING look like a normal, purchasable product when it isn't.
-  const soldOut = product.variants.length === 0 || !product.variants.some((v) => v.inStock);
+  // Computed by the server from live variant stock (api.isSoldOut falls back
+  // to the same rule for older payloads) — never a manually set flag.
+  const soldOut = api.isSoldOut(product);
 
   const [mobileIdx, setMobileIdx] = useState(0);
   const [wishlisted, setWishlisted] = useState(() => isWishlisted(product.slug));
@@ -123,6 +125,7 @@ export function ProductCard({ product }: { product: Product }) {
   };
 
   const colorDots = Array.from(new Set(product.variants.map((v) => v.color).filter((c) => c && c.toLowerCase() !== "default"))).slice(0, 4);
+  const colorInStock = (c: string) => product.variants.some((v) => v.color === c && v.inStock);
 
   const onWish = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -236,14 +239,17 @@ export function ProductCard({ product }: { product: Product }) {
             className="mt-2 flex items-center gap-1"
             aria-label={`${colorDots.length} color${colorDots.length === 1 ? "" : "s"}`}
           >
-            {colorDots.map((c) => (
-              <span
-                key={c}
-                title={c}
-                className="h-2.5 w-2.5 rounded-full border border-black/15"
-                style={{ background: swatch(c) }}
-              />
-            ))}
+            {colorDots.map((c) => {
+              const available = colorInStock(c);
+              return (
+                <span
+                  key={c}
+                  title={available ? c : `${c} — sold out`}
+                  className={`h-2.5 w-2.5 rounded-full border border-black/15${available ? "" : " opacity-30"}`}
+                  style={{ background: swatch(c) }}
+                />
+              );
+            })}
           </div>
         )}
       </div>

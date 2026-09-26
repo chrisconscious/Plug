@@ -41,7 +41,7 @@ function CartItemRow({ item, onUpdated }: { item: api.CartItem; onUpdated: (item
         <b>{item.product?.name ?? 'Item'}</b>
         <p>{item.variant?.color ?? ''} / {item.variant?.size ?? ''}</p>
         {item.available === false && (
-          <p style={{ color: '#c00', fontSize: 11, fontWeight: 600, margin: '4px 0 0' }}>No longer available — please remove it to check out</p>
+          <p style={{ color: '#c00', fontSize: 11, fontWeight: 600, margin: '4px 0 0' }}>{item.insufficientStock ? 'Not enough stock for this quantity — please reduce it to check out' : 'No longer available — please remove it to check out'}</p>
         )}
         {rowError && <p role="alert" style={{ color: '#c00', fontSize: 11, margin: '4px 0 0' }}>{rowError}</p>}
         <Link to={getProductUrl(item.product?.slug ?? '')} style={{ fontSize: 10, textDecoration: 'underline' }}>View</Link>

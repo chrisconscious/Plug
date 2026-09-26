@@ -355,6 +355,8 @@ export interface Product {
   lifestyles?: ProductLifestyleRef[];
   images: ProductImage[];
   active: boolean;
+  /** Server-derived: true when no variant has stock (or there are no variants). Never stored. */
+  soldOut?: boolean;
   variants: ProductVariant[];
   shortDescription?: string | null;
   fullDescription?: string | null;
@@ -365,6 +367,21 @@ export interface Product {
   offerStartDate?: string | null;
   offerEndDate?: string | null;
   tags?: string[];
+  status?: AdminProductStatus;
+  totalStock?: number;
+  publishedAt?: string | null;
+  archivedAt?: string | null;
+  createdAt?: string | null;
+  updatedAt?: string | null;
+}
+
+export type AdminProductStatus = "active" | "draft" | "archived";
+export type AdminProductFilter = "all" | "active" | "draft" | "archived" | "sold_out" | "low_stock";
+export type AdminProductSort = "newest" | "oldest" | "name" | "price_asc" | "price_desc" | "stock_asc" | "updated";
+
+/** Same rule the server uses (see catalog.service.ts serializeProductWithVariants) — for payloads that predate the soldOut field. */
+export function isSoldOut(p: Pick<Product, "soldOut" | "variants">): boolean {
+  return p.soldOut ?? !p.variants.some((v) => v.inStock);
 }
 
 export interface FacetValue {
@@ -530,10 +547,13 @@ export interface AdminOrder {
 // Admin listing reuses the rich storefront Product serialization (name, brand,
 // variants incl. stock/sku, price etc.) but returns { items, pagination } —
 // there are NO facets on this endpoint (search is client-side here).
-export function listAdminProducts(params?: { page?: number; pageSize?: number }): Promise<{ items: Product[]; pagination: { page: number; pageSize: number; total: number } }> {
+export function listAdminProducts(params?: { page?: number; pageSize?: number; q?: string; status?: AdminProductFilter; sort?: AdminProductSort }): Promise<{ items: Product[]; pagination: { page: number; pageSize: number; total: number } }> {
   const q = new URLSearchParams();
   if (params?.page) q.set("page", String(params.page));
   if (params?.pageSize) q.set("pageSize", String(params.pageSize));
+  if (params?.q) q.set("q", params.q);
+  if (params?.status) q.set("status", params.status);
+  if (params?.sort) q.set("sort", params.sort);
   const qs = q.toString();
   return request<{ items: Product[]; pagination: { page: number; pageSize: number; total: number } }>(`/api/v1/admin/products${qs ? `?${qs}` : ""}`);
 }
@@ -578,6 +598,9 @@ export function updateAdminProduct(
   id: string,
   patch: Partial<{
     name: string;
+    slug: string;
+    brandId: string;
+    categoryId: string;
     priceCents: number;
     active: boolean;
     genderAudiences?: string[];
@@ -610,7 +633,30 @@ export function updateProductVariants(
   });
 }
 
-/** Soft-deletes a product (active=false server-side); variants remain, SKUs stay booked. */
+/** The signed-in user's effective permissions (role + per-admin grants) — for hiding actions the server would refuse. */
+export function getMyPermissions(): Promise<string[]> {
+  return request<{ permissions?: string[] }>("/api/v1/auth/me").then((r) => r.permissions ?? []);
+}
+
+/** Admin product detail (any status) — stock, SKUs, dates, images. */
+export function getAdminProduct(id: string): Promise<{ product: Product }> {
+  return request<{ product: Product }>(`/api/v1/admin/products/${encodeURIComponent(id)}`);
+}
+
+/** Un-archives a deleted product back to draft. */
+export function restoreAdminProduct(id: string): Promise<{ product: Product }> {
+  return request<{ product: Product }>(`/api/v1/admin/products/${encodeURIComponent(id)}/restore`, { method: "POST" });
+}
+
+/** Sets absolute stock for some of a product's variants (dedicated inventory path). */
+export function setProductStock(id: string, stock: { variantId: string; stockQty: number }[]): Promise<{ variants: ProductVariant[] }> {
+  return request<{ variants: ProductVariant[] }>(`/api/v1/admin/products/${encodeURIComponent(id)}/stock`, {
+    method: "PATCH",
+    body: JSON.stringify({ stock }),
+  });
+}
+
+/** Archives ("deletes") a product: hidden from the storefront and unpurchasable; order history is kept. Restorable. */
 export function deleteAdminProduct(id: string): Promise<{ success: boolean }> {
   return request<{ success: boolean }>(`/api/v1/admin/products/${encodeURIComponent(id)}`, {
     method: "DELETE",
@@ -1613,6 +1659,8 @@ export interface CartItem {
   lineTotalCents?: number;
   /** False if the product has gone inactive or the variant is out of stock since this was added to cart — the backend's authoritative check at order creation will reject it regardless; this lets the UI warn before checkout instead of after. */
   available?: boolean;
+  /** True when the variant still has stock but less than this line's quantity. */
+  insufficientStock?: boolean;
 }
 
 export interface Cart {

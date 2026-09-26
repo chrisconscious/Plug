@@ -12,19 +12,18 @@ const KNOWN_FLAKY_HOSTS: string[] = ["storage.googleapis.com", "uxpilot-auth.app
 
 /**
  * Self-contained placeholder encoded as a data-URI so it is bundled with the
- * app and never depends on a network round-trip (external fallbacks such as
- * Unsplash are, ironically, as unreliable as the images they replace).
+ * app and never depends on a network round-trip. Deliberately a plain,
+ * labelled neutral tile — NOT a garment drawing — so a missing/failed image
+ * can never be mistaken for a real product photo. (Publishing a product
+ * requires at least one uploaded image, so live products only show this if an
+ * image fails to load.)
  */
 export const PLACEHOLDER_IMG =
   "data:image/svg+xml;utf8," +
   encodeURIComponent(
     `<svg xmlns="http://www.w3.org/2000/svg" width="600" height="800" viewBox="0 0 600 800">
-      <rect width="600" height="800" fill="#ececea"/>
-      <g fill="none" stroke="#c9c7c3" stroke-width="10" stroke-linecap="round" stroke-linejoin="round">
-        <path d="M150 250 L200 600 L250 620 L280 380 L320 620 L370 600 L420 250"/>
-        <rect x="180" y="200" width="150" height="40" rx="20"/>
-        <circle cx="300" cy="150" r="34"/>
-      </g>
+      <rect width="600" height="800" fill="#efeeeb"/>
+      <text x="300" y="410" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="22" font-weight="700" letter-spacing="6" fill="#b9b6b0">NO IMAGE</text>
     </svg>`
   );
 

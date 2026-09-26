@@ -47,6 +47,10 @@ function serializeProductWithVariants(
   const liveSale = isSaleLive(compareAt, product.priceCents, product.offerStartDate, product.offerEndDate);
   const rawSale = compareAt != null && compareAt > product.priceCents;
   const onSale = opts.publicView ? liveSale : rawSale;
+  // Single source of truth for "can anything be bought": derived from live
+  // variant stock on every read, never stored, so it can't drift. A product
+  // with no variants at all is also not purchasable.
+  const soldOut = !variants.some((v) => v.stockQty > 0);
 
   return {
     id: product.id,
@@ -65,9 +69,16 @@ function serializeProductWithVariants(
     lifestyles: product.lifestyles ?? [],
     images: product.images,
     active: product.active,
+    soldOut,
     ...(opts.publicView
       ? {}
       : {
+          status: product.archivedAt ? "archived" : product.active ? "active" : "draft",
+          totalStock: variants.reduce((sum, v) => sum + v.stockQty, 0),
+          publishedAt: product.publishedAt ?? null,
+          archivedAt: product.archivedAt ?? null,
+          createdAt: product.createdAt ?? null,
+          updatedAt: product.updatedAt ?? null,
           // Fulfillment/scheduling details are admin-only (like variant stock
           // counts); the public storefront gets the presentation layer only.
           sku: product.sku ?? null,
@@ -109,6 +120,9 @@ export type ProductFilters = {
   page: number;
   pageSize: number;
   includeInactive?: boolean;
+  adminSearch?: string;
+  status?: catalogRepo.AdminProductStatus | "all";
+  sort?: catalogRepo.AdminProductSort;
 };
 
 // Small in-process caches for brand/category lookups by slug — these are
@@ -118,6 +132,16 @@ export type ProductFilters = {
 // concern — see docs/DATABASE.md "Caching".
 const brandCache = new Map<string, string | null>(); // slug -> id | null (not found)
 const categoryCache = new Map<string, string | null>();
+
+/**
+ * Must be called after any brand/category create or update: the caches above
+ * also remember "not found", so without this a brand created after someone
+ * visited its URL stayed empty until the server restarted.
+ */
+export function clearCatalogLookupCaches(): void {
+  brandCache.clear();
+  categoryCache.clear();
+}
 
 // Resolution result: matched=true when no filter or a real record resolves,
 // matched=false when a requested slug matches nothing (-> empty result set).
@@ -167,9 +191,17 @@ export async function listProducts(filters: ProductFilters) {
     page: filters.page,
     pageSize: filters.pageSize,
     includeInactive: filters.includeInactive,
+    adminSearch: filters.adminSearch,
+    status: filters.status,
+    sort: filters.sort,
   });
 
-  const variants = await catalogRepo.listVariantsForProducts(items.map((p) => p.id));
+  const [variants, imagesByProduct] = await Promise.all([
+    catalogRepo.listVariantsForProducts(items.map((p) => p.id)),
+    // Admin needs thumbnails too — this listing used to always return
+    // images: [] because images are kept off toProduct()'s hot path.
+    catalogRepo.listImagesForProducts(items.map((p) => p.id)),
+  ]);
   const variantsByProduct = new Map<string, ProductVariant[]>();
   for (const v of variants) {
     const list = variantsByProduct.get(v.productId) ?? [];
@@ -186,6 +218,7 @@ export async function listProducts(filters: ProductFilters) {
       serializeProductWithVariants(
         {
           ...p,
+          images: imagesByProduct.get(p.id) ?? [],
           genderAudiences: audiencesByProduct.get(p.id) ?? [],
           lifestyles: lifestylesByProduct.get(p.id) ?? [],
         },
@@ -499,6 +532,31 @@ export async function getPublicProductsByIds(productIds: string[]) {
   return result;
 }
 
+/** Admin view of ONE product in any lifecycle state (draft / live / archived), with stock, SKUs and dates. */
+export async function getAdminProduct(productId: string) {
+  const product = await catalogRepo.findProductById(productId);
+  if (!product) throw new NotFoundError("Product not found.");
+  const [variants, brand, categories, imageMap, audienceList, lifestyleList] = await Promise.all([
+    catalogRepo.listVariantsForProducts([product.id]),
+    catalogRepo.findBrandById(product.brandId),
+    catalogRepo.listCategories(),
+    catalogRepo.listImagesForProducts([product.id]),
+    catalogRepo.listAudiencesForProducts([product.id]),
+    lifestyleRepo.listLifestylesForProducts([product.id]),
+  ]);
+  return serializeProductWithVariants(
+    {
+      ...product,
+      images: imageMap.get(product.id) ?? [],
+      genderAudiences: audienceList.get(product.id) ?? [],
+      lifestyles: lifestyleList.get(product.id) ?? [],
+    },
+    brand,
+    categories.find((c) => c.id === product.categoryId) ?? null,
+    variants
+  );
+}
+
 export async function getProductOrThrow(productId: string): Promise<Product> {
   const product = await catalogRepo.findProductById(productId);
   if (!product || !product.active) throw new NotFoundError("Product not found.");
@@ -529,6 +587,7 @@ export async function updateCategory(actor: { id: string; role: Role }, id: stri
   }
   const category = await catalogRepo.updateCategoryFields(id, patch);
   if (!category) throw new NotFoundError("Category not found.");
+  clearCatalogLookupCaches();
   await recordAuditEvent({ actorId: actor.id, actorRole: actor.role, action: "category.updated", targetType: "category", targetId: id, metadata: patch as Record<string, unknown> });
   return category;
 }
@@ -817,10 +876,36 @@ export async function createProduct(
 export async function updateProduct(
   actor: { id: string; role: Role },
   productId: string,
-  patch: Partial<{ name: string; priceCents: number; active: boolean; genderAudiences?: string[]; lifestyleIds?: string[]; tags?: string[] } & ProductOfferInput>
+  patch: Partial<{ name: string; slug: string; brandId: string; categoryId: string; priceCents: number; active: boolean; genderAudiences?: string[]; lifestyleIds?: string[]; tags?: string[] } & ProductOfferInput>
 ) {
   const before = await catalogRepo.findProductById(productId);
   if (!before) throw new NotFoundError("Product not found.");
+
+  if (patch.name !== undefined && patch.name.trim() === "") {
+    throw new ValidationError("Product name cannot be blank.", { name: "Enter a product name." });
+  }
+  if (patch.name !== undefined) patch = { ...patch, name: patch.name.trim() };
+  if (patch.slug !== undefined) {
+    const slug = slugifyProduct(patch.slug);
+    if (!slug) throw new ValidationError("Invalid slug.", { slug: "Use letters or numbers, e.g. classic-tee." });
+    patch = { ...patch, slug };
+  }
+
+  // Publishing (draft/archived -> live) requires something a customer can
+  // actually see and buy: at least one image and one variant. Enforced
+  // server-side so no client can push an empty product onto the storefront.
+  if (patch.active === true && !before.active) {
+    const [variants, images] = await Promise.all([
+      catalogRepo.listVariantsForProducts([productId]),
+      catalogRepo.listImagesForProduct(productId),
+    ]);
+    const problems: Record<string, string> = {};
+    if (variants.length === 0) problems.variants = "Add at least one color/size variant before publishing.";
+    if (images.length === 0) problems.images = "Upload at least one product image before publishing.";
+    if (Object.keys(problems).length > 0) {
+      throw new ValidationError("This product isn't ready to publish yet.", problems);
+    }
+  }
 
   // A product must keep at least one audience — rejecting an explicit empty
   // list prevents an admin from stripping every audience off an existing item.
@@ -986,19 +1071,102 @@ export async function replaceProductVariants(
   return variants;
 }
 
+/**
+ * "Delete" archives the product: it disappears from every storefront listing,
+ * search, Latest Drop and its detail page, and can no longer be added to a
+ * cart or ordered (both check `active`) — but the row stays, so historical
+ * orders, wishlists and the audit trail remain intact. Restorable.
+ */
 export async function deleteProduct(actor: { id: string; role: Role }, productId: string) {
   const product = await catalogRepo.findProductById(productId);
   if (!product) throw new NotFoundError("Product not found.");
 
-  await catalogRepo.softDeleteProduct(productId);
+  await catalogRepo.archiveProduct(productId);
 
   await recordAuditEvent({
     actorId: actor.id,
     actorRole: actor.role,
-    action: "product.deleted",
+    action: "product.archived",
+    targetType: "product",
+    targetId: productId,
+    metadata: { slug: product.slug, wasActive: product.active },
+  });
+}
+
+/** Un-archives a product back to DRAFT; the admin publishes it again explicitly. */
+export async function restoreProduct(actor: { id: string; role: Role }, productId: string) {
+  const product = await catalogRepo.findProductById(productId);
+  if (!product) throw new NotFoundError("Product not found.");
+  const restored = await catalogRepo.restoreProduct(productId);
+  await recordAuditEvent({
+    actorId: actor.id,
+    actorRole: actor.role,
+    action: "product.restored",
     targetType: "product",
     targetId: productId,
   });
+  return restored;
+}
+
+/**
+ * Dedicated inventory update — absolute stock per variant, without
+ * resubmitting the rest of the product. The storefront reflects it on the
+ * next read (availability / SOLD OUT are derived from stock, never stored).
+ */
+export async function setProductStock(
+  actor: { id: string; role: Role },
+  productId: string,
+  updates: { variantId: string; stockQty: number }[]
+) {
+  const product = await catalogRepo.findProductById(productId);
+  if (!product) throw new NotFoundError("Product not found.");
+  if (updates.length === 0) throw new ValidationError("Nothing to update.", { stock: "Send at least one variant." });
+  if (updates.length > 100) throw new ValidationError("Too many variants.", { stock: "At most 100 variants per update." });
+  const seen = new Set<string>();
+  for (const u of updates) {
+    if (typeof u.variantId !== "string" || !u.variantId) {
+      throw new ValidationError("Invalid variant.", { stock: "Every row needs a variantId." });
+    }
+    if (seen.has(u.variantId)) throw new ValidationError("Duplicate variant.", { stock: "A variant can only appear once." });
+    seen.add(u.variantId);
+    if (!Number.isInteger(u.stockQty) || u.stockQty < 0 || u.stockQty > 100000) {
+      throw new ValidationError("Invalid stock quantity.", { stock: "Stock must be a whole number from 0 to 100000." });
+    }
+  }
+
+  const previous = await catalogRepo.listVariantsForProducts([productId]);
+  const wasFullyOutOfStock = previous.length > 0 && previous.every((v) => v.stockQty === 0);
+  const variants = await catalogRepo.setVariantStock(productId, updates);
+
+  if (product.active && wasFullyOutOfStock && variants.some((v) => v.stockQty > 0)) {
+    (async () => {
+      try {
+        const userIds = await wishlistRepo.listUserIdsWithProductWishlisted(productId);
+        if (userIds.length > 0) await notifyWishlistersProductBackInStock(userIds, productId, product.name, product.slug);
+      } catch {
+        /* best-effort */
+      }
+    })();
+  }
+
+  const before = new Map(previous.map((v) => [v.id, v.stockQty]));
+  await recordAuditEvent({
+    actorId: actor.id,
+    actorRole: actor.role,
+    action: "product.stock.updated",
+    targetType: "product",
+    targetId: productId,
+    metadata: { changes: updates.map((u) => ({ variantId: u.variantId, from: before.get(u.variantId) ?? null, to: u.stockQty })) },
+  });
+  return variants.map((v) => ({
+    id: v.id,
+    size: v.size,
+    color: v.color,
+    stockQty: v.stockQty,
+    sku: v.sku ?? null,
+    inStock: v.stockQty > 0,
+    lowStock: v.stockQty > 0 && v.stockQty <= 5,
+  }));
 }
 
 const slugify = (name: string) =>
@@ -1014,6 +1182,7 @@ export async function createBrand(
 ) {
   const slug = (input.slug && input.slug.trim() ? slugify(input.slug) : slugify(input.name)) || "brand";
   const brand = await catalogRepo.insertBrand({ slug, name: input.name.trim() });
+  clearCatalogLookupCaches();
 
   await recordAuditEvent({
     actorId: actor.id,
@@ -1033,6 +1202,7 @@ export async function createCategory(
   const slug = (input.slug && input.slug.trim() ? slugify(input.slug) : slugify(input.name)) || "category";
   const const_icon = input.icon && input.icon.trim() ? input.icon.trim() : "box";
   const category = await catalogRepo.insertCategory({ slug, name: input.name.trim(), icon: const_icon });
+  clearCatalogLookupCaches();
   await recordAuditEvent({
     actorId: actor.id,
     actorRole: actor.role,
@@ -1062,6 +1232,7 @@ export async function updateBrand(
 
   const updated = await catalogRepo.updateBrandFields(brandId, normalized);
   if (!updated) throw new NotFoundError("Brand not found.");
+  clearCatalogLookupCaches();
 
   await recordAuditEvent({
     actorId: actor.id,

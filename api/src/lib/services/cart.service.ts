@@ -30,11 +30,16 @@ async function serializeLines(lines: LineSource[]) {
     // reject it there regardless, but the customer deserves to know BEFORE
     // checkout rather than being surprised by a rejected order for an
     // item that was still shown as perfectly normal.
-    const available = !!product && product.active && !!variant && variant.stockQty > 0;
+    const inStock = !!variant && variant.stockQty > 0;
+    // More requested than exist (stock dropped after it was added) — the
+    // order would be rejected, so it isn't purchasable as-is either.
+    const insufficientStock = inStock && variant!.stockQty < item.quantity;
+    const available = !!product && product.active && inStock && !insufficientStock;
     return {
       id: item.id,
       quantity: item.quantity,
       available,
+      insufficientStock,
       variant: variant ? { id: variant.id, size: variant.size, color: variant.color, inStock: variant.stockQty > 0 } : null,
       product: product
         ? {
@@ -88,6 +93,17 @@ export async function addToCart(userId: string, variantId: string, quantity: num
   if (variant.stockQty <= 0) {
     throw new ConflictError("This size is currently out of stock.");
   }
+  // The cart merges quantities for the same variant, so check the total the
+  // customer would end up with, not just this request.
+  const existing = (await cartRepo.listCartItems(userId)).find((i) => i.variantId === variantId);
+  const wanted = (existing?.quantity ?? 0) + quantity;
+  if (wanted > variant.stockQty) {
+    throw new ConflictError(
+      existing
+        ? `Only ${variant.stockQty} available in this size — you already have ${existing.quantity} in your cart.`
+        : `Only ${variant.stockQty} available in this size.`
+    );
+  }
 
   await cartRepo.upsertCartItem(userId, variantId, quantity);
   return serializeCart(userId);
@@ -101,6 +117,9 @@ export async function updateCartItemQuantity(userId: string, cartItemId: string,
   const variant = await getVariantOrThrow(item.variantId);
   if (variant.stockQty <= 0) {
     throw new ConflictError("This size is currently out of stock.");
+  }
+  if (quantity > variant.stockQty) {
+    throw new ConflictError(`Only ${variant.stockQty} available in this size.`);
   }
   await cartRepo.updateCartItemQuantity(item.id, quantity);
   return serializeCart(userId);

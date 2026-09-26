@@ -3,15 +3,24 @@ import { validateBody, required, optional, nullable, isString, isNonNegativeInt,
 import { RateLimitRules } from "@/lib/security/rateLimiter";
 import { listProducts, createProduct } from "@/lib/services/catalog.service";
 
+const STATUSES = ["all", "active", "draft", "archived", "sold_out", "low_stock"] as const;
+const SORTS = ["newest", "oldest", "name", "price_asc", "price_desc", "stock_asc", "updated"] as const;
+
 // Admin listing intentionally reuses the public listProducts() query layer —
 // same source of truth, no duplicated filtering logic. includeInactive keeps
 // soft-deleted/draft products visible so admins can always re-open or remove
 // them (they never have `active = true` again otherwise).
 export const GET = withRoute({ permission: "products.read", rateLimit: RateLimitRules.adminGeneral }, async ({ req }) => {
   const url = new URL(req.url);
-  const page = Math.max(1, Number(url.searchParams.get("page") ?? "1") || 1);
-  const pageSize = Math.min(100, Math.max(1, Number(url.searchParams.get("pageSize") ?? "24") || 24));
-  return json(await listProducts({ page, pageSize, includeInactive: true }));
+  const sp = url.searchParams;
+  const page = Math.max(1, Number(sp.get("page") ?? "1") || 1);
+  const pageSize = Math.min(100, Math.max(1, Number(sp.get("pageSize") ?? "24") || 24));
+  const statusRaw = sp.get("status");
+  const sortRaw = sp.get("sort");
+  const status = STATUSES.find((x) => x === statusRaw);
+  const sort = SORTS.find((x) => x === sortRaw);
+  const q = (sp.get("q") ?? "").trim().slice(0, 100);
+  return json(await listProducts({ page, pageSize, includeInactive: true, adminSearch: q || undefined, status, sort }));
 });
 
 export const POST = withRoute({ permission: "products.create", rateLimit: RateLimitRules.adminGeneral }, async ({ req, user }) => {

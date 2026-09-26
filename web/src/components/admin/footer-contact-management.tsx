@@ -12,9 +12,9 @@ const PLATFORM_LABELS: Record<api.FooterPlatform, string> = {
 };
 
 const PLATFORM_PLACEHOLDERS: Record<api.FooterPlatform, string> = {
-  instagram: 'https://instagram.com/yourbrand',
-  tiktok: 'https://tiktok.com/@yourbrand',
-  facebook: 'https://facebook.com/yourbrand',
+  instagram: 'https://instagram.com/yourbrand or @yourbrand',
+  tiktok: 'https://tiktok.com/@yourbrand or @yourbrand',
+  facebook: 'https://facebook.com/yourbrand or @yourbrand',
   phone: '0756825667',
   whatsapp: '0756825667 or https://wa.me/255756825667',
   email: 'hello@yourbrand.com',
@@ -75,7 +75,9 @@ export function FooterContactManagement() {
     <div style={{ maxWidth: 640, display: 'flex', flexDirection: 'column', gap: 18 }}>
       <p style={{ fontSize: 12.5, color: '#71717a', margin: 0 }}>
         These six channels are the only ones the footer supports. A channel only appears on the site once it has a
-        value AND is switched on — an empty or inactive channel never shows a dead icon to customers.
+        value AND is switched on — an empty or inactive channel never shows a dead icon to customers. Each value is
+        checked when you save (a social link must point to that platform; numbers are Tanzanian mobiles) and the
+        exact link customers will open is shown under it.
       </p>
 
       {banner && (
@@ -108,6 +110,13 @@ export function FooterContactManagement() {
                   {saveValue.pending ? 'Saving…' : 'Save'}
                 </button>
               </div>
+              {link.value && (
+                <p data-role="contact-href" style={{ margin: '8px 0 0', fontSize: 11.5, color: link.href ? '#52525b' : '#b91c1c', wordBreak: 'break-all' }}>
+                  {link.href
+                    ? <>Customers open: <a href={link.href} target="_blank" rel="noopener noreferrer">{link.href}</a></>
+                    : 'This saved value is not a valid link, so it is hidden from customers — re-enter it and save.'}
+                </p>
+              )}
             </div>
           );
         })}

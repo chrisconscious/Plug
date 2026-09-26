@@ -149,6 +149,11 @@ export async function createBroadcast(actor: { id: string; role: Role }, input: 
   if (input.actionUrl !== undefined && input.actionUrl !== null && typeof input.actionUrl !== "string") {
     throw new ValidationError("Validation failed.", { actionUrl: "Must be a string or empty." });
   }
+  // The link opens inside the store (e.g. /product/classic-tee, /shop?sale=true)
+  // — never an outside site, so a broadcast can't send customers elsewhere.
+  if (typeof input.actionUrl === "string" && input.actionUrl.trim() && !/^\/(?![\/\\])[^\s]*$/.test(input.actionUrl.trim())) {
+    throw new ValidationError("Validation failed.", { actionUrl: "Use a page on this store, starting with / (e.g. /shop?sale=true)." });
+  }
   const id = await notificationsRepo.createNotification({
     roleScope,
     category: "PROMOTION",

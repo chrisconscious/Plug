@@ -33,7 +33,7 @@ export type Permission = (typeof PERMISSIONS)[number];
  * this single source of truth instead of duplicating descriptions.
  */
 export const PERMISSION_LABELS: Record<Permission, string> = {
-  "products.read": "View product catalog data",
+  "products.read": "View the admin product catalog (drafts, archived, stock)",
   "products.create": "Create new products",
   "products.update": "Edit existing products",
   "products.delete": "Archive and restore products",
@@ -80,7 +80,9 @@ export function isGrantablePermission(code: string): boolean {
  * privilege surface of each role is auditable at a glance.
  */
 const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
-  CUSTOMER: ["products.read", "orders.read.own"],
+  // The storefront catalog is public (no permission). products.read is the
+  // ADMIN catalog (drafts, archived, stock) — never a customer's (0056).
+  CUSTOMER: ["orders.read.own"],
   ADMIN: [
     "products.read",
     "products.create",

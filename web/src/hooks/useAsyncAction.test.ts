@@ -33,8 +33,17 @@ describe("useAsyncAction", () => {
     expect(result.current.pending).toBe(false);
   });
 
-  it("falls back to a generic message for a non-ApiError failure (e.g. a network error)", async () => {
+  it("explains a network failure (fetch rejects with a TypeError)", async () => {
     const action = vi.fn().mockRejectedValue(new TypeError("Failed to fetch"));
+    const { result } = renderHook(() => useAsyncAction(action));
+
+    await act(async () => { await result.current.run(); });
+
+    expect(result.current.error).toBe("We couldn't reach the store. Check your connection and try again.");
+  });
+
+  it("falls back to a generic message for any other non-API failure", async () => {
+    const action = vi.fn().mockRejectedValue(new Error("boom"));
     const { result } = renderHook(() => useAsyncAction(action));
 
     await act(async () => { await result.current.run(); });
@@ -42,9 +51,18 @@ describe("useAsyncAction", () => {
     expect(result.current.error).toBe("Something went wrong. Please try again.");
   });
 
+  it("never shows a server error's internals to the customer", async () => {
+    const action = vi.fn().mockRejectedValue(new ApiError(500, "relation \"orders\" does not exist"));
+    const { result } = renderHook(() => useAsyncAction(action));
+
+    await act(async () => { await result.current.run(); });
+
+    expect(result.current.error).toBe("Something went wrong on our side. Please try again in a moment.");
+  });
+
   it("clears a previous error on the next run, even before the new call resolves", async () => {
     const action = vi.fn()
-      .mockRejectedValueOnce(new ApiError(500, "first failure"))
+      .mockRejectedValueOnce(new ApiError(409, "first failure"))
       .mockResolvedValueOnce(undefined);
     const { result } = renderHook(() => useAsyncAction(action));
 
@@ -56,7 +74,7 @@ describe("useAsyncAction", () => {
   });
 
   it("clearError() resets the error without needing another run", async () => {
-    const action = vi.fn().mockRejectedValue(new ApiError(500, "failed"));
+    const action = vi.fn().mockRejectedValue(new ApiError(409, "failed"));
     const { result } = renderHook(() => useAsyncAction(action));
     await act(async () => { await result.current.run(); });
     expect(result.current.error).toBe("failed");

@@ -10,7 +10,7 @@ import * as ordersRepo from "../db/repos/orders.repo";
 import * as usersRepo from "../db/repos/users.repo";
 import * as catalogRepo from "../db/repos/catalog.repo";
 import { notifyOrderStatusChanged, notifyAdminsNewOrder, notifyAdminsLowStock } from "./notifications.service";
-import { ValidationError, NotFoundError, AuthorizationError, EmailNotVerifiedError, AuthenticationError } from "../errors";
+import { ValidationError, NotFoundError, EmailNotVerifiedError, AuthenticationError } from "../errors";
 import type { Order, Address } from "../db/types";
 import type { Role } from "../rbac";
 import { createHash } from "crypto";
@@ -146,8 +146,8 @@ export async function createOrderFromCart(
 export async function getOrderForUser(userId: string, orderId: string): Promise<Order> {
   const order = await ordersRepo.getOrderById(orderId);
   if (!order) throw new NotFoundError("Order not found.");
-  // Ownership check — a customer may never fetch another customer's order.
-  if (order.userId !== userId) throw new AuthorizationError();
+  // Ownership check — another customer's order answers exactly like a missing one (404), so order ids can't be probed.
+  if (order.userId !== userId) throw new NotFoundError("Order not found.");
   return order;
 }
 

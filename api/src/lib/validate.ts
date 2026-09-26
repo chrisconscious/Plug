@@ -111,7 +111,7 @@ export const isStrongPassword: FieldValidator<string> = (value, fieldName) => {
   if (!/[0-9]/.test(str)) problems.push("a number");
   if (problems.length > 0) {
     throw new ValidationError("Validation failed.", {
-      [fieldName]: `Password must contain ${problems.join(", ")}.`,
+      [fieldName]: `Password needs ${problems.length > 1 ? `${problems.slice(0, -1).join(", ")} and ${problems[problems.length - 1]}` : problems[0]}.`,
     });
   }
   return str;

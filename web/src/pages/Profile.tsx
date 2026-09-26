@@ -7,12 +7,26 @@ import { useAuth } from '../lib/AuthContext';
 import { formatTZS } from '../lib/currency';
 import { PLACEHOLDER_IMG, resolveImage } from '../lib/imagePlaceholder';
 import { getProductUrl } from '../lib/links';
-import { whatsappHref as buildWhatsappHref } from '../lib/contactLinks';
+import { findContact, useContactLinks } from '../lib/contactLinks';
 import { loginUrl, currentLocation } from '../lib/returnTo';
+import { orderRef, orderStatusLabel } from '../lib/orderStatus';
+import { userMessage } from '../lib/errors';
+import { isStrongPassword } from '../lib/password';
+import { PasswordChecklist } from '../components/PasswordChecklist';
 
-const ORDER_STATUS_LABEL: Record<string, string> = {
-  PENDING: 'Pending', PAID: 'Confirmed', SHIPPED: 'Shipped', DELIVERED: 'Delivered', CANCELLED: 'Cancelled',
-};
+/** A section's data: still loading (null), loaded, or failed — a failure is never shown as "empty". */
+type Loaded<T> = { status: 'loading' } | { status: 'ready'; data: T } | { status: 'error' };
+
+function SectionError({ what, onRetry }: { what: string; onRetry: () => void }) {
+  return (
+    <div className="accEmpty" role="alert">
+      <p>We couldn't load your {what} right now.</p>
+      <button type="button" className="outlineButton" onClick={onRetry}>TRY AGAIN</button>
+    </div>
+  );
+}
+
+const COUNTRY_NAMES: Record<string, string> = { TZ: 'Tanzania' };
 
 function initials(name: string | null, phone: string | null): string {
   if (name?.trim()) {
@@ -34,20 +48,32 @@ function Profile() {
     catch { setResendState('error'); }
   };
 
-  const [orders, setOrders] = useState<api.Order[] | null>(null);
-  const [wishlist, setWishlist] = useState<api.WishlistEntry[] | null>(null);
-  const [contactLinks, setContactLinks] = useState<api.FooterContactLink[]>([]);
+  const [orders, setOrders] = useState<Loaded<api.Order[]>>({ status: 'loading' });
+  const [wishlist, setWishlist] = useState<Loaded<api.WishlistEntry[]>>({ status: 'loading' });
+  const [signingOut, setSigningOut] = useState(false);
+  const { links: contactLinks } = useContactLinks();
+  const userId = user?.id;
 
+  const loadOrders = () => {
+    setOrders({ status: 'loading' });
+    api.listOrders().then((r) => setOrders({ status: 'ready', data: r.orders })).catch(() => setOrders({ status: 'error' }));
+  };
+  const loadWishlist = () => {
+    setWishlist({ status: 'loading' });
+    api.listWishlist().then((r) => setWishlist({ status: 'ready', data: r.wishlist })).catch(() => setWishlist({ status: 'error' }));
+  };
   useEffect(() => {
-    if (!user) return;
-    api.listOrders().then((r) => setOrders(r.orders)).catch(() => setOrders([]));
-    api.listWishlist().then((r) => setWishlist(r.wishlist)).catch(() => setWishlist([]));
-    api.listFooterContactLinks().then((r) => setContactLinks(r.links)).catch(() => setContactLinks([]));
-  }, [user]);
+    if (!userId) return;
+    loadOrders();
+    loadWishlist();
+  }, [userId]);
 
-  const whatsapp = contactLinks.find((l) => l.platform === 'whatsapp');
-  const phoneLink = contactLinks.find((l) => l.platform === 'phone');
-  const whatsappHref = whatsapp?.value ? buildWhatsappHref(whatsapp.value) : null;
+  const whatsappHref = findContact(contactLinks, 'whatsapp')?.href ?? null;
+  const phoneHref = findContact(contactLinks, 'phone')?.href ?? null;
+  const signOut = async () => {
+    setSigningOut(true);
+    try { await logout(); } finally { nav('/', { replace: true }); }
+  };
 
   if (status === 'loading') {
     return (
@@ -123,8 +149,8 @@ function Profile() {
           <a href="#acc-addresses" className="accQuickCard"><MapPin size={18} /><span>Addresses</span><small>Manage delivery addresses</small></a>
         </nav>
 
-        <OrdersSection orders={orders} />
-        <WishlistSection wishlist={wishlist} />
+        <OrdersSection orders={orders} onRetry={loadOrders} />
+        <WishlistSection wishlist={wishlist} onRetry={loadWishlist} />
         <PersonalInfoSection user={user} onSaved={refresh} />
         <AddressesSection />
 
@@ -133,7 +159,7 @@ function Profile() {
           <SecurityForm />
         </section>
 
-        {(whatsappHref || phoneLink?.value) && (
+        {(whatsappHref || phoneHref) && (
           <section className="accSection accHelp">
             <h2>Need Help?</h2>
             <p className="accHelpSub">We're here to help.</p>
@@ -143,8 +169,8 @@ function Profile() {
                   <MessageCircle size={16} /> WhatsApp
                 </a>
               )}
-              {phoneLink?.value && (
-                <a href={`tel:${phoneLink.value.replace(/[^\d+]/g, '')}`} className="outlineButton accHelpBtn">
+              {phoneHref && (
+                <a href={phoneHref} className="outlineButton accHelpBtn">
                   <Phone size={16} /> Call Us
                 </a>
               )}
@@ -152,22 +178,25 @@ function Profile() {
           </section>
         )}
 
-        <button type="button" className="accLogout" onClick={() => { logout(); nav('/'); }}>
-          <LogOut size={15} /> Sign Out
+        <button type="button" className="accLogout" disabled={signingOut} onClick={signOut}>
+          <LogOut size={15} /> {signingOut ? 'Signing out…' : 'Sign Out'}
         </button>
       </main>
     </div>
   );
 }
 
-function OrdersSection({ orders }: { orders: api.Order[] | null }) {
+function OrdersSection({ orders: state, onRetry }: { orders: Loaded<api.Order[]>; onRetry: () => void }) {
+  const orders = state.status === 'ready' ? state.data : null;
   return (
     <section id="acc-orders" className="accSection">
       <div className="accSectionHead">
         <h2><Package size={16} /> My Orders</h2>
         {orders && orders.length > 0 && <Link to="/orders" className="accViewAll">VIEW ALL ORDERS</Link>}
       </div>
-      {orders === null ? (
+      {state.status === 'error' ? (
+        <SectionError what="orders" onRetry={onRetry} />
+      ) : orders === null ? (
         <div className="accSkelBlock" style={{ height: 70 }} />
       ) : orders.length === 0 ? (
         <div className="accEmpty">
@@ -177,15 +206,15 @@ function OrdersSection({ orders }: { orders: api.Order[] | null }) {
       ) : (
         <div className="accOrderList">
           {orders.slice(0, 3).map((o) => (
-            <Link key={o.id} to="/orders" className="accOrderRow">
-              <div className="accOrderThumb">
-                {o.items[0] ? <span className="accOrderThumbFallback" /> : null}
+            <Link key={o.id} to={`/orders/${o.id}`} className="accOrderRow">
+              <div className="accOrderThumb" aria-hidden="true" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#8a8a8a' }}>
+                <Package size={22} />
               </div>
               <div className="accOrderInfo">
-                <b>Order #{o.id.slice(0, 8).toUpperCase()}</b>
+                <b>Order {orderRef(o.id)}</b>
                 <span>{new Date(o.createdAt).toLocaleDateString()} · {o.items.length} item{o.items.length === 1 ? '' : 's'}</span>
               </div>
-              <span className={`accOrderStatus accOrderStatus--${o.status.toLowerCase()}`}>{ORDER_STATUS_LABEL[o.status] ?? o.status}</span>
+              <span className={`accOrderStatus accOrderStatus--${o.status.toLowerCase()}`}>{orderStatusLabel(o.status)}</span>
               <b className="accOrderTotal">{formatTZS(o.totalTzs ?? o.totalCents)}</b>
             </Link>
           ))}
@@ -195,14 +224,17 @@ function OrdersSection({ orders }: { orders: api.Order[] | null }) {
   );
 }
 
-function WishlistSection({ wishlist }: { wishlist: api.WishlistEntry[] | null }) {
+function WishlistSection({ wishlist: state, onRetry }: { wishlist: Loaded<api.WishlistEntry[]>; onRetry: () => void }) {
+  const wishlist = state.status === 'ready' ? state.data : null;
   return (
     <section id="acc-wishlist" className="accSection">
       <div className="accSectionHead">
         <h2><Heart size={16} /> Wishlist</h2>
         {wishlist && wishlist.length > 0 && <Link to="/wishlist" className="accViewAll">VIEW ALL</Link>}
       </div>
-      {wishlist === null ? (
+      {state.status === 'error' ? (
+        <SectionError what="wishlist" onRetry={onRetry} />
+      ) : wishlist === null ? (
         <div className="accSkelBlock" style={{ height: 70 }} />
       ) : wishlist.length === 0 ? (
         <div className="accEmpty">
@@ -256,7 +288,7 @@ function PersonalInfoSection({ user, onSaved }: { user: api.PublicUser; onSaved:
       setSaved(true);
       setTimeout(() => setSaved(false), 2500);
     } catch (e) {
-      setError(e instanceof api.ApiError ? e.message : 'Could not save your changes.');
+      setError(userMessage(e, 'Could not save your changes.', { fullName: 'Name', phoneNumber: 'Phone number' }));
     } finally {
       setSaving(false);
     }
@@ -294,18 +326,25 @@ function PersonalInfoSection({ user, onSaved }: { user: api.PublicUser; onSaved:
 
 function AddressesSection() {
   const [addresses, setAddresses] = useState<api.Address[] | null>(null);
+  const [loadFailed, setLoadFailed] = useState(false);
   const [adding, setAdding] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [error, setError] = useState('');
 
-  const load = () => { api.listAddresses().then((r) => setAddresses(r.addresses)).catch(() => setAddresses([])); };
+  const load = () => {
+    setLoadFailed(false);
+    api.listAddresses().then((r) => setAddresses(r.addresses)).catch(() => setLoadFailed(true));
+  };
   useEffect(load, []);
 
   const remove = async (id: string) => {
-    try { await api.deleteAddress(id); load(); } catch (e) { setError(e instanceof api.ApiError ? e.message : 'Could not remove this address.'); }
+    if (!window.confirm('Remove this address?')) return;
+    setError('');
+    try { await api.deleteAddress(id); load(); } catch (e) { setError(userMessage(e, 'Could not remove this address.')); }
   };
   const makeDefault = async (id: string) => {
-    try { await api.setDefaultAddress(id); load(); } catch (e) { setError(e instanceof api.ApiError ? e.message : 'Could not set this as default.'); }
+    setError('');
+    try { await api.setDefaultAddress(id); load(); } catch (e) { setError(userMessage(e, 'Could not set this as default.')); }
   };
 
   return (
@@ -315,7 +354,9 @@ function AddressesSection() {
         {!adding && <button type="button" className="accLinkBtn" onClick={() => setAdding(true)}><Plus size={13} /> ADD ADDRESS</button>}
       </div>
       {error && <p className="accNoticeErr">{error}</p>}
-      {addresses === null ? (
+      {loadFailed && addresses === null ? (
+        <SectionError what="addresses" onRetry={load} />
+      ) : addresses === null ? (
         <div className="accSkelBlock" style={{ height: 70 }} />
       ) : addresses.length === 0 && !adding ? (
         <div className="accEmpty">
@@ -334,8 +375,9 @@ function AddressesSection() {
                   {a.isDefault && <span className="accDefaultBadge">DEFAULT</span>}
                 </div>
                 <p>{a.line1}{a.line2 ? `, ${a.line2}` : ''}</p>
-                <p>{a.city}, {a.region}</p>
-                <p>{a.country}</p>
+                <p>{a.city}, {a.region}{a.postalCode ? ` ${a.postalCode}` : ''}</p>
+                <p>{COUNTRY_NAMES[a.country] ?? a.country}</p>
+                {a.phone && <p>{a.phone}</p>}
                 <div className="accAddressActions">
                   <button type="button" className="accLinkBtn" onClick={() => setEditingId(a.id)}>EDIT</button>
                   {!a.isDefault && <button type="button" className="accLinkBtn" onClick={() => makeDefault(a.id)}>SET DEFAULT</button>}
@@ -355,24 +397,26 @@ function AddressForm({ initial, onDone, onCancel }: { initial?: api.Address; onD
   const [label, setLabel] = useState(initial?.label ?? 'Home');
   const [line1, setLine1] = useState(initial?.line1 ?? '');
   const [city, setCity] = useState(initial?.city ?? '');
-  const [region, setRegion] = useState(initial?.region ?? 'Dar es Salaam');
-  const [postalCode, setPostalCode] = useState(initial?.postalCode ?? '11111');
-  const [country, setCountry] = useState(initial?.country ?? 'Tanzania');
+  const [region, setRegion] = useState(initial?.region ?? '');
+  const [postalCode, setPostalCode] = useState(initial?.postalCode ?? '');
   const [phone, setPhone] = useState(initial?.phone ?? '');
+  // Deliveries are within Tanzania — the same country code checkout saves.
+  const country = initial?.country && initial.country !== 'Tanzania' ? initial.country : 'TZ';
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
 
   const save = async () => {
-    if (!line1.trim() || !city.trim()) { setError('Address line and city are required.'); return; }
+    const missing = [!label.trim() && 'label', !line1.trim() && 'address', !city.trim() && 'city', !region.trim() && 'region', !postalCode.trim() && 'postal code / house number'].filter(Boolean);
+    if (missing.length) { setError(`Please fill in the ${missing.join(', ')}.`); return; }
     setSaving(true);
     setError('');
     try {
-      const body = { label, line1, city, region, postalCode, country, phone: phone || undefined };
+      const body = { label: label.trim(), line1: line1.trim(), city: city.trim(), region: region.trim(), postalCode: postalCode.trim(), country, phone: phone.trim() || undefined };
       if (initial) await api.updateAddress(initial.id, body);
       else await api.createAddress(body);
       onDone();
     } catch (e) {
-      setError(e instanceof api.ApiError ? e.message : 'Could not save this address.');
+      setError(userMessage(e, 'Could not save this address.', { label: 'Label', line1: 'Address', city: 'City', region: 'Region', postalCode: 'Postal code', phone: 'Phone' }));
     } finally {
       setSaving(false);
     }
@@ -384,7 +428,8 @@ function AddressForm({ initial, onDone, onCancel }: { initial?: api.Address; onD
         <label>Label<input value={label} onChange={(e) => setLabel(e.target.value)} placeholder="Home, Office…" /></label>
         <label>Address<input value={line1} onChange={(e) => setLine1(e.target.value)} placeholder="Street, house number" /></label>
         <label>City<input value={city} onChange={(e) => setCity(e.target.value)} /></label>
-        <label>Region<input value={region} onChange={(e) => setRegion(e.target.value)} /></label>
+        <label>Region<input value={region} onChange={(e) => setRegion(e.target.value)} placeholder="e.g. Dar es Salaam" autoComplete="address-level1" /></label>
+        <label>Postal code / House number<input value={postalCode} onChange={(e) => setPostalCode(e.target.value)} autoComplete="postal-code" /></label>
         <label>Phone<input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="0756825667" /></label>
         {error && <p className="accNoticeErr">{error}</p>}
         <div className="accFormActions">
@@ -399,6 +444,7 @@ function AddressForm({ initial, onDone, onCancel }: { initial?: api.Address; onD
 function SecurityForm() {
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
@@ -408,15 +454,19 @@ function SecurityForm() {
     setError('');
     setSuccess(false);
     if (!currentPassword || !newPassword) { setError('Enter your current and new password.'); return; }
+    if (!isStrongPassword(newPassword)) { setError("Your new password doesn't meet all the requirements yet."); return; }
+    if (newPassword !== confirmPassword) { setError("The new passwords don't match."); return; }
+    if (newPassword === currentPassword) { setError('Choose a new password that is different from your current one.'); return; }
     setSaving(true);
     try {
       await api.changeMyPassword(currentPassword, newPassword);
       setCurrentPassword('');
       setNewPassword('');
+      setConfirmPassword('');
       setSuccess(true);
-      setTimeout(() => setSuccess(false), 3000);
+      setTimeout(() => setSuccess(false), 6000);
     } catch (e) {
-      setError(e instanceof api.ApiError ? e.message : 'Could not change your password.');
+      setError(userMessage(e, 'Could not change your password.', { currentPassword: 'Current password', newPassword: 'New password' }));
     } finally {
       setSaving(false);
     }
@@ -425,9 +475,11 @@ function SecurityForm() {
   return (
     <form className="accForm" onSubmit={save}>
       <label>Current password<input type="password" value={currentPassword} onChange={(e) => setCurrentPassword(e.target.value)} autoComplete="current-password" /></label>
-      <label>New password<input type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} autoComplete="new-password" /></label>
-      {success && <p className="accNoticeOk"><Check size={13} /> Password changed.</p>}
-      {error && <p className="accNoticeErr"><X size={13} /> {error}</p>}
+      <label>New password<input type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} autoComplete="new-password" aria-describedby="acc-password-rules" /></label>
+      <PasswordChecklist id="acc-password-rules" password={newPassword} />
+      <label>Confirm new password<input type="password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} autoComplete="new-password" /></label>
+      {success && <p className="accNoticeOk" role="status"><Check size={13} /> Password changed. Any other devices signed in to your account have been signed out.</p>}
+      {error && <p className="accNoticeErr" role="alert"><X size={13} /> {error}</p>}
       <div className="accFormActions">
         <button type="submit" className="blackButton" disabled={saving}>{saving ? 'Saving…' : 'CHANGE PASSWORD'}</button>
       </div>

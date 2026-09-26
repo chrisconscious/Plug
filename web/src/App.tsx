@@ -27,6 +27,7 @@ import Backoffice from './pages/Backoffice';
 import { ProductListingPage } from './components/shop/ProductListingPage';
 import { LifestylePage } from './components/lifestyle/LifestylePage';
 import { superItems, adminItems } from './lib/adminNav';
+import { RequireRole } from './components/RequireRole';
 import { AuthProvider } from './lib/AuthContext';
 import { PlatformSettingsProvider } from './lib/PlatformSettingsContext';
 
@@ -122,9 +123,9 @@ function App() {
         <Route path="/orders/:id" element={<OrderDetail />} />
         <Route path="/wishlist" element={<Wishlist />} />
         <Route path="/notifications" element={<Notifications />} />
-        {superItems.map((x) => <Route key={x.path} path={x.path} element={<Backoffice />} />)}
-        {adminItems.map((x) => <Route key={x.path} path={x.path} element={<Backoffice />} />)}
-        <Route path="/admin/orders/:id" element={<AdminOrderDetail />} />
+        {superItems.map((x) => <Route key={x.path} path={x.path} element={<RequireRole roles={['SUPER_ADMIN']}><Backoffice /></RequireRole>} />)}
+        {adminItems.map((x) => <Route key={x.path} path={x.path} element={<RequireRole roles={['ADMIN', 'SUPER_ADMIN']}><Backoffice /></RequireRole>} />)}
+        <Route path="/admin/orders/:id" element={<RequireRole roles={['ADMIN', 'SUPER_ADMIN']}><AdminOrderDetail /></RequireRole>} />
         <Route path="*" element={<NotFound />} />
       </Routes>
       <MobileBottomNav />

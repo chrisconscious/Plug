@@ -1,11 +1,9 @@
 import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import * as api from '../lib/api';
+import { ORDER_STATUS_LABEL as STATUS_LABEL } from '../lib/orderStatus';
 import { formatTZS } from '../lib/currency';
 
-const STATUS_LABEL: Record<string, string> = {
-  PENDING: 'Pending', PAID: 'Confirmed', SHIPPED: 'Shipped', DELIVERED: 'Delivered', CANCELLED: 'Cancelled',
-};
 const STATUSES: api.Order['status'][] = ['PENDING', 'PAID', 'SHIPPED', 'DELIVERED', 'CANCELLED'];
 
 /**

@@ -1,11 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { usePlatformSettings } from "../lib/PlatformSettingsContext";
 import * as api from "../lib/api";
 import { BrandLogo } from "./BrandLogo";
-import { whatsappHref } from "../lib/contactLinks";
+import { useContactLinks } from "../lib/contactLinks";
 
 /**
  * Minimal, consistent stroke-based icons for the six footer contact
@@ -77,14 +76,6 @@ function contactLabel(platform: api.FooterPlatform, platformName: string): strin
   return CONTACT_LABELS[platform];
 }
 
-function contactHref(link: api.FooterContactLink): string {
-  const v = link.value ?? "";
-  if (link.platform === "phone") return `tel:${v.replace(/[^\d+]/g, "")}`;
-  if (link.platform === "email") return `mailto:${v}`;
-  if (link.platform === "whatsapp") return whatsappHref(v);
-  return v; // instagram / tiktok / facebook are already full URLs
-}
-
 /**
  * Complete rebuild — brand-first-at-the-bottom structure per the current
  * redesign brief, not the earlier top-of-footer brand block. Hierarchy:
@@ -106,22 +97,14 @@ function contactHref(link: api.FooterContactLink): string {
  */
 export function Footer() {
   const { platformName } = usePlatformSettings();
-  const [links, setLinks] = useState<api.FooterContactLink[]>([]);
+  const { links } = useContactLinks();
   const year = new Date().getFullYear();
-
-  useEffect(() => {
-    let mounted = true;
-    api.listFooterContactLinks()
-      .then((r) => { if (mounted) setLinks(r.links); })
-      .catch(() => { /* footer contact row is decorative — never blocks the page */ });
-    return () => { mounted = false; };
-  }, []);
 
   // Defense-in-depth on top of the backend's own active+valued filtering:
   // even if the API ever returned a disabled or empty channel, it must not
   // render a dead icon (§10 of the footer spec).
   const visibleLinks = links.filter(
-    (link) => link.active && (link.value ?? "").trim() !== ""
+    (link) => link.active && !!link.href
   );
 
   return (
@@ -161,7 +144,7 @@ export function Footer() {
             {visibleLinks.map((link) => (
               <a
                 key={link.platform}
-                href={contactHref(link)}
+                href={link.href!}
                 target={link.platform === "phone" || link.platform === "email" ? undefined : "_blank"}
                 rel={link.platform === "phone" || link.platform === "email" ? undefined : "noopener noreferrer"}
                 aria-label={contactLabel(link.platform, platformName)}

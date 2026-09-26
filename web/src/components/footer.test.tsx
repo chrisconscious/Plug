@@ -5,6 +5,7 @@ import { MemoryRouter } from "react-router-dom";
 import { Footer } from "./footer";
 import * as api from "../lib/api";
 import type { FooterContactLink } from "../lib/api";
+import { resetContactLinksCache } from "../lib/contactLinks";
 
 /**
  * This suite exists to prove the architectural claims behind the footer
@@ -24,8 +25,11 @@ vi.mock("../lib/api", async () => {
 
 const mockedListFooterContactLinks = vi.mocked(api.listFooterContactLinks);
 
-function makeLink(platform: FooterContactLink["platform"], value: string, active = true): FooterContactLink {
-  return { id: `footer-${platform}`, platform, value, active, displayOrder: 0 };
+// `href` is what the API computes (api/src/lib/contact-links.ts); the footer
+// must use it verbatim and never build links itself.
+function makeLink(platform: FooterContactLink["platform"], value: string, active = true, href?: string | null): FooterContactLink {
+  const derived = platform === "phone" ? "tel:+255756825667" : platform === "email" ? `mailto:${value}` : value;
+  return { id: `footer-${platform}`, platform, value, href: href === undefined ? derived : href, active, displayOrder: 0 };
 }
 
 function renderFooter() {
@@ -40,13 +44,14 @@ const ALLOWED_ACCOUNTS: FooterContactLink[] = [
   makeLink("instagram", "https://instagram.com/plug"),
   makeLink("tiktok", "https://tiktok.com/@plug"),
   makeLink("facebook", "https://facebook.com/plug"),
-  makeLink("phone", "+255756825667"),
-  makeLink("whatsapp", "https://wa.me/255756825667"),
+  makeLink("phone", "0756825667"),
+  makeLink("whatsapp", "0756825667", true, "https://wa.me/255756825667"),
   makeLink("email", "hello@plug.com"),
 ];
 
 beforeEach(() => {
   mockedListFooterContactLinks.mockReset();
+  resetContactLinksCache();
 });
 
 afterEach(() => {
@@ -77,7 +82,7 @@ describe("Footer — only the six allowed channels can ever render", () => {
     mockedListFooterContactLinks.mockResolvedValue({
       links: [
         ...ALLOWED_ACCOUNTS,
-        { id: "x", platform: "x" as FooterContactLink["platform"], value: "https://x.com/plug", active: true, displayOrder: 99 },
+        { id: "x", platform: "x" as FooterContactLink["platform"], value: "https://x.com/plug", href: "https://x.com/plug", active: true, displayOrder: 99 },
       ],
     });
     renderFooter();
@@ -126,6 +131,24 @@ describe("Footer — contact icons link to the correct destination", () => {
     expect(email.getAttribute("href")).toBe("mailto:hello@plug.com");
     expect(phone.getAttribute("target")).toBeNull();
     expect(email.getAttribute("target")).toBeNull();
+  });
+});
+
+describe("Footer — WhatsApp and unusable values", () => {
+  it("opens the API's international wa.me link, never wa.me/0…", async () => {
+    mockedListFooterContactLinks.mockResolvedValue({ links: ALLOWED_ACCOUNTS });
+    renderFooter();
+    const wa = await screen.findByLabelText("Contact PLUG on WhatsApp");
+    expect(wa.getAttribute("href")).toBe("https://wa.me/255756825667");
+  });
+
+  it("hides a channel whose value the API could not turn into a link", async () => {
+    mockedListFooterContactLinks.mockResolvedValue({
+      links: [makeLink("instagram", "https://instagram.com/plug"), makeLink("whatsapp", "12345", true, null)],
+    });
+    renderFooter();
+    await screen.findByLabelText("Instagram");
+    expect(screen.queryByLabelText("Contact PLUG on WhatsApp")).not.toBeInTheDocument();
   });
 });
 

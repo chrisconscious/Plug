@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import * as api from '../lib/api';
+import { itemSummary, orderRef, orderStatusLabel } from '../lib/orderStatus';
 import { formatTZS } from '../lib/currency';
 import { StoreHeader } from '../components/shop/StoreHeader';
 import { loginUrl, currentLocation } from '../lib/returnTo';
@@ -56,19 +57,20 @@ function OrdersPage() {
             <div className="orderBox">
               <h3>ORDER HISTORY</h3>
               {orders.map((o) => (
-                <div key={o.id} style={{ borderTop: '1px solid #ececec', padding: '14px 0' }}>
+                <Link key={o.id} to={`/orders/${o.id}`} data-role="order-row" style={{ display: 'block', color: 'inherit', textDecoration: 'none', borderTop: '1px solid #ececec', padding: '14px 0' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12 }}>
-                    <b>#{o.id.slice(0, 8).toUpperCase()}</b>
+                    <b>{orderRef(o.id)}</b>
                     <span style={{ fontSize: 12 }}>{new Date(o.createdAt).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })}</span>
                   </div>
                   <p style={{ fontSize: 13, color: '#555', margin: '4px 0 6px' }}>
-                    {(o.items ?? []).map((it) => `${it.nameSnapshot} (${it.color ?? ''} ${it.size ?? ''})`.trim()).join(', ') || 'Order'}
+                    {(o.items ?? []).map(itemSummary).join(', ')}
                   </p>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <span className={`status ${o.status === 'CANCELLED' ? 'danger' : o.status === 'DELIVERED' ? '' : 'warning'}`}>{o.status}</span>
+                    <span className={`status ${o.status === 'CANCELLED' ? 'danger' : o.status === 'DELIVERED' ? '' : 'warning'}`}>{orderStatusLabel(o.status)}</span>
                     <b>{formatTZS(o.totalTzs ?? o.totalCents ?? 0)}</b>
                   </div>
-                </div>
+                  <span style={{ display: 'block', marginTop: 6, fontSize: 11, fontWeight: 700, letterSpacing: '.08em', textDecoration: 'underline' }}>VIEW DETAILS</span>
+                </Link>
               ))}
             </div>
           )}

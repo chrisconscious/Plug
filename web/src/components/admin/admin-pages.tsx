@@ -90,42 +90,12 @@ type AddForm = {
 };
 
 export function FunctionalManagementPage({ title, desc, withHeroOverride = false, withPaymentsOverride = false, withLifestylesOverride = false, withMfaOverride = false, superRole = true }: { title: string; desc: string; withHeroOverride?: boolean; withPaymentsOverride?: boolean; withLifestylesOverride?: boolean; withMfaOverride?: boolean; superRole?: boolean }) {
-  const kind = kindFor(title);
-  const [rows, setRows] = useState<AdminRow[]>([]);
-  const [query, setQuery] = useState("");
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [notImplemented, setNotImplemented] = useState(false);
-  const [add, setAdd] = useState<AddForm>({ open: false, fields: [] });
-  const [productReload, setProductReload] = useState(0);
-  const [banner, setBanner] = useState("");
-  const [catalogData, setCatalogData] = useState<{ brands: AdminRow[]; categories: AdminRow[] }>({ brands: [], categories: [] });
-  const [catalogToAdd, setCatalogToAdd] = useState<"brand" | "category" | null>(null);
-  const [editingBrand, setEditingBrand] = useState<api.Brand | null>(null);
-  const [editingCategory, setEditingCategory] = useState<api.Category | null>(null);
-  const [editingProduct, setEditingProduct] = useState<api.Product | null>(null);
-  const [permsAdmin, setPermsAdmin] = useState<api.AdminUser | null>(null);
-
-  // Live brand/category data for the Add Product form: kept in a ref (not
-  // localStorage) so it can never go stale across tabs/sessions, and
-  // refetched fresh every time the Add Product modal is opened (see the
-  // "Add New" button below) rather than only once per page load.
-  const catalogOptionsRef = useRef<{ brands: api.Brand[]; categories: api.Category[] }>({ brands: [], categories: [] });
-
-  // Create-product attribute picker: when the Add Product dialog's category
-  // select changes we load that category's attribute groups (via slug) and
-  // render their options so the new product can be tagged right at creation.
-  const [createAttrGroups, setCreateAttrGroups] = useState<api.AttributeGroup[]>([]);
-  const [createAttrSelected, setCreateAttrSelected] = useState<string[]>([]);
-  const lastCreateCategory = useRef("");
-
   // Homepage hero management is a first-class, database-backed tool instead of
   // the generic demo table. Content editing is SUPER_ADMIN-only (RBAC
   // `content.manage`); standard admins get an explicit permission notice.
-  // NOTE: all hooks above run unconditionally — these `with*Override` pages
-  // are pure functions of props, so the early returns stay AFTER every hook
-  // call (Rules of Hooks: the hook count must be identical on every render of
-  // a mounted component, or React's fiber state corrupts).
+  // These dedicated pages are chosen here, in a hook-free wrapper, so the
+  // generic table below always calls the same hooks in the same order
+  // (Rules of Hooks) — an early return inside it used to skip later hooks.
   if (withLifestylesOverride) {
     if (!superRole) {
       return (
@@ -168,6 +138,39 @@ export function FunctionalManagementPage({ title, desc, withHeroOverride = false
     }
     return <PaymentMethodsPage />;
   }
+  return <GenericManagementPage title={title} desc={desc} superRole={superRole} />;
+}
+
+function GenericManagementPage({ title, desc, superRole }: { title: string; desc: string; superRole: boolean }) {
+  const kind = kindFor(title);
+  const [rows, setRows] = useState<AdminRow[]>([]);
+  const [query, setQuery] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [notImplemented, setNotImplemented] = useState(false);
+  const [add, setAdd] = useState<AddForm>({ open: false, fields: [] });
+  const [productReload, setProductReload] = useState(0);
+  const [banner, setBanner] = useState("");
+  const [catalogData, setCatalogData] = useState<{ brands: AdminRow[]; categories: AdminRow[] }>({ brands: [], categories: [] });
+  const [catalogToAdd, setCatalogToAdd] = useState<"brand" | "category" | null>(null);
+  const [editingBrand, setEditingBrand] = useState<api.Brand | null>(null);
+  const [editingCategory, setEditingCategory] = useState<api.Category | null>(null);
+  const [editingProduct, setEditingProduct] = useState<api.Product | null>(null);
+  const [permsAdmin, setPermsAdmin] = useState<api.AdminUser | null>(null);
+
+  // Live brand/category data for the Add Product form: kept in a ref (not
+  // localStorage) so it can never go stale across tabs/sessions, and
+  // refetched fresh every time the Add Product modal is opened (see the
+  // "Add New" button below) rather than only once per page load.
+  const catalogOptionsRef = useRef<{ brands: api.Brand[]; categories: api.Category[] }>({ brands: [], categories: [] });
+
+  // Create-product attribute picker: when the Add Product dialog's category
+  // select changes we load that category's attribute groups (via slug) and
+  // render their options so the new product can be tagged right at creation.
+  const [createAttrGroups, setCreateAttrGroups] = useState<api.AttributeGroup[]>([]);
+  const [createAttrSelected, setCreateAttrSelected] = useState<string[]>([]);
+  const lastCreateCategory = useRef("");
+
   const handleCreateCategoryChange = (d: Record<string, string>) => {
     if (kind !== "products") return;
     const catName = (d.categoryId ?? "").trim();

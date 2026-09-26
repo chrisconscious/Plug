@@ -1,5 +1,5 @@
 import { withRoute, json } from "@/lib/http";
-import { validateBody, isEmail, isPhoneNumber, isStrongPassword, isString, maxLength, required, optional } from "@/lib/validate";
+import { validateBody, isEmail, isPhoneNumber, isStrongPassword, isString, required, optional } from "@/lib/validate";
 import { ValidationError } from "@/lib/errors";
 import { RateLimitRules } from "@/lib/security/rateLimiter";
 import { registerCustomer, registerCustomerByPhone } from "@/lib/services/auth.service";
@@ -7,7 +7,12 @@ import { touchLastLogin } from "@/lib/db/repos/users.repo";
 import { createAccessToken, createRefreshToken, setAuthCookies, type SessionUser } from "@/lib/security/tokens";
 import { config } from "@/lib/config";
 
-const isFullName = (value: unknown, fieldName: string) => maxLength(200)(isString(value, fieldName), fieldName);
+// Same 120-character limit as editing the name later on the account page.
+const isFullName = (value: unknown, fieldName: string) => {
+  const name = isString(value, fieldName).trim().replace(/\s+/g, " ");
+  if (name.length > 120) throw new ValidationError("Validation failed.", { [fieldName]: "Name must be 120 characters or fewer." });
+  return name;
+};
 
 /**
  * Phone number is the primary sign-up field now (see migration 0037) —

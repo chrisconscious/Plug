@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Bell, Package, CreditCard, Tag, Megaphone, Heart, Boxes, Users, ShieldAlert, Shield } from 'lucide-react';
 import * as api from '../lib/api';
+import { safeReturnTo } from '../lib/returnTo';
 
 const CATEGORY_ICON: Record<api.NotificationCategory, React.ReactNode> = {
   ORDER: <Package size={15} />,
@@ -40,6 +41,7 @@ export function NotificationBell() {
   const [open, setOpen] = useState(false);
   const [unread, setUnread] = useState(0);
   const [items, setItems] = useState<api.AppNotification[] | null>(null);
+  const [loadFailed, setLoadFailed] = useState(false);
   const [marking, setMarking] = useState(false);
   const panelRef = useRef<HTMLDivElement>(null);
 
@@ -54,7 +56,8 @@ export function NotificationBell() {
   useEffect(() => {
     if (!open) return;
     let on = true;
-    api.listNotifications(1, 20).then((r) => { if (on) setItems(r.notifications); }).catch(() => { if (on) setItems([]); });
+    setLoadFailed(false);
+    api.listNotifications(1, 20).then((r) => { if (on) setItems(r.notifications); }).catch(() => { if (on) setLoadFailed(true); });
     return () => { on = false; };
   }, [open]);
 
@@ -74,7 +77,9 @@ export function NotificationBell() {
       api.markNotificationRead(n.id).catch(() => {});
     }
     setOpen(false);
-    if (n.actionUrl) nav(n.actionUrl);
+    // Only ever an in-store page (same rule as sign-in return links).
+    const target = safeReturnTo(n.actionUrl);
+    if (target) nav(target);
   };
 
   const markAllRead = async () => {
@@ -114,7 +119,12 @@ export function NotificationBell() {
             )}
           </div>
           <div className="notifList">
-            {items === null ? (
+            {items === null && loadFailed ? (
+              <div className="notifEmpty" role="alert">
+                <p>Couldn't load your notifications.</p>
+                <span>Please try again in a moment.</span>
+              </div>
+            ) : items === null ? (
               <div className="notifLoading">Loading…</div>
             ) : items.length === 0 ? (
               <div className="notifEmpty">

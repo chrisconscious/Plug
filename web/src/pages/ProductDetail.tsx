@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, useNavigate, Link, useSearchParams } from 'react-router-dom';
 import { Truck, Lock, Minus, Plus, ChevronLeft, ChevronRight, X, ZoomIn, ZoomOut, Maximize2 } from 'lucide-react';
+import { userMessage } from '../lib/errors';
 import * as api from '../lib/api';
 import { setCartCountFromItems } from '../lib/cartCount';
 import { formatTZS } from '../lib/currency';
@@ -294,7 +295,7 @@ function ProductDetail() {
         setFeedback('Please sign in to add items to your cart.');
         nav(loginUrl(selectionUrl(selectedVariant.id)));
       }
-      else setFeedback(e instanceof api.ApiError ? e.message : 'Could not add to cart');
+      else setFeedback(userMessage(e, 'Could not add to cart. Please try again.'));
     }
     finally { setBusy(false); }
   };

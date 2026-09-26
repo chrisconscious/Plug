@@ -5,6 +5,7 @@ import * as api from '../lib/api';
 import { StoreHeader } from '../components/shop/StoreHeader';
 import { useAuth } from '../lib/AuthContext';
 import { loginUrl, currentLocation } from '../lib/returnTo';
+import { safeReturnTo } from '../lib/returnTo';
 
 const CATEGORY_ICON: Record<api.NotificationCategory, React.ReactNode> = {
   ORDER: <Package size={16} />,
@@ -74,7 +75,9 @@ function Notifications() {
       setItems((cur) => cur.map((x) => (x.id === n.id ? { ...x, isRead: true } : x)));
       api.markNotificationRead(n.id).catch(() => {});
     }
-    if (n.actionUrl) nav(n.actionUrl);
+    // Only ever an in-store page (same rule as sign-in return links).
+    const target = safeReturnTo(n.actionUrl);
+    if (target) nav(target);
   };
 
   const markAllRead = async () => {

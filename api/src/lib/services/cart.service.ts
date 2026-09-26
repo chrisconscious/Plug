@@ -1,7 +1,7 @@
 import * as cartRepo from "../db/repos/cart.repo";
 import * as catalogRepo from "../db/repos/catalog.repo";
 import { getProductOrThrow, getVariantOrThrow } from "./catalog.service";
-import { NotFoundError, ValidationError, AuthorizationError, ConflictError } from "../errors";
+import { NotFoundError, ValidationError, ConflictError } from "../errors";
 import { addCents, cents, multiplyCents, type Cents } from "../money";
 import type { CartItem } from "../db/types";
 
@@ -70,7 +70,7 @@ async function serializeCart(userId: string) {
 async function assertOwnsCartItem(userId: string, cartItemId: string): Promise<CartItem> {
   const item = await cartRepo.findCartItemById(cartItemId);
   if (!item) throw new NotFoundError("Cart item not found.");
-  if (item.userId !== userId) throw new AuthorizationError("This cart item does not belong to you.");
+  if (item.userId !== userId) throw new NotFoundError("Cart item not found.");
   return item;
 }
 

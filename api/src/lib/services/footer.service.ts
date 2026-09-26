@@ -2,7 +2,7 @@ import * as footerRepo from "../db/repos/footer.repo";
 import type { FooterPlatform } from "../db/repos/footer.repo";
 import { NotFoundError, ValidationError } from "../errors";
 import { recordAuditEvent } from "../audit";
-import { isEmail, isPhoneNumber } from "../validate";
+import { contactHref, normaliseContactValue } from "../contact-links";
 import type { Role } from "../rbac";
 
 const VALID_PLATFORMS: FooterPlatform[] = ["instagram", "tiktok", "facebook", "phone", "whatsapp", "email"];
@@ -11,57 +11,24 @@ export function isFooterPlatform(value: unknown): value is FooterPlatform {
   return typeof value === "string" && (VALID_PLATFORMS as string[]).includes(value);
 }
 
-export async function listActiveFooterContactLinks() {
-  return footerRepo.listActiveFooterContactLinks();
-}
-
-export async function listAllFooterContactLinks() {
-  return footerRepo.listAllFooterContactLinks();
+/** Adds the ready-to-open link (`https://wa.me/255…`, `tel:+255…`, `mailto:…`, profile URL). */
+function withHref<T extends { platform: FooterPlatform; value: string | null }>(link: T): T & { href: string | null } {
+  return { ...link, href: contactHref(link.platform, link.value) };
 }
 
 /**
- * Validates a link's value according to what that platform actually is —
- * a URL-based social platform must be a real http(s) URL (never a
- * javascript:/data: scheme, which this rejects outright as a genuine
- * security concern, not just a formatting nicety), phone/WhatsApp must be
- * a real phone number, email must be a real address.
+ * Public list: active channels with a usable link only. A value that no
+ * longer validates (saved before per-platform checks existed) is left out
+ * rather than sending customers to a broken or wrong destination.
  */
-function validateValueForPlatform(platform: FooterPlatform, raw: string): string {
-  const trimmed = raw.trim();
-  if (platform === "instagram" || platform === "tiktok" || platform === "facebook") {
-    let url: URL;
-    try {
-      url = new URL(trimmed);
-    } catch {
-      throw new ValidationError("Validation failed.", { value: "Enter a full URL, e.g. https://instagram.com/yourbrand." });
-    }
-    if (url.protocol !== "https:" && url.protocol !== "http:") {
-      throw new ValidationError("Validation failed.", { value: "Only http/https links are allowed." });
-    }
-    return trimmed;
-  }
-  if (platform === "phone") {
-    return isPhoneNumber(trimmed, "value");
-  }
-  if (platform === "whatsapp") {
-    // Accept either a plain phone number or a full wa.me/whatsapp link —
-    // the document itself says "number/link" for this one specifically.
-    if (/^https?:\/\//i.test(trimmed)) {
-      let url: URL;
-      try {
-        url = new URL(trimmed);
-      } catch {
-        throw new ValidationError("Validation failed.", { value: "Enter a valid WhatsApp link or phone number." });
-      }
-      if (url.protocol !== "https:" && url.protocol !== "http:") {
-        throw new ValidationError("Validation failed.", { value: "Only http/https links are allowed." });
-      }
-      return trimmed;
-    }
-    return isPhoneNumber(trimmed, "value");
-  }
-  // email
-  return isEmail(trimmed, "value");
+export async function listActiveFooterContactLinks() {
+  const links = await footerRepo.listActiveFooterContactLinks();
+  return links.map(withHref).filter((l) => l.href !== null);
+}
+
+/** Admin list: every channel, with the link it opens (null = not usable yet) for a preview. */
+export async function listAllFooterContactLinks() {
+  return (await footerRepo.listAllFooterContactLinks()).map(withHref);
 }
 
 export async function updateFooterContactLink(
@@ -80,7 +47,7 @@ export async function updateFooterContactLink(
     if (input.value === null || (typeof input.value === "string" && input.value.trim() === "")) {
       patch.value = null;
     } else if (typeof input.value === "string") {
-      patch.value = validateValueForPlatform(platform, input.value);
+      patch.value = normaliseContactValue(platform, input.value);
     } else {
       throw new ValidationError("Validation failed.", { value: "Must be a string or null." });
     }
@@ -108,5 +75,5 @@ export async function updateFooterContactLink(
   const updated = await footerRepo.updateFooterContactLink(platform, patch);
   if (!updated) throw new NotFoundError("Footer contact link not found.");
   await recordAuditEvent({ actorId: actor.id, actorRole: actor.role, action: "footer_contact_link.updated", targetType: "footer_contact_link", targetId: platform, metadata: { active: updated.active, hasValue: !!updated.value } });
-  return updated;
+  return withHref(updated);
 }

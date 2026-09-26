@@ -2,9 +2,17 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import * as api from '../lib/api';
 import { BrandLogo } from '../components/BrandLogo';
+import { userMessage } from '../lib/errors';
+import { findContact, useContactLinks } from '../lib/contactLinks';
 
 function ForgotPassword() {
   const [email, setEmail] = useState(''); const [sent, setSent] = useState(false); const [busy, setBusy] = useState(false); const [error, setError] = useState('');
+  // Phone-registered customers can't get a reset email — point them at the
+  // store's own configured support channels (never a hard-coded number).
+  const { links } = useContactLinks();
+  const whatsapp = findContact(links, 'whatsapp');
+  const phone = findContact(links, 'phone');
+  const supportEmail = findContact(links, 'email');
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -16,7 +24,7 @@ function ForgotPassword() {
       // backend deliberately never reveals that (see auth.service.ts).
       setSent(true);
     } catch (err) {
-      setError(err instanceof api.ApiError ? err.message : 'Something went wrong. Please try again.');
+      setError(userMessage(err, 'We couldn\'t send the reset link. Please try again.', { email: 'Email address' }));
     } finally {
       setBusy(false);
     }
@@ -40,10 +48,17 @@ function ForgotPassword() {
           <form className="formGrid" onSubmit={submit}>
             <input aria-label="Email address" placeholder="Email address" type="email" required value={email} onChange={(e) => setEmail(e.target.value)} />
             {error && <p style={{ color: '#c00', fontSize: 13, margin: 0 }}>{error}</p>}
-            <button className="blackButton" disabled={!email.includes('@') || busy}>{busy ? 'SENDING…' : 'SEND RESET LINK'}</button>
+            <button type="submit" className="blackButton" disabled={!email.includes('@') || busy}>{busy ? 'SENDING…' : 'SEND RESET LINK'}</button>
             <p style={{ fontSize: 11.5, color: '#999', margin: '4px 0 0' }}>
-              Registered with a mobile number instead of an email? Password reset by phone isn't available yet — please contact support to regain access.
+              Registered with a mobile number instead of an email? Password reset by phone isn't available yet — contact us and we'll help you regain access.
             </p>
+            {(whatsapp || phone || supportEmail) && (
+              <div data-role="reset-support" style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                {whatsapp && <a className="outlineButton" href={whatsapp.href!} target="_blank" rel="noopener noreferrer">WhatsApp us</a>}
+                {phone && <a className="outlineButton" href={phone.href!}>Call us</a>}
+                {supportEmail && <a className="outlineButton" href={supportEmail.href!}>Email us</a>}
+              </div>
+            )}
           </form>
         )}
         <p><Link to="/login" style={{ color: '#666' }}>Back to sign in</Link></p>

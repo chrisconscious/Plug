@@ -1,5 +1,5 @@
 import { useCallback, useRef, useState } from "react";
-import { ApiError } from "../lib/api";
+import { userMessage } from "../lib/errors";
 
 /**
  * Reusable pattern for any mutating action (add to cart, update quantity,
@@ -40,7 +40,7 @@ export function useAsyncAction<Args extends unknown[]>(action: (...args: Args) =
       try {
         await action(...args);
       } catch (e) {
-        setError(e instanceof ApiError ? e.message : "Something went wrong. Please try again.");
+        setError(userMessage(e, "Something went wrong. Please try again."));
       } finally {
         inFlight.current = false;
         setPending(false);

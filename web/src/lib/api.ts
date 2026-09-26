@@ -763,6 +763,8 @@ export interface FooterContactLink {
   id: string;
   platform: FooterPlatform;
   value: string | null;
+  /** Ready-to-open link built and validated by the API; null when the value isn't usable. */
+  href: string | null;
   active: boolean;
   displayOrder: number;
 }

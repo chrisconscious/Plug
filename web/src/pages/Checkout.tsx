@@ -1,12 +1,16 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, Link, useSearchParams, Navigate, useLocation } from 'react-router-dom';
 import { Lock, Truck, Copy, Check, Loader2, Banknote, Smartphone } from 'lucide-react';
+import { userMessage } from '../lib/errors';
+import { isValidMobile } from '../lib/password';
 import * as api from '../lib/api';
 import { clearCartCount } from '../lib/cartCount';
 import { formatTZS } from '../lib/currency';
 import { StoreHeader } from '../components/shop/StoreHeader';
 import { usePlatformSettings } from '../lib/PlatformSettingsContext';
 import { loginUrl } from '../lib/returnTo';
+
+const CHECKOUT_FIELD_LABELS = { label: 'Full name', line1: 'Delivery address', city: 'City', region: 'Region', postalCode: 'Postal code / house number', country: 'Country', phone: 'Phone number' };
 
 function Checkout() {
   const nav = useNavigate();
@@ -126,7 +130,7 @@ function Checkout() {
     } catch (e) {
       setMethods([]);
       setCartLoaded(true);
-      setErr(e instanceof api.ApiError ? e.message : 'Could not load payment options');
+      setErr(userMessage(e, 'Could not load payment options. Please refresh the page.'));
     }
   };
 
@@ -224,7 +228,10 @@ function Checkout() {
       if (!full.trim()) { setErr('Please enter your full name.'); return; }
       if (!addr.trim()) { setErr('Please enter your delivery address.'); return; }
       if (!city.trim()) { setErr('Please enter your city.'); return; }
+      if (!region.trim()) { setErr('Please enter your region.'); return; }
+      if (!zip.trim()) { setErr('Please enter your postal code or house number.'); return; }
       if (!phone.trim()) { setErr('Please enter your phone number.'); return; }
+      if (!isValidMobile(phone)) { setErr('Please enter a valid mobile number, e.g. 0756825667.'); return; }
       setStep(2); return;
     }
     if (!location) { setErr('Please choose your delivery location.'); return; }
@@ -239,14 +246,14 @@ function Checkout() {
       if (!cash) { setErr('Cash on delivery is not available right now.'); return; }
       paymentMethodId = cash.id;
       if (transportFeeTzs > 0) {
-        if (!network) { setErr('Please choose a network to pay the transport fee.'); return; }
+        if (!network) { setErr(online.length ? 'Please choose a network to pay the transport fee.' : 'Paying the transport fee by mobile money isn\'t set up yet — please contact us to place this order.'); return; }
         transportPaymentNumber = network.paymentNumber ?? network.id;
       }
     }
     setPaying(true);
     try {
       const order = await api.createOrder(
-        { label: full || 'Home', line1: addr, city, region: region || 'Dar es Salaam', postalCode: zip.trim(), country: 'TZ', phone: phone || undefined },
+        { label: full.trim() || 'Home', line1: addr.trim(), city: city.trim(), region: region.trim(), postalCode: zip.trim(), country: 'TZ', phone: phone.trim() || undefined },
         paymentMethodId,
         idempotencyKey,
         transportPaymentNumber,
@@ -284,7 +291,7 @@ function Checkout() {
         setCouponError(e.fields.couponCode);
         setErr('Your coupon is no longer valid — please remove it or try a different code, then place your order again.');
       } else {
-        setErr(e instanceof api.ApiError ? e.message : 'Could not place your order.');
+        setErr(userMessage(e, 'Could not place your order. Please try again.', CHECKOUT_FIELD_LABELS));
       }
       setNeedsVerification(e instanceof api.ApiError && e.category === 'EMAIL_NOT_VERIFIED');
       setPaying(false);
@@ -654,11 +661,17 @@ function PaymentStep({ methods, cash, online, mode, setMode, network, networkId,
                 <span className="codFeeAmount">{formatTZS(transportFeeTzs)}</span>
               </div>
               <p className="opSectionLabel">Pay transport fee via mobile money</p>
-              <div className="networkRows">
-                {online.map((n) => (
-                  <NetworkRow key={n.id} network={n} groupName="cod-network" selected={n.id === networkId} onSelect={() => setNetworkId(n.id)} />
-                ))}
-              </div>
+              {online.length > 0 ? (
+                <div className="networkRows">
+                  {online.map((n) => (
+                    <NetworkRow key={n.id} network={n} groupName="cod-network" selected={n.id === networkId} onSelect={() => setNetworkId(n.id)} />
+                  ))}
+                </div>
+              ) : (
+                <p role="alert" data-role="no-transport-network" className="codFeeNote" style={{ color: '#b45309' }}>
+                  Mobile-money payment for the transport fee isn't set up yet, so cash-on-delivery orders can't be placed right now. Please contact us to order.
+                </p>
+              )}
             </>
           )}
         </div>

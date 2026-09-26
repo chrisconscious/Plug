@@ -56,17 +56,19 @@ function Confirmation() {
           {(state.deliveryLocation === 'dar_es_salaam' || state.deliveryLocation === 'outside_dar') && (
             <div><span>Delivery location</span><b>{state.deliveryLocation === 'dar_es_salaam' ? 'Dar es Salaam' : 'Outside Dar es Salaam'}</b></div>
           )}
-          <div><span>Payment method</span><b>{typeof state.paymentMethodName === 'string' ? state.paymentMethodName : 'Cash on Delivery'}</b></div>
+          {typeof state.paymentMethodName === 'string' && <div><span>Payment method</span><b>{state.paymentMethodName}</b></div>}
           <div><span>Order total</span><b>{formatTZS(typeof state.totalTzs === 'number' ? state.totalTzs : 0)}</b></div>
           {state.transportPaymentNumber && state.transportPaymentName ? (
             <>
-              <div><span>Transport fee paid via</span><b>{String(state.transportPaymentName)}</b></div>
-              <div><span>Transport fee account</span><b>{String(state.transportPaymentNumber)}</b></div>
+              <div><span>Pay transport fee via</span><b>{String(state.transportPaymentName)}</b></div>
+              <div><span>Transport fee number</span><b>{String(state.transportPaymentNumber)}</b></div>
             </>
           ) : null}
-          <div><span>Payment status</span><b>{isOnline ? 'Payment initiated' : 'Pay on delivery'}</b></div>
+          {/* The order starts as PENDING; payment is confirmed by the store, never assumed here. */}
+          <div><span>Order status</span><b>Pending</b></div>
+          <div><span>Payment</span><b>{isOnline ? 'Awaiting your mobile-money payment' : isCash ? 'Pay on delivery' : 'To be confirmed'}</b></div>
         </div>
-        <div className="nextSteps"><span><Check size={13} /> Order confirmed</span><ChevronRight /><span><Truck size={13} /> Order shipped</span><ChevronRight /><span>Delivered</span></div>
+        <div className="nextSteps"><span><Check size={13} /> Order placed</span><ChevronRight /><span><Truck size={13} /> Order shipped</span><ChevronRight /><span>Delivered</span></div>
         <Link to={`/orders/${orderId}`} className="outlineButton">VIEW ORDER DETAILS</Link>
         <Link to="/shop" className="blackButton">CONTINUE SHOPPING</Link>
       </main>

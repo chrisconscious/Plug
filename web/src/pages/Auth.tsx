@@ -6,44 +6,12 @@ import { useAuth } from '../lib/AuthContext';
 import { usePlatformSettings } from '../lib/PlatformSettingsContext';
 import { BrandLogo } from '../components/BrandLogo';
 import { safeReturnTo, loginUrl } from '../lib/returnTo';
+import { fieldErrors, userMessage } from '../lib/errors';
+import { isStrongPassword, isValidMobile } from '../lib/password';
+import { PasswordChecklist } from '../components/PasswordChecklist';
 
-/**
- * Google/Apple sign-in: real, correctly-branded buttons, but honest about
- * a real limitation — actually authenticating with either provider
- * requires OAuth Client ID/Secret credentials registered with Google's
- * and Apple's own developer consoles, which this environment has no way
- * to generate. Rather than wire these to something that silently fails
- * or pretends to work, they show a clear, calm message explaining
- * exactly that. Once real credentials are configured server-side, this
- * handler is the one place to swap in the actual OAuth redirect.
- */
-function useSocialLoginNotice() {
-  const [notice, setNotice] = useState<string | null>(null);
-  const trigger = (provider: string) => {
-    setNotice(`${provider} sign-in isn't connected yet — the site owner needs to add ${provider} developer credentials first.`);
-    setTimeout(() => setNotice(null), 5000);
-  };
-  return { notice, trigger };
-}
-
-function GoogleLogo() {
-  return (
-    <svg width="20" height="20" viewBox="0 0 48 48" aria-hidden="true">
-      <path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3c-1.6 4.6-6 8-11.3 8-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.8 1.1 8 3l6-6C34.5 5.1 29.6 3 24 3 12.4 3 3 12.4 3 24s9.4 21 21 21 21-9.4 21-21c0-1.2-.1-2.4-.4-3.5z" />
-      <path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.6 15.5 18.9 13 24 13c3.1 0 5.8 1.1 8 3l6-6C34.5 5.1 29.6 3 24 3 16.3 3 9.6 7.3 6.3 14.7z" />
-      <path fill="#4CAF50" d="M24 45c5.5 0 10.4-1.9 14.2-5.1l-6.6-5.6c-2 1.5-4.6 2.5-7.6 2.5-5.3 0-9.7-3.4-11.3-8.1l-6.6 5.1C9.5 40.5 16.2 45 24 45z" />
-      <path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-.8 2.2-2.2 4.1-4.1 5.4l6.6 5.6C41.6 35.9 45 30.4 45 24c0-1.2-.1-2.4-.4-3.5z" />
-    </svg>
-  );
-}
-
-function AppleLogo() {
-  return (
-    <svg width="18" height="18" viewBox="0 0 384 512" aria-hidden="true" fill="currentColor">
-      <path d="M318.7 268.7c-.2-36.7 16.4-64.4 50-84.8-18.8-26.9-47.2-41.7-84.7-44.6-35.5-2.8-74.3 20.7-88.5 20.7-15 0-49.4-19.7-76.4-19.7C63.3 141 4 184.8 4 273.5q0 39.3 14.4 81.2c12.8 36.7 59 126.7 107.2 125.2 25.2-.6 43-17.9 75.8-17.9 31.8 0 48.3 17.9 76.4 17.9 48.6-.7 90.4-82.5 102.6-119.3-65.2-30.7-61.7-90-61.7-91.9zm-56.6-164.2c27.3-32.4 24.8-61.9 24-72.5-24.1 1.4-52 16.4-67.9 34.9-17.5 19.8-27.8 44.3-25.6 71.9 26.1 2 49.9-11.4 69.5-34.3z" />
-    </svg>
-  );
-}
+const FIELD_LABELS = { fullName: 'Full name', phoneNumber: 'Mobile number', password: 'Password' };
+type FieldKey = 'fullName' | 'phoneNumber' | 'password';
 
 function Auth({ register = false }: { register?: boolean }) {
   const nav = useNavigate();
@@ -61,7 +29,11 @@ function Auth({ register = false }: { register?: boolean }) {
   const [name, setName] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
-  const { notice: socialNotice, trigger: triggerSocial } = useSocialLoginNotice();
+  const [fieldErr, setFieldErr] = useState<Partial<Record<FieldKey, string>>>({});
+  // Registration refused because the number is taken (the API answers 409
+  // without saying so outright — no account enumeration); offer the two
+  // useful next steps instead of a dead end.
+  const [registerConflict, setRegisterConflict] = useState(false);
   const [authSettings, setAuthSettings] = useState<api.AuthPageSettings | null>(null);
 
   useEffect(() => {
@@ -84,27 +56,54 @@ function Auth({ register = false }: { register?: boolean }) {
     else if (role === 'ADMIN') nav('/admin', { replace: true });
     else nav('/shop', { replace: true });
   };
-  async function submit(ev: any) {
-    ev.preventDefault(); setBusy(true); setError('');
+  // Same rules the API enforces, checked first so the customer gets an
+  // immediate, specific message; the API remains the authority.
+  function validateLocally(): Partial<Record<FieldKey, string>> {
+    const errs: Partial<Record<FieldKey, string>> = {};
+    if (register && !name.trim()) errs.fullName = 'Enter your full name.';
+    if (!phone.trim()) errs.phoneNumber = 'Enter your mobile number.';
+    else if (!isValidMobile(phone)) errs.phoneNumber = 'Enter a valid mobile number, e.g. 0756825667.';
+    if (!password) errs.password = 'Enter your password.';
+    else if (register && !isStrongPassword(password)) errs.password = 'Your password doesn\'t meet all the requirements below yet.';
+    return errs;
+  }
+  async function submit(ev: React.FormEvent) {
+    ev.preventDefault();
+    setError(''); setRegisterConflict(false);
+    const local = validateLocally();
+    setFieldErr(local);
+    if (Object.keys(local).length > 0) return;
+    setBusy(true);
     try {
       if (register) {
-        const res = await doRegister(phone, password, name);
+        const res = await doRegister(phone.trim(), password, name.trim());
         if ('user' in res) goToRoleHome(res.user.role);
         return;
       }
-      const res = await login(phone, password);
+      const res = await login(phone.trim(), password);
       if (res.mfaRequired) { setMfaToken(res.mfaToken); return; }
       if ('user' in res) goToRoleHome(res.user.role);
-    } catch (e) { setError(e instanceof api.ApiError ? e.message : 'Something went wrong'); } finally { setBusy(false); }
+    } catch (e) {
+      if (register && e instanceof api.ApiError && e.status === 409) {
+        setRegisterConflict(true);
+        return;
+      }
+      const fields = fieldErrors(e, FIELD_LABELS) as Partial<Record<FieldKey, string>>;
+      const shown = (Object.keys(FIELD_LABELS) as FieldKey[]).filter((k) => fields[k]);
+      setFieldErr(fields);
+      // Anything not attached to a visible field is still said, never dropped.
+      if (shown.length === 0) setError(userMessage(e, register ? 'We couldn\'t create your account. Please try again.' : 'We couldn\'t sign you in. Please try again.', FIELD_LABELS));
+    } finally { setBusy(false); }
   }
-  async function submitMfa(ev: any) {
+  async function submitMfa(ev: React.FormEvent) {
     ev.preventDefault(); setBusy(true); setError('');
     try {
       const res = await api.mfaVerifyLogin(mfaToken!, mfaCode);
       await refresh(); // re-resolve AuthContext state from the server now that the session exists
       if ('user' in res) goToRoleHome(res.user.role);
-    } catch (e) { setError(e instanceof api.ApiError ? e.message : 'Something went wrong'); } finally { setBusy(false); }
+    } catch (e) { setError(userMessage(e, 'That code didn\'t work. Please try again.')); } finally { setBusy(false); }
   }
+  const errId = (k: FieldKey) => (fieldErr[k] ? `auth-${k}-error` : undefined);
   // Already signed in (e.g. a stale /login?returnTo=… tab, or Back from the
   // destination): don't show the form again — continue to the destination.
   if (status === 'authenticated' && user && !mfaToken) {
@@ -123,8 +122,8 @@ function Auth({ register = false }: { register?: boolean }) {
             <p>Enter the 6-digit code from your authenticator app, or one of your recovery codes.</p>
             <form className="formGrid" onSubmit={submitMfa}>
               <input aria-label="6-digit code or recovery code" placeholder="6-digit code or recovery code" required value={mfaCode} onChange={(e) => setMfaCode(e.target.value)} autoFocus />
-              {error && <p style={{ color: '#c00', fontSize: 13, margin: 0 }}>{error}</p>}
-              <button className="blackButton" disabled={busy}>{busy ? 'Verifying...' : 'VERIFY'}</button>
+              {error && <p role="alert" style={{ color: '#c00', fontSize: 13, margin: 0 }}>{error}</p>}
+              <button type="submit" className="blackButton" disabled={busy}>{busy ? 'Verifying...' : 'VERIFY'}</button>
             </form>
             <p><button type="button" onClick={() => { setMfaToken(null); setMfaCode(''); setError(''); }} style={{ color: '#666', background: 'none', border: 'none', textDecoration: 'underline', cursor: 'pointer', padding: 0 }}>Back to sign in</button></p>
           </>
@@ -134,8 +133,26 @@ function Auth({ register = false }: { register?: boolean }) {
             <p>{register ? `Join ${platformName} today` : 'Sign in to your account'}</p>
             {!register && sessionExpired && <p style={{ color: '#b45309', fontSize: 13, margin: 0 }}>Your session expired. Please sign in again to continue.</p>}
             {toCheckout && <p role="status" data-role="checkout-return-note" style={{ fontSize: 13, margin: 0, color: '#333' }}>{register ? 'Create an account' : 'Sign in'} to continue to checkout — you'll go straight back to your order.</p>}
-            <form className="formGrid" onSubmit={submit}>
-              {register && <input aria-label="Full name" placeholder="Full name" value={name} onChange={(e) => setName(e.target.value)} />}
+            <form className="formGrid" onSubmit={submit} noValidate>
+              {register && (
+                <div>
+                  <label htmlFor="auth-name" style={{ display: 'block', fontSize: 12, fontWeight: 600, color: '#555', marginBottom: 5 }}>
+                    Full Name
+                  </label>
+                  <input
+                    id="auth-name"
+                    placeholder="Your full name"
+                    autoComplete="name"
+                    maxLength={120}
+                    value={name}
+                    aria-invalid={!!fieldErr.fullName}
+                    aria-describedby={errId('fullName')}
+                    onChange={(e) => { setName(e.target.value); setFieldErr((f) => ({ ...f, fullName: undefined })); }}
+                    style={{ fontSize: 16 }}
+                  />
+                  {fieldErr.fullName && <p id="auth-fullName-error" className="authFieldError">{fieldErr.fullName}</p>}
+                </div>
+              )}
               <div>
                 <label htmlFor="auth-phone" style={{ display: 'block', fontSize: 12, fontWeight: 600, color: '#555', marginBottom: 5 }}>
                   Mobile Number
@@ -149,10 +166,14 @@ function Auth({ register = false }: { register?: boolean }) {
                   autoComplete="tel"
                   required
                   value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
+                  aria-invalid={!!fieldErr.phoneNumber}
+                  aria-describedby={errId('phoneNumber')}
+                  onChange={(e) => { setPhone(e.target.value); setFieldErr((f) => ({ ...f, phoneNumber: undefined })); }}
                   style={{ fontSize: 16 }}
                 />
-                <span style={{ display: 'block', fontSize: 11, color: '#999', marginTop: 4 }}>e.g. 0756825667</span>
+                {fieldErr.phoneNumber
+                  ? <p id="auth-phoneNumber-error" className="authFieldError">{fieldErr.phoneNumber}</p>
+                  : <span style={{ display: 'block', fontSize: 11, color: '#999', marginTop: 4 }}>e.g. 0756825667 or +255 756 825 667</span>}
               </div>
               <div>
                 <label htmlFor="auth-password" style={{ display: 'block', fontSize: 12, fontWeight: 600, color: '#555', marginBottom: 5 }}>
@@ -167,7 +188,9 @@ function Auth({ register = false }: { register?: boolean }) {
                     autoComplete={register ? 'new-password' : 'current-password'}
                     required
                     value={password}
-                    onChange={(e) => setPassword(e.target.value)}
+                    aria-invalid={!!fieldErr.password}
+                    aria-describedby={[errId('password'), register ? 'auth-password-rules' : undefined].filter(Boolean).join(' ') || undefined}
+                    onChange={(e) => { setPassword(e.target.value); setFieldErr((f) => ({ ...f, password: undefined })); }}
                     style={{ width: '100%', paddingRight: 44, fontSize: 16 }}
                   />
                   <button
@@ -180,38 +203,18 @@ function Auth({ register = false }: { register?: boolean }) {
                     {showPassword ? <EyeOff size={19} /> : <Eye size={19} />}
                   </button>
                 </div>
+                {fieldErr.password && <p id="auth-password-error" className="authFieldError">{fieldErr.password}</p>}
+                {register && <PasswordChecklist id="auth-password-rules" password={password} />}
               </div>
-              {error && <p style={{ color: '#c00', fontSize: 13, margin: 0 }}>{error}</p>}
-              <button className="blackButton" disabled={busy} style={{ minHeight: 50, fontSize: 13 }}>{busy ? 'Please wait...' : (register ? 'CREATE ACCOUNT' : 'SIGN IN')}</button>
-            </form>
-
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12, margin: '18px 0' }}>
-              <span style={{ flex: 1, height: 1, background: '#e5e5e5' }} />
-              <span style={{ fontSize: 11, color: '#999', textTransform: 'uppercase', letterSpacing: '.08em' }}>or</span>
-              <span style={{ flex: 1, height: 1, background: '#e5e5e5' }} />
-            </div>
-
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-              <button
-                type="button"
-                onClick={() => triggerSocial('Google')}
-                style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, width: '100%', minHeight: 48, border: '1px solid #d8d5cd', background: '#fff', borderRadius: 2, fontSize: 13, fontWeight: 600, color: '#222', cursor: 'pointer' }}
-              >
-                <GoogleLogo /> Continue with Google
-              </button>
-              <button
-                type="button"
-                onClick={() => triggerSocial('Apple')}
-                style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, width: '100%', minHeight: 48, border: '1px solid #111', background: '#111', borderRadius: 2, fontSize: 13, fontWeight: 600, color: '#fff', cursor: 'pointer' }}
-              >
-                <AppleLogo /> Continue with Apple
-              </button>
-              {socialNotice && (
-                <p role="status" style={{ fontSize: 12, color: '#8a5a00', background: '#fff7e6', border: '1px solid #f5d99b', borderRadius: 6, padding: '8px 10px', margin: 0 }}>
-                  {socialNotice}
-                </p>
+              {registerConflict && (
+                <div role="alert" data-role="register-conflict" style={{ fontSize: 13, color: '#8a4b00', background: '#fff7e6', border: '1px solid #f5d99b', borderRadius: 6, padding: '10px 12px' }}>
+                  We couldn't create an account with this mobile number. If you already have an account,{' '}
+                  <Link to={loginUrl(returnTo)}>sign in</Link> or <Link to="/forgot-password">reset your password</Link>.
+                </div>
               )}
-            </div>
+              {error && <p role="alert" style={{ color: '#c00', fontSize: 13, margin: 0 }}>{error}</p>}
+              <button type="submit" className="blackButton" disabled={busy} style={{ minHeight: 50, fontSize: 13 }}>{busy ? 'Please wait...' : (register ? 'CREATE ACCOUNT' : 'SIGN IN')}</button>
+            </form>
 
             <p style={{ marginTop: 18 }}>{register ? 'Already have an account?' : 'New here?'} <Link to={loginUrl(returnTo, { page: register ? 'login' : 'register' })}>{register ? 'Sign in' : 'Create an account'}</Link></p>
             <p><Link to="/forgot-password" style={{ color: '#666' }}>Forgot password?</Link></p>

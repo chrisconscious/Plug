@@ -40,7 +40,7 @@ function CartItemRow({ item, onUpdated }: { item: api.CartItem; onUpdated: (item
       <img src={resolveImage(item.product?.image ?? null)} alt="" />
       <div>
         <b>{item.product?.name ?? 'Item'}</b>
-        <p>{item.variant?.color ?? ''} / {item.variant?.size ?? ''}</p>
+        {[item.variant?.color, item.variant?.size].filter(Boolean).length > 0 && <p>{[item.variant?.color, item.variant?.size].filter(Boolean).join(' / ')}</p>}
         {item.available === false && (
           <p style={{ color: '#c00', fontSize: 11, fontWeight: 600, margin: '4px 0 0' }}>{item.insufficientStock ? 'Not enough stock for this quantity — please reduce it to check out' : 'No longer available — please remove it to check out'}</p>
         )}
@@ -49,11 +49,11 @@ function CartItemRow({ item, onUpdated }: { item: api.CartItem; onUpdated: (item
       </div>
       <b>{formatTZS(item.lineTotalCents ?? 0)}</b>
       <div className="qty">
-        <button onClick={() => decrease.run()} disabled={rowPending || (item.quantity ?? 1) <= 1}><Minus /></button>
-        {item.quantity}
-        <button onClick={() => increase.run()} disabled={rowPending || (item.quantity ?? 1) >= 20}><Plus /></button>
+        <button type="button" aria-label="Decrease quantity" onClick={() => decrease.run()} disabled={rowPending || (item.quantity ?? 1) <= 1}><Minus /></button>
+        <span aria-live="polite">{item.quantity}</span>
+        <button type="button" aria-label="Increase quantity" onClick={() => increase.run()} disabled={rowPending || (item.quantity ?? 1) >= 20}><Plus /></button>
       </div>
-      <button className="iconBtn" onClick={() => remove.run()} disabled={rowPending}><X /></button>
+      <button type="button" className="iconBtn" aria-label={`Remove ${item.product?.name ?? 'item'} from cart`} onClick={() => remove.run()} disabled={rowPending}><X /></button>
     </div>
   );
 }
@@ -108,14 +108,19 @@ function Cart() {
           : items && items.length > 0 ? (items.map((it, i) => (
               <CartItemRow key={it.id ?? i} item={it} onUpdated={(updated) => { setItems(updated); setCartCountFromItems(updated); }} />
             )))
-          : (items ? <p style={{ padding: '20px 0' }}>Your cart is empty.</p> : <p style={{ padding: '20px 0' }}>Loading your cart...</p>)}
-        <div className="cartRecs"><h3>YOU MAY ALSO LIKE</h3><div className="productGrid">{recs.map((px) => <ProductCard key={px.id} product={px} />)}</div></div>
-      </section><OrderSummary subtotal={subtotal} /></main>
+          : (items ? (
+            <div style={{ padding: '20px 0' }}>
+              <p style={{ marginBottom: 12 }}>Your cart is empty.</p>
+              <Link to="/shop" className="blackButton">START SHOPPING</Link>
+            </div>
+          ) : <p style={{ padding: '20px 0' }}>Loading your cart...</p>)}
+        {recs.length > 0 && <div className="cartRecs"><h3>YOU MAY ALSO LIKE</h3><div className="productGrid">{recs.map((px) => <ProductCard key={px.id} product={px} />)}</div></div>}
+      </section><OrderSummary subtotal={subtotal} status={status} itemCount={(items ?? []).length} blocked={(items ?? []).some((it) => it.available === false)} /></main>
     </div>
   );
 }
 
-function OrderSummary({ subtotal = 0 }: { subtotal?: number }) {
+function OrderSummary({ subtotal = 0, status, itemCount, blocked }: { subtotal?: number; status: 'loading' | 'authenticated' | 'unauthenticated' | 'error'; itemCount: number; blocked: boolean }) {
   // The cart shows PRODUCTS ONLY — no transport/delivery fee here. The
   // transport fee is a checkout concern: it depends on the delivery
   // location the customer picks on the checkout payment page (see
@@ -128,7 +133,16 @@ function OrderSummary({ subtotal = 0 }: { subtotal?: number }) {
       <h3>ORDER SUMMARY</h3>
       <p><span>Subtotal</span><b>{formatTZS(subtotalTzs)}</b></p>
       <hr /><p className="total"><span>Total</span><b>{formatTZS(subtotalTzs)}</b></p>
-      <Link to="/checkout" className="blackButton">PROCEED TO CHECKOUT</Link>
+      {status === 'unauthenticated' ? (
+        <Link to={loginUrl('/checkout')} className="blackButton">SIGN IN TO CHECK OUT</Link>
+      ) : status === 'authenticated' && itemCount > 0 ? (
+        <>
+          {blocked && <p role="status" style={{ color: '#c00', fontSize: 12, margin: '0 0 8px' }}>Update or remove the unavailable items above to check out.</p>}
+          <Link to="/checkout" className="blackButton">PROCEED TO CHECKOUT</Link>
+        </>
+      ) : (
+        <button type="button" className="blackButton" disabled>PROCEED TO CHECKOUT</button>
+      )}
       <div className="secure"><Lock /> Secure checkout<br /><small>Your information is protected</small></div>
     </aside>
   );

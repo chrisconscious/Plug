@@ -1,6 +1,6 @@
 import * as wishlistRepo from "../db/repos/wishlist.repo";
 import { getProductOrThrow, getPublicProductsByIds } from "./catalog.service";
-import { NotFoundError, AuthorizationError } from "../errors";
+import { NotFoundError } from "../errors";
 
 async function serializeWishlist(userId: string) {
   const items = await wishlistRepo.listWishlistItems(userId);
@@ -29,7 +29,7 @@ export async function addToWishlist(userId: string, productId: string) {
 export async function removeFromWishlist(userId: string, productId: string) {
   const existing = await wishlistRepo.findWishlistItem(userId, productId);
   if (!existing) throw new NotFoundError("Wishlist item not found.");
-  if (existing.userId !== userId) throw new AuthorizationError();
+  if (existing.userId !== userId) throw new NotFoundError("Wishlist item not found.");
   await wishlistRepo.deleteWishlistItem(existing.id);
   return serializeWishlist(userId);
 }

@@ -17,8 +17,8 @@ import { getGrantedPermissions } from "@/lib/db/repos/admin-permissions.repo";
 import { hasPermissionForUser } from "./rbac";
 
 describe("hasPermission", () => {
-  it("CUSTOMER can read products and their own orders only", () => {
-    expect(hasPermission("CUSTOMER", "products.read")).toBe(true);
+  it("CUSTOMER can read only their own orders — never the admin catalog", () => {
+    expect(hasPermission("CUSTOMER", "products.read")).toBe(false);
     expect(hasPermission("CUSTOMER", "orders.read.own")).toBe(true);
     expect(hasPermission("CUSTOMER", "orders.read")).toBe(false);
     expect(hasPermission("CUSTOMER", "users.manage")).toBe(false);
@@ -60,13 +60,13 @@ describe("hasPermission", () => {
 
   it("returns false for an unrecognized role rather than throwing", () => {
     // Defense in depth: a bad/unexpected role value must fail closed, not crash.
-    expect(hasPermission("NOT_A_ROLE" as Role, "products.read")).toBe(false);
+    expect(hasPermission("NOT_A_ROLE" as Role, "orders.read.own")).toBe(false);
   });
 });
 
 describe("permissionsForRole", () => {
   it("returns the exact CUSTOMER permission set", () => {
-    expect(permissionsForRole("CUSTOMER").sort()).toEqual(["orders.read.own", "products.read"].sort());
+    expect(permissionsForRole("CUSTOMER")).toEqual(["orders.read.own"]);
   });
 
   it("returns the exact ADMIN permission set", () => {

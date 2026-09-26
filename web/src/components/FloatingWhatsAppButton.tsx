@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { useLocation } from 'react-router-dom';
-import * as api from '../lib/api';
-import { whatsappHref } from '../lib/contactLinks';
+import { findContact, useContactLinks } from '../lib/contactLinks';
 
 const EXPAND_DELAY_MS = 1000;
 const HOLD_MS = 2000;
@@ -15,28 +14,13 @@ type Phase = 'circle' | 'expanded' | 'settled';
 /** Configurable label — a prop rather than a hardcoded string, per this feature's own explicit "make it configurable" requirement. */
 export function FloatingWhatsAppButton({ label = 'Need Help?' }: { label?: string }) {
   const location = useLocation();
-  const [href, setHref] = useState<string | null>(null);
+  const href = findContact(useContactLinks().links, 'whatsapp')?.href ?? null;
   const [phase, setPhase] = useState<Phase>('circle');
   const reducedRef = useRef(false);
   const timers = useRef<ReturnType<typeof setTimeout>[]>([]);
 
   useEffect(() => {
     reducedRef.current = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-  }, []);
-
-  // The WhatsApp number itself only needs fetching once — it isn't going
-  // to change mid-session, and this must never block or repeat on every
-  // route change the way the animation itself deliberately does.
-  useEffect(() => {
-    let on = true;
-    api.listFooterContactLinks()
-      .then((r) => {
-        if (!on) return;
-        const wa = r.links.find((l) => l.platform === 'whatsapp');
-        setHref(wa?.value ? whatsappHref(wa.value) : null);
-      })
-      .catch(() => { if (on) setHref(null); });
-    return () => { on = false; };
   }, []);
 
   // Replays the full choreography on every route change, per this

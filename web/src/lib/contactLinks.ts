@@ -1,14 +1,48 @@
 /**
- * Builds a wa.me chat link from whatever an admin entered in Footer
- * Management for the WhatsApp channel — either a bare phone number or a
- * full link (the document that introduced footer contact links
- * explicitly allows either, calling it a "number/link" field). Extracted
- * here because this exact logic was independently duplicated in
- * footer.tsx and Profile.tsx before a third consumer (the floating chat
- * button) needed it too.
+ * The store's configured contact channels (Footer Management), fetched once
+ * per page load and shared by every consumer — footer icons, the floating
+ * WhatsApp button and the account page's help card.
+ *
+ * Links are never built here: the API returns each channel's ready-to-open
+ * `href` (`https://wa.me/255…`, `tel:+255…`, `mailto:…`, a verified profile
+ * URL), so all consumers open exactly the same, validated destination.
  */
-export function whatsappHref(value: string): string {
-  const trimmed = value.trim();
-  if (/^https?:\/\//i.test(trimmed)) return trimmed;
-  return `https://wa.me/${trimmed.replace(/[^\d]/g, "")}`;
+import { useEffect, useState } from "react";
+import * as api from "./api";
+
+export type ContactLinksState =
+  | { status: "loading"; links: api.FooterContactLink[] }
+  | { status: "ready"; links: api.FooterContactLink[] }
+  | { status: "error"; links: api.FooterContactLink[] };
+
+let pending: Promise<api.FooterContactLink[]> | null = null;
+
+function load(): Promise<api.FooterContactLink[]> {
+  if (!pending) {
+    pending = api.listFooterContactLinks().then((r) => r.links.filter((l) => !!l.href));
+    // A failed load isn't cached — the next consumer that mounts retries.
+    pending.catch(() => { pending = null; });
+  }
+  return pending;
+}
+
+export function useContactLinks(): ContactLinksState {
+  const [state, setState] = useState<ContactLinksState>({ status: "loading", links: [] });
+  useEffect(() => {
+    let on = true;
+    load()
+      .then((links) => { if (on) setState({ status: "ready", links }); })
+      .catch(() => { if (on) setState({ status: "error", links: [] }); });
+    return () => { on = false; };
+  }, []);
+  return state;
+}
+
+export function findContact(links: api.FooterContactLink[], platform: api.FooterPlatform): api.FooterContactLink | undefined {
+  return links.find((l) => l.platform === platform && !!l.href);
+}
+
+/** Test hook: forget the shared fetch between tests. */
+export function resetContactLinksCache(): void {
+  pending = null;
 }

@@ -1,13 +1,11 @@
 import { useState, useEffect } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import * as api from '../lib/api';
+import { ORDER_STATUS_LABEL as STATUS_LABEL } from '../lib/orderStatus';
 import { formatTZS } from '../lib/currency';
 import { StoreHeader } from '../components/shop/StoreHeader';
 import { loginUrl, currentLocation } from '../lib/returnTo';
 
-const STATUS_LABEL: Record<string, string> = {
-  PENDING: 'Pending', PAID: 'Confirmed', SHIPPED: 'Shipped', DELIVERED: 'Delivered', CANCELLED: 'Cancelled',
-};
 
 function OrderDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -84,7 +82,7 @@ function OrderDetailPage() {
                 <div key={i} className="notifPageItem" style={{ cursor: 'default' }}>
                   <span className="notifItemBody">
                     <span className="notifItemTitle">{item.nameSnapshot}</span>
-                    <span className="notifItemMsg">{item.brandSnapshot} · {item.size} / {item.color} · Qty {item.quantity}</span>
+                    <span className="notifItemMsg">{[item.brandSnapshot, [item.size, item.color].filter(Boolean).join(' / ')].filter(Boolean).join(' · ')} · Qty {item.quantity}</span>
                   </span>
                   <b style={{ fontSize: 13 }}>{formatTZS(item.lineTotalCents)}</b>
                 </div>
@@ -100,7 +98,7 @@ function OrderDetailPage() {
 
             {order.paymentMethodName && (
               <p style={{ fontSize: 12.5, color: '#666', marginTop: 16 }}>
-                Paid via {order.paymentMethodName}
+                Payment method: {order.paymentMethodName}
                 {order.deliveryLocation && ` · Delivery to ${order.deliveryLocation === 'dar_es_salaam' ? 'Dar es Salaam' : 'outside Dar es Salaam'}`}
               </p>
             )}

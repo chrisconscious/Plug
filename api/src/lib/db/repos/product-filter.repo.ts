@@ -106,12 +106,14 @@ export function buildProductWhere(filters: ProductFilters, exclude: (keyof Produ
 
   if (X("sizes") && filters.sizes?.length) {
     const arr = `$${params.length + 1}`;
-    push(`EXISTS (SELECT 1 FROM product_variants pv WHERE pv.product_id = p.id AND pv.size = ANY(${arr}))`, filters.sizes);
+    // Only sizes that can actually be bought: a customer filtering by "M"
+    // must not be shown products whose M is sold out.
+    push(`EXISTS (SELECT 1 FROM product_variants pv WHERE pv.product_id = p.id AND pv.size = ANY(${arr}) AND pv.stock_qty > 0)`, filters.sizes);
   }
 
   if (X("colors") && filters.colors?.length) {
     const arr = `$${params.length + 1}`;
-    push(`EXISTS (SELECT 1 FROM product_variants pv WHERE pv.product_id = p.id AND pv.color = ANY(${arr}))`, filters.colors);
+    push(`EXISTS (SELECT 1 FROM product_variants pv WHERE pv.product_id = p.id AND pv.color = ANY(${arr}) AND pv.stock_qty > 0)`, filters.colors);
   }
 
   if (X("availability")) {
@@ -185,17 +187,46 @@ export function buildProductWhere(filters: ProductFilters, exclude: (keyof Produ
   }
 
   if (X("search") && filters.search) {
-    push(`p.search_vector @@ plainto_tsquery('english', $${params.length + 1})`, filters.search);
+    const prefixQuery = toPrefixTsQuery(filters.search);
+    if (prefixQuery) {
+      // Prefix match on the product name ("shir" finds "shirt") via the GIN
+      // index, plus brand / category name matches (both tiny tables).
+      const tq = `$${params.length + 1}`;
+      const like = `$${params.length + 2}`;
+      push(
+        `(p.search_vector @@ to_tsquery('english', ${tq})
+          OR p.brand_id IN (SELECT b.id FROM brands b WHERE b.name ILIKE ${like})
+          OR p.category_id IN (SELECT c.id FROM categories c WHERE c.name ILIKE ${like}))`,
+        prefixQuery,
+        `%${filters.search.trim().replace(/[\\%_]/g, (c) => "\\" + c)}%`
+      );
+    }
   }
 
   return { clause: conds.join(" AND "), params };
 }
 
+/**
+ * Builds a safe prefix tsquery ("black tee" -> "black:* & tee:*") from free
+ * text: only letters/digits survive, so user input can never inject tsquery
+ * operators. Returns null when nothing searchable remains.
+ */
+export function toPrefixTsQuery(input: string): string | null {
+  const words = input
+    .toLowerCase()
+    .split(/[^\p{L}\p{N}]+/u)
+    .filter(Boolean)
+    .slice(0, 8);
+  return words.length ? words.map((w) => `${w}:*`).join(" & ") : null;
+}
+
 const SORT_SQL: Record<NonNullable<ProductFilters["sort"]>, string> = {
   price_asc: "p.price_cents ASC, p.created_at DESC",
   price_desc: "p.price_cents DESC, p.created_at DESC",
-  newest: "p.created_at DESC",
-  recommended: "p.created_at DESC",
+  // "Newest" = most recently PUBLISHED (migration 0053) — this is the
+  // Latest Drop ordering. id breaks ties so paging is deterministic.
+  newest: "p.published_at DESC NULLS LAST, p.created_at DESC, p.id DESC",
+  recommended: "p.published_at DESC NULLS LAST, p.created_at DESC, p.id DESC",
 };
 
 export const DEFAULT_SORT: NonNullable<ProductFilters["sort"]> = "recommended";
@@ -277,9 +308,9 @@ export async function getProductFacets(filters: ProductFilters): Promise<Product
 
   const sizeWhere = buildProductWhere(filters, ["sizes"]);
   const sizeRows = await query<{ value: string; count: string }>(
-    `SELECT pv.size AS value, count(*)::text AS count
+    `SELECT pv.size AS value, count(DISTINCT p.id)::text AS count
      FROM products p
-     JOIN product_variants pv ON pv.product_id = p.id
+     JOIN product_variants pv ON pv.product_id = p.id AND pv.stock_qty > 0
      WHERE ${sizeWhere.clause}
      GROUP BY pv.size
      ORDER BY pv.size`,
@@ -288,12 +319,12 @@ export async function getProductFacets(filters: ProductFilters): Promise<Product
 
   const colorWhere = buildProductWhere(filters, ["colors"]);
   const colorRows = await query<{ value: string; count: string }>(
-    `SELECT pv.color AS value, count(*)::text AS count
+    `SELECT pv.color AS value, count(DISTINCT p.id)::text AS count
      FROM products p
-     JOIN product_variants pv ON pv.product_id = p.id
+     JOIN product_variants pv ON pv.product_id = p.id AND pv.stock_qty > 0
      WHERE ${colorWhere.clause}
      GROUP BY pv.color
-     ORDER BY count(*) DESC`,
+     ORDER BY count(DISTINCT p.id) DESC`,
     colorWhere.params
   );
 

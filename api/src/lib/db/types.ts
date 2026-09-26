@@ -223,6 +223,10 @@ export type Product = {
   offerLabel?: string | null;
   offerStartDate?: string | null; // ISO date (yyyy-mm-dd)
   offerEndDate?: string | null; // ISO date (yyyy-mm-dd)
+  publishedAt?: string | null; // first time the product went live (migration 0053)
+  archivedAt?: string | null; // set while the product is archived ("deleted")
+  createdAt?: string;
+  updatedAt?: string;
 };
 
 export type ProductVariant = {

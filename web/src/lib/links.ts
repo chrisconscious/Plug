@@ -45,6 +45,11 @@ export function getBrandCategoryUrl(brandSlug: string, categorySlug: string): st
   return `/brands/${encodeURIComponent(brandSlug)}?category=${encodeURIComponent(categorySlug)}`;
 }
 
+/** Every live product, newest publish first — "NEW IN" / Latest Drop "VIEW ALL". Not tag-based. */
+export function getNewInUrl(): string {
+  return "/shop?sort=newest";
+}
+
 /** Collection context via the product tag (e.g. "new", "trending", "premium", "campus"). */
 export function getCollectionUrl(collectionSlug: string): string {
   return `/shop?collection=${encodeURIComponent(collectionSlug)}`;

@@ -51,9 +51,9 @@ cd api && npm run db:migrate
 # "Applied 27 migration(s)." — not an error, not a partial count.
 
 # 3. -> seed/test data:
-node db/scripts/seed-catalog.cjs
-# This is dev/test-only seed data — see that script's own header comment
-# and README.md's note on it. Never run against a real production database.
+npm run db:seed
+# This is dev/test-only seed data (db/seed.sql). Never run it against a real
+# production database — all real products are created from the admin panel.
 
 # 4. -> application:
 npm run dev

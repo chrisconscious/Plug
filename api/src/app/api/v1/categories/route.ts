@@ -4,7 +4,9 @@ import { listCategories, listGenderCategories, listGenderCategoriesWithAttribute
 
 // Stable storefront taxonomy (admin-edited, infrequent changes). A longer TTL
 // lets proxies/browsers serve these without re-querying Postgres each time.
-const TAXONOMY_CACHE = "public, max-age=600";
+// Revalidate every time so a brand/category an admin just created shows up
+// immediately (in the storefront and in the admin product form dropdowns).
+const TAXONOMY_CACHE = "no-cache";
 
 export const GET = withRoute({ auth: "none", rateLimit: RateLimitRules.general }, async ({ req }) => {
   const url = new URL(req.url);

@@ -35,7 +35,8 @@ const PRODUCT_COLUMNS = `
   id, slug, name, brand_id, category_id, price_cents, active,
   compare_at_price_cents, gender, tags,
   sku, short_description, full_description, badge_text, offer_label,
-  offer_start_date, offer_end_date`;
+  offer_start_date, offer_end_date,
+  published_at, archived_at, created_at, updated_at`;
 
 type ProductRow = {
   id: string;
@@ -55,6 +56,10 @@ type ProductRow = {
   offer_label: string | null;
   offer_start_date: string | null;
   offer_end_date: string | null;
+  published_at: Date | null;
+  archived_at: Date | null;
+  created_at: Date;
+  updated_at: Date;
 };
 type VariantRow = { id: string; product_id: string; size: string; color: string; stock_qty: number; sku: string | null };
 type ProductImageRow = {
@@ -195,6 +200,10 @@ const toProduct = (r: ProductRow): Product => ({
   offerLabel: r.offer_label,
   offerStartDate: toDateOnly(r.offer_start_date),
   offerEndDate: toDateOnly(r.offer_end_date),
+  publishedAt: r.published_at ? new Date(r.published_at).toISOString() : null,
+  archivedAt: r.archived_at ? new Date(r.archived_at).toISOString() : null,
+  createdAt: new Date(r.created_at).toISOString(),
+  updatedAt: new Date(r.updated_at).toISOString(),
 });
 const toVariant = (r: VariantRow): ProductVariant => ({
   id: r.id,
@@ -482,15 +491,35 @@ export async function insertCategory(input: { slug: string; name: string; icon?:
   }
 }
 
+export type AdminProductStatus = "active" | "draft" | "archived" | "sold_out" | "low_stock";
+export type AdminProductSort = "newest" | "oldest" | "name" | "price_asc" | "price_desc" | "stock_asc" | "updated";
+
 export type ProductListFilters = {
   brandId?: string;
   categoryId?: string;
   search?: string;
   page: number;
   pageSize: number;
-  /** Admin listing only — include soft-deleted/inactive products so they stay manageable. */
+  /** Admin listing only — include draft/archived products so they stay manageable. */
   includeInactive?: boolean;
+  /** Admin listing only — substring match on name / slug / SKU / variant SKU (search above is the storefront full-text match). */
+  adminSearch?: string;
+  /** Admin listing only — lifecycle / inventory state. Omitted = everything except archived. */
+  status?: AdminProductStatus | "all";
+  sort?: AdminProductSort;
 };
+
+const ADMIN_SORT_SQL: Record<AdminProductSort, string> = {
+  newest: "created_at DESC",
+  oldest: "created_at ASC",
+  name: "lower(name) ASC, created_at DESC",
+  price_asc: "price_cents ASC, created_at DESC",
+  price_desc: "price_cents DESC, created_at DESC",
+  stock_asc: "(SELECT COALESCE(SUM(stock_qty), 0) FROM product_variants pv WHERE pv.product_id = products.id) ASC, created_at DESC",
+  updated: "updated_at DESC",
+};
+
+const IN_STOCK_SQL = "EXISTS (SELECT 1 FROM product_variants pv WHERE pv.product_id = products.id AND pv.stock_qty > 0)";
 
 /**
  * Returns one page of active products plus a total count for pagination.
@@ -517,6 +546,27 @@ export async function listProducts(filters: ProductListFilters): Promise<{ items
     // 0003) — uses the GIN index rather than an ILIKE full scan.
     conditions.push(`search_vector @@ plainto_tsquery('english', $${params.length})`);
   }
+  if (filters.adminSearch) {
+    params.push(`%${filters.adminSearch.replace(/[\\%_]/g, (c) => "\\" + c)}%`);
+    const i = params.length;
+    conditions.push(
+      `(name ILIKE $${i} OR slug ILIKE $${i} OR sku ILIKE $${i}
+        OR EXISTS (SELECT 1 FROM product_variants pv WHERE pv.product_id = products.id AND pv.sku ILIKE $${i}))`
+    );
+  }
+  switch (filters.status) {
+    case "active": conditions.push("active = true"); break;
+    case "draft": conditions.push("active = false AND archived_at IS NULL"); break;
+    case "archived": conditions.push("archived_at IS NOT NULL"); break;
+    case "sold_out": conditions.push(`archived_at IS NULL AND NOT ${IN_STOCK_SQL}`); break;
+    case "low_stock":
+      conditions.push(`archived_at IS NULL AND EXISTS (SELECT 1 FROM product_variants pv WHERE pv.product_id = products.id AND pv.stock_qty BETWEEN 1 AND 5)`);
+      break;
+    case "all": break;
+    default:
+      // Admin default view hides archived products (they have their own tab).
+      if (filters.includeInactive) conditions.push("archived_at IS NULL");
+  }
 
   const whereClause = conditions.length ? `WHERE ${conditions.join(" AND ")}` : "";
 
@@ -532,7 +582,7 @@ export async function listProducts(filters: ProductListFilters): Promise<{ items
     `SELECT ${PRODUCT_COLUMNS}
      FROM products
      ${whereClause}
-     ORDER BY created_at DESC
+     ORDER BY ${ADMIN_SORT_SQL[filters.sort ?? "newest"]}
      LIMIT $${limitParamIdx} OFFSET $${offsetParamIdx}`,
     [...params, filters.pageSize, (filters.page - 1) * filters.pageSize]
   );
@@ -825,6 +875,9 @@ export async function updateProductFields(
   id: string,
   patch: Partial<{
     name: string;
+    slug: string;
+    brandId: string;
+    categoryId: string;
     priceCents: number;
     active: boolean;
     sku: string | null;
@@ -842,7 +895,16 @@ export async function updateProductFields(
   const params: unknown[] = [];
   if (patch.name !== undefined) { params.push(patch.name); sets.push(`name = $${params.length}`); }
   if (patch.priceCents !== undefined) { params.push(patch.priceCents); sets.push(`price_cents = $${params.length}`); }
-  if (patch.active !== undefined) { params.push(patch.active); sets.push(`active = $${params.length}`); }
+  if (patch.slug !== undefined) { params.push(patch.slug); sets.push(`slug = $${params.length}`); }
+  if (patch.brandId !== undefined) { params.push(patch.brandId); sets.push(`brand_id = $${params.length}`); }
+  if (patch.categoryId !== undefined) { params.push(patch.categoryId); sets.push(`category_id = $${params.length}`); }
+  if (patch.active !== undefined) {
+    params.push(patch.active);
+    sets.push(`active = $${params.length}`);
+    // Publishing stamps published_at the FIRST time only (Latest Drop order
+    // must not jump on unpublish/republish) and always un-archives.
+    if (patch.active) sets.push("published_at = COALESCE(published_at, now())", "archived_at = NULL");
+  }
   if (patch.sku !== undefined) { params.push(patch.sku ?? null); sets.push(`sku = $${params.length}`); }
   if (patch.shortDescription !== undefined) { params.push(patch.shortDescription ?? null); sets.push(`short_description = $${params.length}`); }
   if (patch.fullDescription !== undefined) { params.push(patch.fullDescription ?? null); sets.push(`full_description = $${params.length}`); }
@@ -857,17 +919,69 @@ export async function updateProductFields(
     return existing;
   }
   params.push(id);
+  try {
+    const row = await queryOne<ProductRow>(
+      `UPDATE products SET ${sets.join(", ")} WHERE id = $${params.length}
+       RETURNING ${PRODUCT_COLUMNS}`,
+      params
+    );
+    return row ? toProduct(row) : null;
+  } catch (err) {
+    if (isPgErrorCode(err, PG_ERROR_CODES.UNIQUE_VIOLATION)) {
+      if (err.constraint === "products_sku_unique_idx") throw new ConflictError("A product with this SKU already exists.");
+      throw new ConflictError("A product with this slug already exists.");
+    }
+    if (isPgErrorCode(err, PG_ERROR_CODES.FOREIGN_KEY_VIOLATION)) {
+      throw new ConflictError("The specified brand or category does not exist.");
+    }
+    throw err;
+  }
+}
+
+/**
+ * Archive ("delete") — never a hard DELETE: the row stays so order history,
+ * wishlists and audit events keep resolving (see migrations 0003 / 0053).
+ * An archived product is unlisted and unpurchasable everywhere.
+ */
+export async function archiveProduct(id: string): Promise<Product | null> {
   const row = await queryOne<ProductRow>(
-    `UPDATE products SET ${sets.join(", ")} WHERE id = $${params.length}
-     RETURNING ${PRODUCT_COLUMNS}`,
-    params
+    `UPDATE products SET active = false, archived_at = COALESCE(archived_at, now()) WHERE id = $1 RETURNING ${PRODUCT_COLUMNS}`,
+    [id]
   );
   return row ? toProduct(row) : null;
 }
 
-/** Soft delete only — see migration 0003's comment on `products.active` for why this is never a hard DELETE. */
-export async function softDeleteProduct(id: string): Promise<void> {
-  await query("UPDATE products SET active = false WHERE id = $1", [id]);
+/** Restores an archived product as a DRAFT — the admin re-publishes it deliberately. */
+export async function restoreProduct(id: string): Promise<Product | null> {
+  const row = await queryOne<ProductRow>(
+    `UPDATE products SET archived_at = NULL WHERE id = $1 RETURNING ${PRODUCT_COLUMNS}`,
+    [id]
+  );
+  return row ? toProduct(row) : null;
+}
+
+/**
+ * Sets absolute stock for a batch of one product's variants in a single
+ * transaction — the dedicated inventory path (no need to resubmit the whole
+ * product). Each row is locked like checkout locks it, so a concurrent order
+ * either commits first (and this overwrites with the admin's counted value)
+ * or waits for this to finish.
+ */
+export async function setVariantStock(productId: string, updates: { variantId: string; stockQty: number }[]): Promise<ProductVariant[]> {
+  await withTransaction(async (client) => {
+    const ids = [...new Set(updates.map((u) => u.variantId))].sort();
+    const locked = await client.query<{ id: string }>(
+      "SELECT id FROM product_variants WHERE product_id = $1 AND id = ANY($2::uuid[]) ORDER BY id FOR UPDATE",
+      [productId, ids]
+    );
+    if (locked.rows.length !== ids.length) {
+      throw new ConflictError("One or more variants do not belong to this product.");
+    }
+    for (const u of updates) {
+      await client.query("UPDATE product_variants SET stock_qty = $2, version = version + 1 WHERE id = $1", [u.variantId, u.stockQty]);
+    }
+  });
+  return listVariantsForProducts([productId]);
 }
 
 export type VariantInput = {

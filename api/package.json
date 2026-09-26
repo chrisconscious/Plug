@@ -15,7 +15,6 @@
     "test:watch": "vitest",
     "db:migrate": "tsx db/scripts/migrate.ts",
     "db:seed": "psql \"$DATABASE_URL\" -f db/seed.sql",
-    "db:seed:catalog": "node db/scripts/seed-catalog.cjs",
     "db:create-super-admin": "tsx db/scripts/create-super-admin.ts",
     "media:cleanup-orphans": "tsx db/scripts/cleanup-orphaned-media.ts"
   },

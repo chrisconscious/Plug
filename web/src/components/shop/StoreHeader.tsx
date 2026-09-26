@@ -8,7 +8,7 @@ import { NotificationBell } from "../NotificationBell";
 import * as api from "../../lib/api";
 import {
   getCategoryUrl,
-  getCollectionUrl,
+  getNewInUrl,
   getGenderCategoryUrl,
   getMenUrl,
   getSaleUrl,
@@ -163,7 +163,7 @@ export function StoreHeader() {
   const genderApiUrl = (kind: MenuKind, slug: string) => getGenderCategoryUrl(kind, slug);
 
   const quickNav: [string, string][] = [
-    ["NEW IN", getCollectionUrl("new")],
+    ["NEW IN", getNewInUrl()],
     ["COLLECTIONS", getShopAllUrl()],
     ["SALE", getSaleUrl()],
     ["BRANDS", "/brands"],
@@ -203,7 +203,7 @@ export function StoreHeader() {
               <Link to={genderUrl(kind)}>{MENU_LABEL[kind]} <ChevronDown size={10} /></Link>
             </div>
           ))}
-          <Link to={getCollectionUrl("new")}>NEW IN</Link>
+          <Link to={getNewInUrl()}>NEW IN</Link>
           <Link to={getShopAllUrl()}>COLLECTIONS</Link>
           <Link to={getSaleUrl()}>SALE</Link>
           <Link to="/brands">BRANDS</Link>
@@ -351,7 +351,7 @@ export function StoreHeader() {
             {!query && (
               <div className="searchHints">
                 <span>Popular</span>
-                {[["New In", getCollectionUrl("new")], ["Sale", getSaleUrl()], ["Women", getWomenUrl()], ["Men", getMenUrl()]].map(([x, to]) => (
+                {[["New In", getNewInUrl()], ["Sale", getSaleUrl()], ["Women", getWomenUrl()], ["Men", getMenUrl()]].map(([x, to]) => (
                   <button key={x} type="button" onClick={() => { nav(to); closeAll(); }}>{x}</button>
                 ))}
               </div>

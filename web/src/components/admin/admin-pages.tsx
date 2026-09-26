@@ -11,6 +11,7 @@ import { PaymentMethodsPage } from "./payment-methods";
 import { LifestyleManagementPage } from "./lifestyle-content";
 import { MfaSettingsPage } from "./mfa-settings";
 import { AdminPermissionsEditor } from "./admin-permissions-editor";
+import { ProductManagementTable } from "./product-management";
 
 export type AdminRow = {
   id: string;
@@ -94,6 +95,7 @@ export function FunctionalManagementPage({ title, desc, withHeroOverride = false
   const [error, setError] = useState<string | null>(null);
   const [notImplemented, setNotImplemented] = useState(false);
   const [add, setAdd] = useState<AddForm>({ open: false, fields: [] });
+  const [productReload, setProductReload] = useState(0);
   const [banner, setBanner] = useState("");
   const [catalogData, setCatalogData] = useState<{ brands: AdminRow[]; categories: AdminRow[] }>({ brands: [], categories: [] });
   const [catalogToAdd, setCatalogToAdd] = useState<"brand" | "category" | null>(null);
@@ -214,18 +216,11 @@ export function FunctionalManagementPage({ title, desc, withHeroOverride = false
     try {
       switch (kind) {
         case "products": {
-          const [pg, br, ca] = await Promise.all([api.listAdminProducts({ pageSize: 100 }), listBrands(), listCategories()]);
-          setRows(pg.items.map((p) => ({
-            id: p.id,
-            primary: p.name,
-            sub: p.brand?.name ?? "—",
-            status: p.onSale ? "On Sale" : p.active ? "Active" : "Draft",
-            statusTone: p.onSale ? "err" : p.active ? "ok" : "warn",
-            meta: p.onSale
-              ? `${formatTZS(p.priceCents)} → ${formatTZS(p.compareAtPriceCents ?? p.priceCents)} (Save ${p.discountPercent}%)`
-              : formatTZS(p.priceCents),
-            raw: p,
-          })));
+          // The product list itself is loaded (search/filter/sort/paged) by
+          // ProductManagementTable; this only prepares the create form.
+          const [br, ca] = await Promise.all([listBrands(), listCategories()]);
+          setRows([]);
+          setProductReload((n) => n + 1);
           catalogOptionsRef.current = { brands: br.brands, categories: ca.categories };
           setAdd({ open: false, fields: [
             { name: "name", label: "Product name", kind: "text" },
@@ -300,26 +295,6 @@ export function FunctionalManagementPage({ title, desc, withHeroOverride = false
             meta: new Date(e.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }),
             raw: e,
           })));
-          break;
-        }
-        case "inventory": {
-          const pg = await api.listAdminProducts({ pageSize: 100 });
-          setRows(pg.items.map((p) => {
-            const vs = p.variants ?? [];
-            const units = vs.reduce((s, v) => s + (v.stockQty ?? 0), 0);
-            const low = vs.find((v) => (v.stockQty ?? 0) > 0 && (v.stockQty ?? 0) <= 5) ?? null;
-            const out = vs.filter((v) => (v.stockQty ?? 0) <= 0).length;
-            const status = units <= 0 ? "Out of stock" : low ? "Low stock" : "In stock";
-            return {
-              id: p.id,
-              primary: p.name,
-              sub: `${vs.length} variants · ${units} units${low ? ` · low: ${low.color}/${low.size} (${low.stockQty})` : ""}${out ? ` · ${out} out` : ""}`,
-              status,
-              statusTone: units <= 0 ? "warn" : low ? "warn" : "ok",
-              meta: `${units} units`,
-              raw: p,
-            };
-          }));
           break;
         }
         case "catalog": {
@@ -431,7 +406,12 @@ export function FunctionalManagementPage({ title, desc, withHeroOverride = false
             await api.setProductAttributeValues(created.product.id, createAttrSelected);
           } catch { /* attributes are best-effort; product creation already succeeded */ }
         }
-        msg = "Product created as a draft — add variants (sizes/colors/stock) and activate it in Edit once it's ready to sell.";
+        msg = "Product created as a draft — now add images and color/size stock, then tick Published.";
+        if (created?.product?.id) {
+          // Continue straight into the editor so the admin can add images and
+          // variants and publish, instead of hunting for the new draft.
+          api.getAdminProduct(created.product.id).then((r) => setEditingProduct(r.product)).catch(() => undefined);
+        }
       } else if (kind === "admins") {
         const email = (formData.email ?? "").trim().toLowerCase();
         const password = formData.password ?? "";
@@ -782,6 +762,17 @@ export function FunctionalManagementPage({ title, desc, withHeroOverride = false
           <p style={{ fontWeight: 700, color: '#374151', marginBottom: 6 }}>This module is not wired up yet</p>
           <p style={{ fontSize: 13 }}>There is no backend endpoint for "{title}" yet, so no real data can be shown here.</p>
         </div>
+      ) : kind === "products" ? (
+        <ProductManagementTable
+          reloadKey={productReload}
+          canAdd={canAdd}
+          onAdd={() => { setCreateAttrGroups([]); setCreateAttrSelected([]); lastCreateCategory.current = ""; setAdd({ ...add, open: true }); }}
+          onEdit={(p) => {
+            // Always edit the freshest server copy (stock may have changed since the list loaded).
+            api.getAdminProduct(p.id).then((r) => setEditingProduct(r.product)).catch(() => setEditingProduct(p));
+          }}
+          setBanner={setBanner}
+        />
       ) : (
         <CatalogManagementTable
           title={title}
@@ -793,27 +784,12 @@ export function FunctionalManagementPage({ title, desc, withHeroOverride = false
           handleAdd={() => { setCreateAttrGroups([]); setCreateAttrSelected([]); lastCreateCategory.current = ""; setAdd({ ...add, open: true }); }}
           canAdd={canAdd}
           onRemove={async (r) => {
-            // Products are soft-deleted server-side (active=false) and stay
-            // visible in the list so they can be restored later. Other rows
-            // (e.g. admins) have no delete endpoint — drop them locally only.
-            if (kind === "products") {
-              try {
-                await api.deleteAdminProduct(r.id);
-                setBanner(`${r.primary} removed (can be re-activated anytime)`);
-                setTimeout(() => setBanner(""), 3000);
-                await load();
-              } catch (e) {
-                if (handleAuthError(e, setBanner)) return;
-                setBanner(e instanceof api.ApiError ? e.message : "Could not remove product");
-                setTimeout(() => setBanner(""), 4000);
-              }
-              return;
-            }
+            // Rows here (e.g. admins) have no delete endpoint — drop them locally only.
             setRows((rs) => rs.filter((x) => x.id !== r.id));
             setBanner(`${r.primary} removed`);
             setTimeout(() => setBanner(""), 2000);
           }}
-          onEdit={(r) => { if (kind === "products") setEditingProduct(r.raw as api.Product); }}
+          onEdit={() => undefined}
           extra={kind === "orders" ? (r) => <OrderStatusActions r={r} onChange={handleOrderStatus} /> : kind === "admins" ? (r) => <AdminToggleActions r={r} onToggle={handleAdminToggle} onPermissions={(row) => setPermsAdmin(row.raw as api.AdminUser)} /> : undefined}
         />
       )}
@@ -889,7 +865,7 @@ export function FunctionalManagementPage({ title, desc, withHeroOverride = false
         <ProductEditorModal
           product={editingProduct}
           onClose={() => setEditingProduct(null)}
-          onSaved={async () => { await load(); }}
+          onSaved={async () => { setProductReload((n) => n + 1); }}
         />
       )}
 
@@ -1350,12 +1326,17 @@ function BrandLogoField({ preview, existingUrl, removed, error, onSelect, onRemo
   );
 }
 
-function ProductEditorModal({ product, onClose, onSaved }: {
+export function ProductEditorModal({ product, onClose, onSaved }: {
   product: api.Product;
   onClose: () => void;
   onSaved: () => Promise<void>;
 }) {
   const [name, setName] = useState(product.name);
+  const [slug, setSlug] = useState(product.slug);
+  const [brandId, setBrandId] = useState(product.brand?.id ?? "");
+  const [categoryId, setCategoryId] = useState(product.category?.id ?? "");
+  const [brandOptions, setBrandOptions] = useState<api.Brand[]>(product.brand ? [product.brand] : []);
+  const [categoryOptions, setCategoryOptions] = useState<api.Category[]>(product.category ? [product.category] : []);
   const [price, setPrice] = useState(String(product.priceCents));
   const [compareAt, setCompareAt] = useState(product.compareAtPriceCents != null ? String(product.compareAtPriceCents) : "");
   const [active, setActive] = useState(product.active);
@@ -1395,6 +1376,16 @@ function ProductEditorModal({ product, onClose, onSaved }: {
   );
   const [draft, setDraft] = useState({ color: "", size: "", stockQty: "0", sku: "" });
   const [variantsError, setVariantsError] = useState<string | null>(null);
+
+  // Brand / category are editable (moving a product re-files it on every
+  // brand, category and filter page automatically — they're all queries).
+  useEffect(() => {
+    let alive = true;
+    Promise.all([api.listAdminBrands(), api.listAdminCategories()])
+      .then(([b, c]) => { if (alive) { setBrandOptions(b.brands); setCategoryOptions(c.categories); } })
+      .catch(() => { /* keep the current brand/category as the only option */ });
+    return () => { alive = false; };
+  }, []);
 
   const updateRow = (key: string, field: 'stockQty' | 'sku', value: string) => {
     setVariantsError(null);
@@ -1456,9 +1447,26 @@ function ProductEditorModal({ product, onClose, onSaved }: {
       setBusy(false);
       return;
     }
+    if (!name.trim()) { setError("Enter a product name."); setBusy(false); return; }
     try {
+      // Variants first: publishing is validated server-side against the
+      // SAVED variants/images, so a product published in the same save as
+      // its first variants must have those variants stored already.
+      await api.updateProductVariants(
+        product.id,
+        variantRows.map((r) => ({
+          id: r.id ?? null,
+          size: r.size.trim(),
+          color: r.color.trim(),
+          stockQty: Math.max(0, Math.floor(Number(r.stockQty) || 0)),
+          sku: r.sku.trim() || null,
+        }))
+      );
       await api.updateAdminProduct(product.id, {
-        name: name.trim() || undefined,
+        name: name.trim(),
+        slug: slug.trim() && slug.trim() !== product.slug ? slug.trim() : undefined,
+        brandId: brandId && brandId !== product.brand?.id ? brandId : undefined,
+        categoryId: categoryId && categoryId !== product.category?.id ? categoryId : undefined,
         priceCents: parsedPrice,
         active,
         genderAudiences: audiences,
@@ -1473,16 +1481,6 @@ function ProductEditorModal({ product, onClose, onSaved }: {
         fullDescription: trimOrNull(fullDescription),
         tags: tags.split(",").map((s) => s.trim()).filter(Boolean),
       });
-      await api.updateProductVariants(
-        product.id,
-        variantRows.map((r) => ({
-          id: r.id ?? null,
-          size: r.size.trim(),
-          color: r.color.trim(),
-          stockQty: Math.max(0, Math.floor(Number(r.stockQty) || 0)),
-          sku: r.sku.trim() || null,
-        }))
-      );
       if (attributeGroups.length > 0) {
         await api.setProductAttributeValues(product.id, selectedAttributeOptionIds);
       }
@@ -1532,7 +1530,13 @@ function ProductEditorModal({ product, onClose, onSaved }: {
     <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.45)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: 16 }}>
       <div style={{ background: '#fff', width: '100%', maxWidth: 760, maxHeight: '90vh', overflowY: 'auto', padding: 24, position: 'relative' }}>
         <button onClick={onClose} style={{ position: 'absolute', top: 14, right: 14, border: 'none', background: 'none', cursor: 'pointer' }}><X size={20} /></button>
-        <h3 style={{ font: '800 20px Manrope', margin: '0 0 18px' }}>Edit Product</h3>
+        <h3 style={{ font: '800 20px Manrope', margin: '0 0 6px' }}>Edit Product</h3>
+        <p style={{ fontSize: 11, color: '#777', margin: '0 0 18px' }}>
+          {product.archivedAt ? 'Archived' : product.active ? 'Live on the storefront' : 'Draft — not visible to customers'}
+          {product.createdAt ? ` · Created ${new Date(product.createdAt).toLocaleDateString()}` : ''}
+          {product.publishedAt ? ` · First published ${new Date(product.publishedAt).toLocaleDateString()}` : ''}
+          {product.updatedAt ? ` · Updated ${new Date(product.updatedAt).toLocaleString()}` : ''}
+        </p>
 
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 18 }}>
           <div>
@@ -1543,10 +1547,28 @@ function ProductEditorModal({ product, onClose, onSaved }: {
             <label style={{ display: 'block', fontSize: 11, fontWeight: 600, marginBottom: 4, color: '#555' }}>Price (TZS)</label>
             <input style={{ width: '100%', border: '1px solid #ddd', padding: '9px 10px', fontSize: 12 }} value={price} onChange={(e) => setPrice(e.target.value)} />
           </div>
+          <div>
+            <label style={{ display: 'block', fontSize: 11, fontWeight: 600, marginBottom: 4, color: '#555' }}>Brand</label>
+            <select data-role="edit-brand" style={{ width: '100%', border: '1px solid #ddd', padding: '9px 10px', fontSize: 12, background: '#fff' }} value={brandId} onChange={(e) => setBrandId(e.target.value)}>
+              {brandOptions.map((b) => <option key={b.id} value={b.id}>{b.name}{b.active === false ? ' (inactive)' : ''}</option>)}
+            </select>
+          </div>
+          <div>
+            <label style={{ display: 'block', fontSize: 11, fontWeight: 600, marginBottom: 4, color: '#555' }}>Category</label>
+            <select data-role="edit-category" style={{ width: '100%', border: '1px solid #ddd', padding: '9px 10px', fontSize: 12, background: '#fff' }} value={categoryId} onChange={(e) => setCategoryId(e.target.value)}>
+              {categoryOptions.map((c) => <option key={c.id} value={c.id}>{c.name}{c.active === false ? ' (inactive)' : ''}</option>)}
+            </select>
+          </div>
+          <div style={{ gridColumn: '1 / -1' }}>
+            <label style={{ display: 'block', fontSize: 11, fontWeight: 600, marginBottom: 4, color: '#555' }}>Slug (product URL)</label>
+            <input style={{ width: '100%', border: '1px solid #ddd', padding: '9px 10px', fontSize: 12 }} value={slug} onChange={(e) => setSlug(e.target.value)} />
+            <small style={{ fontSize: 10, color: '#999' }}>Letters, numbers and dashes — e.g. classic-oversized-tee. Changing it changes the product link.</small>
+          </div>
         </div>
-        <label style={{ display: 'inline-flex', alignItems: 'center', gap: 8, fontSize: 12, marginBottom: 18, cursor: 'pointer' }}>
-          <input type="checkbox" checked={active} onChange={(e) => setActive(e.target.checked)} /> Active / published
+        <label style={{ display: 'inline-flex', alignItems: 'center', gap: 8, fontSize: 12, marginBottom: 4, cursor: 'pointer' }}>
+          <input data-role="edit-published" type="checkbox" checked={active} onChange={(e) => setActive(e.target.checked)} /> Published — visible on the storefront
         </label>
+        <p style={{ fontSize: 10, color: '#999', margin: '0 0 18px' }}>Publishing needs at least one image and one color/size variant. Newly published products appear first in THE LATEST DROP.</p>
 
         <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 8 }}>Pricing &amp; Offer <small style={{ color: '#888', fontWeight: 400 }}>(sale = compare-at above price, within the window)</small></div>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 8 }}>

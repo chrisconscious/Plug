@@ -135,6 +135,18 @@ export function permissionsForRole(role: Role): Permission[] {
  * This function is called by `withRoute()` in http.ts on every
  * permission-gated admin request.
  */
+/** Role permissions plus any per-admin grants — the same set hasPermissionForUser() answers from. */
+export async function effectivePermissionsForUser(userId: string, role: Role): Promise<Permission[]> {
+  const base = new Set<Permission>(permissionsForRole(role));
+  if (role === "ADMIN") {
+    const { getGrantedPermissions } = await import("@/lib/db/repos/admin-permissions.repo");
+    for (const p of await getGrantedPermissions(userId)) {
+      if (!NON_GRANTABLE_PERMISSIONS.includes(p as Permission)) base.add(p as Permission);
+    }
+  }
+  return [...base];
+}
+
 export async function hasPermissionForUser(
   userId: string,
   role: Role,

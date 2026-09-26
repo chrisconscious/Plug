@@ -62,7 +62,10 @@ authenticated, not instead of it.
 | POST | `/api/v1/admin/products/[id]/images` | required | products.update | adminGeneral |
 | GET | `/api/v1/admin/products/[id]/images` | required | products.update | adminGeneral |
 | PUT | `/api/v1/admin/products/[id]/images` | required | products.update | adminGeneral |
+| GET | `/api/v1/admin/products/[id]` | required | products.read | adminGeneral |
 | PATCH | `/api/v1/admin/products/[id]` | required | products.update | adminGeneral |
+| PATCH | `/api/v1/admin/products/[id]/stock` | required | products.update | adminGeneral |
+| POST | `/api/v1/admin/products/[id]/restore` | required | products.delete | adminGeneral |
 | PUT | `/api/v1/admin/products/[id]` | required | products.update | adminGeneral |
 | DELETE | `/api/v1/admin/products/[id]` | required | products.delete | adminGeneral |
 | PATCH | `/api/v1/admin/products/images/[imageId]` | required | products.update | adminGeneral |

@@ -124,3 +124,31 @@ describe("addToCart — validation, never trusting a client-supplied price", () 
     expect(cartRepo.upsertCartItem).not.toHaveBeenCalled();
   });
 });
+
+describe("addToCart — never more than is in stock", () => {
+  it("rejects a quantity above the variant's stock", async () => {
+    vi.mocked(catalogService.getVariantOrThrow).mockResolvedValue(fakeVariant({ stockQty: 2 }) as never);
+    vi.mocked(catalogService.getProductOrThrow).mockResolvedValue(fakeProduct() as never);
+    vi.mocked(cartRepo.listCartItems).mockResolvedValue([]);
+    await expect(addToCart("user-1", "variant-1", 3)).rejects.toThrow("Only 2 available");
+    expect(cartRepo.upsertCartItem).not.toHaveBeenCalled();
+  });
+
+  it("counts what is already in the cart (quantities merge)", async () => {
+    vi.mocked(catalogService.getVariantOrThrow).mockResolvedValue(fakeVariant({ stockQty: 3 }) as never);
+    vi.mocked(catalogService.getProductOrThrow).mockResolvedValue(fakeProduct() as never);
+    vi.mocked(cartRepo.listCartItems).mockResolvedValue([fakeCartItem({ quantity: 2 })] as never);
+    await expect(addToCart("user-1", "variant-1", 2)).rejects.toThrow("already have 2 in your cart");
+    expect(cartRepo.upsertCartItem).not.toHaveBeenCalled();
+  });
+
+  it("flags a cart line whose quantity now exceeds stock as not purchasable", async () => {
+    vi.mocked(cartRepo.listCartItems).mockResolvedValue([fakeCartItem({ quantity: 5 })] as never);
+    vi.mocked(catalogRepo.findVariantById).mockResolvedValue(fakeVariant({ stockQty: 2 }) as never);
+    vi.mocked(catalogRepo.findProductById).mockResolvedValue(fakeProduct() as never);
+    const cart = await getCart("user-1");
+    expect(cart.items[0]!.available).toBe(false);
+    expect(cart.items[0]!.insufficientStock).toBe(true);
+    expect(cart.subtotalCents).toBe(0);
+  });
+});

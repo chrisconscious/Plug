@@ -35,3 +35,7 @@ yarn-error.log*
 
 # Local tooling
 *.local
+
+# Runtime media uploads (local storage provider) — user content, never source.
+# Files committed before this rule stay tracked until removed deliberately.
+api/public/uploads/

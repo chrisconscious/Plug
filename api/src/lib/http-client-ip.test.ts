@@ -4,7 +4,7 @@ import type { NextRequest } from "next/server";
 // A mutable mock config object — tests change .trustProxyHops between
 // cases to simulate different deployment topologies without needing to
 // reload the module (config.ts is otherwise a real, frozen singleton).
-const mockConfig = { trustProxyHops: 0, frontendOrigin: "http://localhost:5173" };
+const mockConfig = vi.hoisted(() => ({ trustProxyHops: 0, frontendOrigin: "http://localhost:5173" }));
 vi.mock("./config", () => ({ config: mockConfig }));
 
 import { clientIp } from "./http";

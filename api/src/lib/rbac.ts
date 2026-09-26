@@ -36,7 +36,7 @@ export const PERMISSION_LABELS: Record<Permission, string> = {
   "products.read": "View product catalog data",
   "products.create": "Create new products",
   "products.update": "Edit existing products",
-  "products.delete": "Deactivate (soft-delete) products",
+  "products.delete": "Archive and restore products",
   "brands.manage": "Create and manage brands and categories",
   "orders.read": "View any customer's orders",
   "orders.read.own": "View only the current user's own orders",
@@ -85,6 +85,9 @@ const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
     "products.read",
     "products.create",
     "products.update",
+    // Archive/restore (never a hard delete — orders keep their history; see
+    // migration 0053). Granted to Admins by the owner's decision (0055).
+    "products.delete",
     "brands.manage",
     "orders.read",
     "orders.update",

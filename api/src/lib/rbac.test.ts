@@ -25,13 +25,14 @@ describe("hasPermission", () => {
     expect(hasPermission("CUSTOMER", "system.manage")).toBe(false);
   });
 
-  it("ADMIN can manage the catalog and orders but not other admins or system settings", () => {
+  it("ADMIN can manage the catalog (incl. archive/restore) and orders but not other admins or system settings", () => {
     expect(hasPermission("ADMIN", "products.create")).toBe(true);
     expect(hasPermission("ADMIN", "products.update")).toBe(true);
     expect(hasPermission("ADMIN", "orders.update")).toBe(true);
+    // Archive/restore products (soft delete only) — granted to Admins (migration 0055).
+    expect(hasPermission("ADMIN", "products.delete")).toBe(true);
     // The explicit-allow-list design (see rbac.ts comment) means ADMIN does
     // NOT implicitly get everything SUPER_ADMIN has — these must stay false:
-    expect(hasPermission("ADMIN", "products.delete")).toBe(false);
     expect(hasPermission("ADMIN", "admins.manage")).toBe(false);
     expect(hasPermission("ADMIN", "users.manage")).toBe(false);
     expect(hasPermission("ADMIN", "system.manage")).toBe(false);
@@ -70,7 +71,7 @@ describe("permissionsForRole", () => {
 
   it("returns the exact ADMIN permission set", () => {
     expect(permissionsForRole("ADMIN").sort()).toEqual(
-      ["products.read", "products.create", "products.update", "brands.manage", "orders.read", "orders.update", "users.read"].sort()
+      ["products.read", "products.create", "products.update", "products.delete", "brands.manage", "orders.read", "orders.update", "users.read"].sort()
     );
   });
 

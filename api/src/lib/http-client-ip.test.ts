@@ -6,6 +6,9 @@ import type { NextRequest } from "next/server";
 // reload the module (config.ts is otherwise a real, frozen singleton).
 const mockConfig = vi.hoisted(() => ({ trustProxyHops: 0, frontendOrigin: "http://localhost:5173" }));
 vi.mock("./config", () => ({ config: mockConfig }));
+// http.ts reaches the DB pool through its imports; clientIp never queries,
+// so a stub keeps this unit test from needing (or configuring) a database.
+vi.mock("./db/pool", () => ({ pool: {} }));
 
 import { clientIp } from "./http";
 

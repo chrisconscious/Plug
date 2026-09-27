@@ -220,7 +220,6 @@ cp .env.example .env      # fill in ACCESS_TOKEN_SECRET / REFRESH_TOKEN_SECRET /
                             # (generate secrets: node -e "console.log(require('crypto').randomBytes(48).toString('hex'))")
 npm install
 npm run db:migrate         # applies db/migrations/*.sql — see docs/DATABASE.md
-npm run db:seed            # optional: sample brands/categories/products for local dev
 npm run db:create-super-admin   # interactive — creates your first Super Admin login
 npm run dev                # http://localhost:3001
 ```

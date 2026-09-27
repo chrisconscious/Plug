@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import * as api from '../../lib/api';
+import { userMessage } from "../../lib/errors";
 
 export function CouponManagement() {
   const [items, setItems] = useState<api.Coupon[] | null>(null);
@@ -15,6 +16,8 @@ export function CouponManagement() {
   const [startsAt, setStartsAt] = useState('');
   const [endsAt, setEndsAt] = useState('');
   const [saving, setSaving] = useState(false);
+  // Set while editing an existing coupon; the same form then saves changes.
+  const [editing, setEditing] = useState<api.Coupon | null>(null);
 
   const load = () => {
     setStatus('loading');
@@ -30,7 +33,34 @@ export function CouponManagement() {
   };
 
   const resetForm = () => {
-    setCode(''); setDiscountValue(''); setMinOrder(''); setMaxRedemptions(''); setMaxPerCustomer(''); setStartsAt(''); setEndsAt('');
+    setEditing(null);
+    setCode(''); setDiscountType('PERCENTAGE'); setDiscountValue(''); setMinOrder(''); setMaxRedemptions(''); setMaxPerCustomer(''); setStartsAt(''); setEndsAt('');
+  };
+
+  const dateOnly = (iso: string | null | undefined) => (iso ? iso.slice(0, 10) : '');
+  const startEdit = (c: api.Coupon) => {
+    setEditing(c);
+    setCode(c.code);
+    setDiscountType(c.discountType);
+    setDiscountValue(String(c.discountValue));
+    setMinOrder(c.minOrderCents ? String(c.minOrderCents) : '');
+    setMaxRedemptions(c.maxRedemptions != null ? String(c.maxRedemptions) : '');
+    setMaxPerCustomer(c.maxRedemptionsPerCustomer != null ? String(c.maxRedemptionsPerCustomer) : '');
+    setStartsAt(dateOnly(c.startsAt));
+    setEndsAt(dateOnly(c.endsAt));
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const remove = async (c: api.Coupon) => {
+    if (!window.confirm(`Delete coupon ${c.code} permanently? This can't be undone.`)) return;
+    try {
+      await api.deleteCoupon(c.id);
+      if (editing?.id === c.id) resetForm();
+      showBanner(`Coupon ${c.code} deleted.`, 'ok');
+      load();
+    } catch (e) {
+      showBanner(userMessage(e, 'Could not delete this coupon.'), 'error');
+    }
   };
 
   const submit = async (ev: React.FormEvent) => {
@@ -41,7 +71,7 @@ export function CouponManagement() {
     }
     setSaving(true);
     try {
-      await api.createCoupon({
+      const draft = {
         code: code.trim(),
         discountType,
         discountValue: Number(discountValue),
@@ -50,12 +80,14 @@ export function CouponManagement() {
         maxRedemptionsPerCustomer: maxPerCustomer.trim() ? Number(maxPerCustomer) : null,
         startsAt: startsAt || null,
         endsAt: endsAt || null,
-      });
+      };
+      if (editing) await api.updateCoupon(editing.id, draft);
+      else await api.createCoupon(draft);
+      showBanner(editing ? `Coupon ${draft.code.toUpperCase()} updated.` : 'Coupon created.', 'ok');
       resetForm();
-      showBanner('Coupon created.', 'ok');
       load();
     } catch (e) {
-      showBanner(e instanceof api.ApiError ? e.message : 'Could not create this coupon.', 'error');
+      showBanner(userMessage(e, editing ? 'Could not save this coupon.' : 'Could not create this coupon.'), 'error');
     } finally {
       setSaving(false);
     }
@@ -66,7 +98,7 @@ export function CouponManagement() {
       await api.updateCoupon(c.id, { active: !c.active });
       load();
     } catch (e) {
-      showBanner(e instanceof api.ApiError ? e.message : 'Could not update this coupon.', 'error');
+      showBanner(userMessage(e, 'Could not update this coupon.'), 'error');
     }
   };
 
@@ -102,7 +134,7 @@ export function CouponManagement() {
       )}
 
       <section style={{ border: '1px solid #e5e5e5', borderRadius: 10, padding: 20 }}>
-        <h3 style={{ font: '800 15px Manrope', margin: '0 0 4px' }}>Create a Coupon</h3>
+        <h3 style={{ font: '800 15px Manrope', margin: '0 0 4px' }}>{editing ? `Edit ${editing.code}` : 'Create a Coupon'}</h3>
         <p style={{ fontSize: 12.5, color: '#71717a', margin: '0 0 16px' }}>
           Discounts are calculated and validated server-side at checkout — never trusted from the customer's browser.
         </p>
@@ -148,9 +180,12 @@ export function CouponManagement() {
               <input type="date" value={endsAt} onChange={(e) => setEndsAt(e.target.value)} style={{ ...fieldStyle, width: '100%' }} />
             </div>
           </div>
-          <button type="submit" className="blackButton" disabled={saving} style={{ alignSelf: 'flex-start' }}>
-            {saving ? 'Creating…' : 'CREATE COUPON'}
-          </button>
+          <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+            <button type="submit" className="blackButton" disabled={saving}>
+              {saving ? 'Saving…' : editing ? 'SAVE CHANGES' : 'CREATE COUPON'}
+            </button>
+            {editing && <button type="button" onClick={resetForm} disabled={saving} style={{ fontSize: 11, fontWeight: 700, background: 'none', border: 'none', cursor: 'pointer' }}>CANCEL</button>}
+          </div>
         </form>
       </section>
 
@@ -176,9 +211,13 @@ export function CouponManagement() {
                 <p style={{ fontSize: 11.5, color: '#888', margin: '0 0 8px' }}>{formatLimit(c)}</p>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                   <span style={{ fontSize: 11, color: '#999' }}>Created {new Date(c.createdAt).toLocaleDateString()}</span>
-                  <button type="button" onClick={() => toggleActive(c)} style={{ fontSize: 11, fontWeight: 700, background: 'none', border: 'none', color: c.active ? '#b91c1c' : '#166534', cursor: 'pointer' }}>
-                    {c.active ? 'DEACTIVATE' : 'ACTIVATE'}
-                  </button>
+                  <span style={{ display: 'flex', gap: 12 }}>
+                    <button type="button" onClick={() => startEdit(c)} style={{ fontSize: 11, fontWeight: 700, background: 'none', border: 'none', cursor: 'pointer' }}>EDIT</button>
+                    <button type="button" onClick={() => toggleActive(c)} style={{ fontSize: 11, fontWeight: 700, background: 'none', border: 'none', color: c.active ? '#b45309' : '#166534', cursor: 'pointer' }}>
+                      {c.active ? 'DEACTIVATE' : 'ACTIVATE'}
+                    </button>
+                    <button type="button" onClick={() => remove(c)} aria-label={`Delete coupon ${c.code}`} style={{ fontSize: 11, fontWeight: 700, background: 'none', border: 'none', color: '#b91c1c', cursor: 'pointer' }}>DELETE</button>
+                  </span>
                 </div>
               </div>
             ))}

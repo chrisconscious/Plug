@@ -2,7 +2,7 @@ import { withRoute, json } from "@/lib/http";
 import { validateBody, optional, isString, isBoolean } from "@/lib/validate";
 import { RateLimitRules } from "@/lib/security/rateLimiter";
 import { ValidationError } from "@/lib/errors";
-import { updateBrand } from "@/lib/services/catalog.service";
+import { updateBrand, deleteBrand } from "@/lib/services/catalog.service";
 
 export const PATCH = withRoute(
   { permission: "brands.manage", rateLimit: RateLimitRules.adminGeneral },
@@ -28,3 +28,8 @@ export const PATCH = withRoute(
     return json({ brand });
   }
 );
+
+export const DELETE = withRoute({ permission: "brands.manage", rateLimit: RateLimitRules.adminGeneral }, async ({ user, params }) => {
+  await deleteBrand(user!, params.id!);
+  return json({ success: true });
+});

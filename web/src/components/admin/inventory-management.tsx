@@ -3,6 +3,7 @@ import { Search, Save } from "lucide-react";
 import * as api from "../../lib/api";
 import { resolveImage } from "../../lib/imagePlaceholder";
 import { sortSizeStrings } from "../../lib/shop";
+import { userMessage } from "../../lib/errors";
 
 const PAGE_SIZE = 12;
 
@@ -15,9 +16,7 @@ const FILTERS: { value: api.AdminProductFilter | ""; label: string }[] = [
 ];
 
 function describe(e: unknown, fallback: string): string {
-  if (!(e instanceof api.ApiError)) return fallback;
-  const details = Object.values(e.fields ?? {});
-  return details.length ? `${e.message} ${details.join(" ")}` : e.message;
+  return userMessage(e, fallback);
 }
 
 /**

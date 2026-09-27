@@ -54,7 +54,6 @@ export function CategoryCircles() {
   useEffect(() => {
     if (!inView) return;
     load();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [inView]);
 
   // Autoplay only when real categories are on screen — never on skeletons,

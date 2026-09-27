@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { ShieldCheck, RefreshCw, Check, Minus, ArrowUp, ArrowDown, X } from "lucide-react";
 import * as api from "../../lib/api";
 import { redirectToLoginExpired } from "../../lib/returnTo";
+import { userMessage } from "../../lib/errors";
 
 function handleAuthError(e: unknown, setError: (m: string) => void): boolean {
   if (e instanceof api.ApiError && e.status === 401) {
@@ -29,7 +30,7 @@ export function RolesPermissionsPage() {
       setPermissions(r.permissions);
       setRoles(r.roles);
     } catch (e) {
-      if (!handleAuthError(e, setError)) setError(e instanceof api.ApiError ? e.message : "Could not load the access-control matrix.");
+      if (!handleAuthError(e, setError)) setError(userMessage(e, "Could not load the access-control matrix."));
     } finally { setLoading(false); }
   };
   useEffect(() => { load(); }, []);
@@ -45,7 +46,7 @@ export function RolesPermissionsPage() {
       setTimeout(() => setBanner(""), 3000);
       await load();
     } catch (e) {
-      if (!handleAuthError(e, setError)) setError(e instanceof api.ApiError ? e.message : "Could not change role");
+      if (!handleAuthError(e, setError)) setError(userMessage(e, "Could not change role"));
     } finally { setBusyId(null); }
   };
 

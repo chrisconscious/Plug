@@ -23,6 +23,7 @@ import {
   type Lifestyle,
 } from "../../lib/api";
 import { resolveImage } from "../../lib/imagePlaceholder";
+import { userMessage } from "../../lib/errors";
 
 /**
  * "Shop by Lifestyle" taxonomy management (SUPER_ADMIN only, RBAC
@@ -66,7 +67,7 @@ export function LifestyleManagementPage() {
       })
       .catch((e) => {
         if (!mounted) return;
-        setLoadError((e as Error)?.message ?? "Could not load lifestyles.");
+        setLoadError(userMessage(e, "Could not load lifestyles."));
         setLoading(false);
       });
     return () => {
@@ -92,7 +93,7 @@ export function LifestyleManagementPage() {
       toast(r.lifestyle.active ? `“${l.name}” is now live on the storefront.` : `“${l.name}” is now a draft.`);
     } catch (e) {
       setLifestyles((prevList) => prevList.map((x) => (x.id === l.id ? { ...x, active: prev } : x)));
-      toast((e as Error)?.message ?? "Could not update status.", "err");
+      toast(userMessage(e, "Could not update status."), "err");
     } finally {
       setBusyId(null);
     }
@@ -119,7 +120,7 @@ export function LifestyleManagementPage() {
       );
     } catch (e) {
       await refresh().catch(() => {});
-      toast(`Reorder failed: ${(e as Error)?.message ?? "unknown error"}`, "err");
+      toast(`Reorder failed: ${userMessage(e, "unknown error")}`, "err");
     } finally {
       setBusyId(null);
     }
@@ -134,7 +135,7 @@ export function LifestyleManagementPage() {
       toast(`Lifestyle “${deleteTarget.name}” deleted. Products in it stay in the catalog.`);
       setDeleteTarget(null);
     } catch (e) {
-      toast(`Delete blocked: ${(e as Error)?.message ?? "unknown error"}`, "err");
+      toast(`Delete blocked: ${userMessage(e, "unknown error")}`, "err");
       setDeleteTarget(null);
     } finally {
       setDeleting(false);
@@ -202,7 +203,7 @@ export function LifestyleManagementPage() {
             onClick={() => {
               setLoading(true);
               setLoadError(null);
-              refresh().then(() => setLoading(false)).catch((e) => setLoadError((e as Error)?.message ?? "Could not load.")).finally(() => setLoading(false));
+              refresh().then(() => setLoading(false)).catch((e) => setLoadError(userMessage(e, "Could not load."))).finally(() => setLoading(false));
             }}
           >
             Retry
@@ -490,7 +491,7 @@ function LifestyleEditor({
       setErr(null);
       onSaved(r.lifestyle, false);
     } catch (e) {
-      setErr((e as Error)?.message ?? "Remove failed. Deactivate the lifestyle before removing its image.");
+      setErr(userMessage(e, "Remove failed. Deactivate the lifestyle before removing its image."));
     }
   };
 
@@ -537,7 +538,7 @@ function LifestyleEditor({
         onSaved(final, false);
       }
     } catch (e) {
-      setErr((e as Error)?.message ?? "Save failed.");
+      setErr(userMessage(e, "Save failed."));
     } finally {
       setUploading(false);
       setSaving(false);

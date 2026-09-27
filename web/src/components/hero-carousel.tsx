@@ -19,13 +19,16 @@ function CtaButton({ slide, tone }: { slide: PublicHeroSlide; tone: "promotional
   const label = slide.ctaText || "Shop Now";
   const hasSecond = !!(slide.cta2Text && slide.cta2Url);
 
+  // Only a page on this store or an http(s) site is ever rendered as a link —
+  // the API enforces the same rule on save; this also covers anything stored
+  // before that check existed (a javascript: URL would otherwise run script).
   const renderOne = (text: string, url: string, cls: string) =>
-    /^https?:\/\//i.test(url) ? (
+    !/^https?:\/\//i.test(url) && !/^\/(?![/\\])/.test(url) ? null : /^https?:\/\//i.test(url) ? (
       <a href={url} className={`${cls} group inline-flex items-center gap-2`}>
         {text} <ArrowRight size={15} className="transition-transform group-hover:translate-x-1" />
       </a>
     ) : (
-      <Link to={url || "/"} className={`${cls} group inline-flex items-center gap-2`}>
+      <Link to={url} className={`${cls} group inline-flex items-center gap-2`}>
         {text} <ArrowRight size={15} className="transition-transform group-hover:translate-x-1" />
       </Link>
     );
@@ -80,7 +83,6 @@ export function HeroCarousel() {
         // Logging it (rather than a bare empty catch) means a real outage
         // shows up in error monitoring instead of just quietly not
         // rendering a banner with no trace anywhere.
-        // eslint-disable-next-line no-console
         console.error("Failed to load hero slides:", err);
         setSlides([]);
         setStatus("error");

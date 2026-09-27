@@ -3,6 +3,7 @@ import { Plus, Search, Pencil, Archive, RotateCcw, Eye, EyeOff } from "lucide-re
 import * as api from "../../lib/api";
 import { formatTZS } from "../../lib/currency";
 import { resolveImage } from "../../lib/imagePlaceholder";
+import { userMessage } from "../../lib/errors";
 
 const PAGE_SIZE = 24;
 
@@ -26,9 +27,7 @@ const SORTS: { value: api.AdminProductSort; label: string }[] = [
 ];
 
 function describe(e: unknown, fallback: string): string {
-  if (!(e instanceof api.ApiError)) return fallback;
-  const details = Object.values(e.fields ?? {});
-  return details.length ? `${e.message} ${details.join(" ")}` : e.message;
+  return userMessage(e, fallback);
 }
 
 function StatusPill({ p }: { p: api.Product }) {

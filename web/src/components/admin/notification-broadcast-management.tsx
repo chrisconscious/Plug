@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import * as api from '../../lib/api';
+import { userMessage } from "../../lib/errors";
 
 const ROLE_LABEL: Record<string, string> = {
   CUSTOMER: 'Customers',
@@ -46,7 +47,7 @@ export function NotificationBroadcastManagement() {
       showBanner('Notification sent.', 'ok');
       load();
     } catch (e) {
-      showBanner(e instanceof api.ApiError ? e.message : 'Could not send this notification.', 'error');
+      showBanner(userMessage(e, 'Could not send this notification.'), 'error');
     } finally {
       setSending(false);
     }
@@ -57,7 +58,7 @@ export function NotificationBroadcastManagement() {
       await api.setBroadcastNotificationActive(n.id, !n.active);
       load();
     } catch (e) {
-      showBanner(e instanceof api.ApiError ? e.message : 'Could not update this notification.', 'error');
+      showBanner(userMessage(e, 'Could not update this notification.'), 'error');
     }
   };
 

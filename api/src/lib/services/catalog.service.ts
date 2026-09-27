@@ -1,13 +1,14 @@
 import * as catalogRepo from "../db/repos/catalog.repo";
+import { query } from "../db/client";
 import * as lifestyleRepo from "../db/repos/lifestyles.repo";
 import * as attributeRepo from "../db/repos/attribute.repo";
 import * as wishlistRepo from "../db/repos/wishlist.repo";
 import * as adminProductLimitsRepo from "../db/repos/admin-product-limits.repo";
 import { toDateOnly } from "../db/repos/catalog.repo";
 import * as productFilterRepo from "../db/repos/product-filter.repo";
-import { NotFoundError, ValidationError } from "../errors";
+import { ConflictError, NotFoundError, ValidationError } from "../errors";
 import { recordAuditEvent } from "../audit";
-import { notifyWishlistersProductBackInStock } from "./notifications.service";
+import { notifyCustomersNewProduct, notifyWishlistersProductBackInStock } from "./notifications.service";
 import type { Brand, Product, ProductVariant, Category } from "../db/types";
 import type { Role } from "../rbac";
 import { brandLogoStorage, brandCampaignImageStorage, productImageStorage } from "../storage/storage";
@@ -966,6 +967,15 @@ export async function updateProduct(
       },
     },
   });
+
+  // First time this product goes live → tell customers. Best-effort and
+  // after the save, so a notification problem never blocks publishing.
+  if (patch.active === true && !before.active) {
+    (async () => {
+      const [brand, images] = await Promise.all([catalogRepo.findBrandById(updated.brandId), catalogRepo.listImagesForProducts([productId])]);
+      await notifyCustomersNewProduct({ id: updated.id, name: updated.name, slug: updated.slug, imageUrl: images.get(productId)?.[0]?.url ?? null, brandName: brand?.name ?? null });
+    })().catch((err) => logger.warn("notification.new_product_failed", { productId: updated.id, error: String(err) }));
+  }
   return updated;
 }
 
@@ -1668,4 +1678,41 @@ export async function reorderProductImages(
     metadata: { orderedImageIds },
   });
   return images;
+}
+
+/**
+ * Permanently delete a brand that nothing uses. A brand with products (live,
+ * draft or archived — orders keep their own snapshot, but the product rows
+ * still point at the brand) can't be deleted: deactivate it instead, which
+ * hides it from the storefront. Its logo and campaign image go with it.
+ */
+export async function deleteBrand(actor: { id: string; role: Role }, brandId: string) {
+  const brand = await catalogRepo.findBrandById(brandId);
+  if (!brand) throw new NotFoundError("Brand not found.");
+  const used = await query<{ n: number }>("SELECT COUNT(*)::int AS n FROM products WHERE brand_id = $1", [brandId]);
+  const n = used[0]?.n ?? 0;
+  if (n > 0) {
+    throw new ConflictError(`"${brand.name}" is used by ${n} product${n === 1 ? "" : "s"}, so it can't be deleted. Deactivate it to hide it from the store, or move those products to another brand first.`);
+  }
+  if (await catalogRepo.findLogoByBrandId(brandId)) await removeBrandLogo(actor, brandId);
+  if (await catalogRepo.findCampaignImageByBrandId(brandId)) await removeBrandCampaignImage(actor, brandId);
+  await query("DELETE FROM brands WHERE id = $1", [brandId]);
+  await recordAuditEvent({ actorId: actor.id, actorRole: actor.role, action: "brand.deleted", targetType: "brand", targetId: brandId, metadata: { name: brand.name, slug: brand.slug } });
+}
+
+/** Permanently delete a category no product uses (sub-categories are kept and move to the top level). */
+export async function deleteCategory(actor: { id: string; role: Role }, categoryId: string, provider: import("../storage/provider").StorageProvider) {
+  const rows = await query<{ name: string; slug: string; n: number }>(
+    "SELECT c.name, c.slug, (SELECT COUNT(*)::int FROM products p WHERE p.category_id = c.id) AS n FROM categories c WHERE c.id = $1",
+    [categoryId]
+  );
+  const cat = rows[0];
+  if (!cat) throw new NotFoundError("Category not found.");
+  if (cat.n > 0) {
+    throw new ConflictError(`"${cat.name}" has ${cat.n} product${cat.n === 1 ? "" : "s"}, so it can't be deleted. Deactivate it to hide it from the store, or move those products to another category first.`);
+  }
+  const oldKey = await catalogRepo.getCategoryImageStorageKey(categoryId);
+  await query("DELETE FROM categories WHERE id = $1", [categoryId]);
+  if (oldKey) await provider.delete(oldKey).catch(() => {});
+  await recordAuditEvent({ actorId: actor.id, actorRole: actor.role, action: "category.deleted", targetType: "category", targetId: categoryId, metadata: { name: cat.name, slug: cat.slug } });
 }

@@ -1,7 +1,8 @@
 import { withRoute, json } from "@/lib/http";
+import { categoryImageStorage } from "@/lib/storage/storage";
 import { validateBody, optional, isString, isBoolean, isNonNegativeInt } from "@/lib/validate";
 import { RateLimitRules } from "@/lib/security/rateLimiter";
-import { updateCategory } from "@/lib/services/catalog.service";
+import { updateCategory, deleteCategory } from "@/lib/services/catalog.service";
 import { ValidationError } from "@/lib/errors";
 
 export const PATCH = withRoute({ permission: "products.create", rateLimit: RateLimitRules.adminGeneral }, async ({ req, user, params }) => {
@@ -18,4 +19,9 @@ export const PATCH = withRoute({ permission: "products.create", rateLimit: RateL
   }
   const category = await updateCategory(user!, params.id!, patch);
   return json({ category });
+});
+
+export const DELETE = withRoute({ permission: "products.create", rateLimit: RateLimitRules.adminGeneral }, async ({ user, params }) => {
+  await deleteCategory(user!, params.id!, categoryImageStorage);
+  return json({ success: true });
 });

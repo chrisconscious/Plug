@@ -163,7 +163,7 @@ export function Footer() {
             <BrandLogo variant="footer" />
           </Link>
           <p className="text-[11px] text-white/35 tracking-[.02em] text-center">
-            © {year} {platformName.toUpperCase()}. All rights reserved. | Designed in Tanzania. Delivering Worldwide
+            © {year} {platformName.toUpperCase()}. All rights reserved | Designed in Tanzania. Delivering Worldwide
           </p>
         </div>
       </div>

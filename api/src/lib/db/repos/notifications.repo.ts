@@ -44,6 +44,15 @@ const toNotification = (r: NotificationRow): Notification => ({
   createdAt: r.created_at,
 });
 
+/**
+ * Role-scoped notifications a role can see. A Super Admin is also an admin:
+ * operational alerts sent to ADMIN (new orders, low stock, admin
+ * broadcasts) must reach them too, not only SUPER_ADMIN-scoped ones.
+ */
+export function visibleScopes(role: Role): Role[] {
+  return role === "SUPER_ADMIN" ? ["ADMIN", "SUPER_ADMIN"] : [role];
+}
+
 // Shared UNION: a user's own notifications (real is_read column) combined
 // with active broadcasts for their role (is_read computed via NOT EXISTS
 // against notification_reads, since a broadcast has no per-row read flag
@@ -58,7 +67,7 @@ const UNION_SQL = `
          (nr.user_id IS NOT NULL) AS is_read, n.created_at
     FROM notifications n
     LEFT JOIN notification_reads nr ON nr.notification_id = n.id AND nr.user_id = $1
-   WHERE n.role_scope = $2 AND n.active = true
+   WHERE n.role_scope = ANY($2::text[]) AND n.active = true
 `;
 
 export async function listNotificationsForUser(
@@ -73,9 +82,9 @@ export async function listNotificationsForUser(
   const [rows, countRow] = await Promise.all([
     query<NotificationRow>(
       `SELECT * FROM (${UNION_SQL}) combined ORDER BY created_at DESC LIMIT $3 OFFSET $4`,
-      [userId, role, pageSize, offset]
+      [userId, visibleScopes(role), pageSize, offset]
     ),
-    queryOne<{ n: string }>(`SELECT count(*)::text AS n FROM (${UNION_SQL}) combined`, [userId, role]),
+    queryOne<{ n: string }>(`SELECT count(*)::text AS n FROM (${UNION_SQL}) combined`, [userId, visibleScopes(role)]),
   ]);
   return { items: rows.map(toNotification), total: Number(countRow?.n ?? 0) };
 }
@@ -95,9 +104,9 @@ export async function getUnreadCountForUser(userId: string, role: Role): Promise
     queryOne<{ n: string }>(
       `SELECT count(*)::text AS n
          FROM notifications n
-        WHERE n.role_scope = $2 AND n.active = true
+        WHERE n.role_scope = ANY($2::text[]) AND n.active = true
           AND NOT EXISTS (SELECT 1 FROM notification_reads nr WHERE nr.notification_id = n.id AND nr.user_id = $1)`,
-      [userId, role]
+      [userId, visibleScopes(role)]
     ),
   ]);
   return Number(ownUnread?.n ?? 0) + Number(broadcastUnread?.n ?? 0);
@@ -116,8 +125,8 @@ export async function markNotificationRead(userId: string, role: Role, notificat
   // alone: a customer must not be able to mark an admin-only broadcast
   // as read, which would otherwise leak its existence).
   const broadcast = await queryOne<{ id: string }>(
-    "SELECT id FROM notifications WHERE id = $1 AND role_scope = $2 AND active = true",
-    [notificationId, role]
+    "SELECT id FROM notifications WHERE id = $1 AND role_scope = ANY($2::text[]) AND active = true",
+    [notificationId, visibleScopes(role)]
   );
   if (!broadcast) return false;
   await query(
@@ -132,10 +141,10 @@ export async function markAllReadForUser(userId: string, role: Role): Promise<vo
   await query(
     `INSERT INTO notification_reads (notification_id, user_id)
      SELECT n.id, $1 FROM notifications n
-      WHERE n.role_scope = $2 AND n.active = true
+      WHERE n.role_scope = ANY($2::text[]) AND n.active = true
         AND NOT EXISTS (SELECT 1 FROM notification_reads nr WHERE nr.notification_id = n.id AND nr.user_id = $1)
      ON CONFLICT DO NOTHING`,
-    [userId, role]
+    [userId, visibleScopes(role)]
   );
 }
 
@@ -190,4 +199,15 @@ export async function setBroadcastActive(id: string, active: boolean): Promise<b
     [id, active]
   );
   return rows.length > 0;
+}
+
+/** True if a role-scoped notification about this entity was ever sent (used to announce a product only once). */
+export async function hasRoleNotificationForEntity(roleScope: Role, category: NotificationCategory, entityType: string, entityId: string): Promise<boolean> {
+  const row = await queryOne<{ id: string }>(
+    `SELECT id FROM notifications
+      WHERE role_scope = $1 AND category = $2 AND entity_type = $3 AND entity_id = $4
+      LIMIT 1`,
+    [roleScope, category, entityType, entityId]
+  );
+  return !!row;
 }

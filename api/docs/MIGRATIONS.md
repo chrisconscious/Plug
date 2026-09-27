@@ -50,17 +50,13 @@ cd api && npm run db:migrate
 # Expect: every migration reports "OK", ending in
 # "Applied 27 migration(s)." — not an error, not a partial count.
 
-# 3. -> seed/test data:
-npm run db:seed
-# This is dev/test-only seed data (db/seed.sql). Never run it against a real
-# production database — all real products are created from the admin panel.
-
-# 4. -> application:
+# 3. -> first admin, then application:
+npm run db:create-super-admin
 npm run dev
-# Manually verify: the homepage loads (hero slides, categories, brands,
-# lifestyles all render from the seeded data), an account can register,
-# and an admin can log in (see db/scripts/create-super-admin.ts if no
-# admin account was seeded).
+# Manually verify: the homepage loads with empty sections, the Super Admin
+# can sign in and create brands, categories, products and homepage content
+# from the admin panel (there is no seed data — every record comes from
+# there), and a customer account can register.
 
 # Cleanup:
 dropdb plug_migration_test

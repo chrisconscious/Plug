@@ -62,7 +62,6 @@ async function hydrateFromServer(): Promise<void> {
     cache = wishlist.map((w) => w.product);
     loadError = false;
   } catch (e) {
-    // eslint-disable-next-line no-console
     console.error("Failed to load wishlist from server:", e);
     cache = [];
     loadError = true;

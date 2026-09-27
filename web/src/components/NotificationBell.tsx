@@ -36,7 +36,8 @@ function timeAgo(iso: string): string {
  * dependencies" instruction. The dropdown's full list is only fetched
  * when the customer actually opens it, not on every poll tick.
  */
-export function NotificationBell() {
+/** `alwaysVisible`: also show on small screens (the storefront header hides it there in favour of the mobile nav; the admin header has no other entry point). */
+export function NotificationBell({ alwaysVisible = false }: { alwaysVisible?: boolean } = {}) {
   const nav = useNavigate();
   const [open, setOpen] = useState(false);
   const [unread, setUnread] = useState(0);
@@ -99,7 +100,7 @@ export function NotificationBell() {
     <div className="notifWrap" ref={panelRef}>
       <button
         type="button"
-        className="iconBtn desktopOnlyIcon notifBellBtn"
+        className={`iconBtn notifBellBtn${alwaysVisible ? "" : " desktopOnlyIcon"}`}
         aria-label={unread > 0 ? `Notifications, ${unread} unread` : 'Notifications'}
         onClick={() => setOpen((v) => !v)}
       >

@@ -114,7 +114,8 @@ export async function listAllUsersWithStats(opts: { page?: number; pageSize?: nu
             COALESCE(SUM(o.total_cents), 0)::int AS "totalSpentCents",
             COUNT(*) OVER()::int AS "totalCount"
      FROM users u
-     LEFT JOIN orders o ON o.user_id = u.id
+     -- Cancelled orders are neither purchases nor spend.
+     LEFT JOIN orders o ON o.user_id = u.id AND o.status <> 'CANCELLED'
      GROUP BY u.id
      ORDER BY u.created_at DESC
      LIMIT $1 OFFSET $2`,

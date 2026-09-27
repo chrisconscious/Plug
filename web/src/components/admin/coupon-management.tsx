@@ -37,7 +37,17 @@ export function CouponManagement() {
     setCode(''); setDiscountType('PERCENTAGE'); setDiscountValue(''); setMinOrder(''); setMaxRedemptions(''); setMaxPerCustomer(''); setStartsAt(''); setEndsAt('');
   };
 
-  const dateOnly = (iso: string | null | undefined) => (iso ? iso.slice(0, 10) : '');
+  // The form works in whole local days: "Starts" means from the start of that
+  // day and "Ends" means through the end of that day (so a one-day coupon has
+  // the same start and end date). Stored values are full timestamps.
+  const pad = (n: number) => String(n).padStart(2, '0');
+  const dateOnly = (iso: string | null | undefined) => {
+    if (!iso) return '';
+    const d = new Date(iso);
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+  };
+  const startOfDay = (day: string) => (day ? new Date(`${day}T00:00:00`).toISOString() : null);
+  const endOfDay = (day: string) => (day ? new Date(`${day}T23:59:59.999`).toISOString() : null);
   const startEdit = (c: api.Coupon) => {
     setEditing(c);
     setCode(c.code);
@@ -69,6 +79,10 @@ export function CouponManagement() {
       showBanner('Enter a code and a discount value.', 'error');
       return;
     }
+    if (startsAt && endsAt && endsAt < startsAt) {
+      showBanner('The end date must be on or after the start date.', 'error');
+      return;
+    }
     setSaving(true);
     try {
       const draft = {
@@ -78,8 +92,8 @@ export function CouponManagement() {
         minOrderCents: minOrder.trim() ? Number(minOrder) : 0,
         maxRedemptions: maxRedemptions.trim() ? Number(maxRedemptions) : null,
         maxRedemptionsPerCustomer: maxPerCustomer.trim() ? Number(maxPerCustomer) : null,
-        startsAt: startsAt || null,
-        endsAt: endsAt || null,
+        startsAt: startOfDay(startsAt),
+        endsAt: endOfDay(endsAt),
       };
       if (editing) await api.updateCoupon(editing.id, draft);
       else await api.createCoupon(draft);
@@ -141,43 +155,43 @@ export function CouponManagement() {
         <form onSubmit={submit} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12 }}>
             <div>
-              <label style={labelStyle}>Code</label>
-              <input value={code} onChange={(e) => setCode(e.target.value)} maxLength={32} placeholder="NEWSEASON20" style={{ ...fieldStyle, width: '100%', textTransform: 'uppercase' }} />
+              <label htmlFor="cp-code" style={labelStyle}>Code</label>
+              <input id="cp-code" value={code} onChange={(e) => setCode(e.target.value)} maxLength={32} placeholder="NEWSEASON20" style={{ ...fieldStyle, width: '100%', textTransform: 'uppercase' }} />
             </div>
             <div>
-              <label style={labelStyle}>Discount type</label>
-              <select value={discountType} onChange={(e) => setDiscountType(e.target.value as api.CouponDiscountType)} style={{ ...fieldStyle, width: '100%' }}>
+              <label htmlFor="cp-type" style={labelStyle}>Discount type</label>
+              <select id="cp-type" value={discountType} onChange={(e) => setDiscountType(e.target.value as api.CouponDiscountType)} style={{ ...fieldStyle, width: '100%' }}>
                 <option value="PERCENTAGE">Percentage (%)</option>
                 <option value="FIXED">Fixed amount (TZS)</option>
               </select>
             </div>
             <div>
-              <label style={labelStyle}>{discountType === 'PERCENTAGE' ? 'Percentage off' : 'Amount off (TZS)'}</label>
-              <input type="number" min={1} max={discountType === 'PERCENTAGE' ? 100 : undefined} value={discountValue} onChange={(e) => setDiscountValue(e.target.value)} placeholder={discountType === 'PERCENTAGE' ? '20' : '5000'} style={{ ...fieldStyle, width: '100%' }} />
+              <label htmlFor="cp-value" style={labelStyle}>{discountType === 'PERCENTAGE' ? 'Percentage off' : 'Amount off (TZS)'}</label>
+              <input id="cp-value" type="number" min={1} max={discountType === 'PERCENTAGE' ? 100 : undefined} value={discountValue} onChange={(e) => setDiscountValue(e.target.value)} placeholder={discountType === 'PERCENTAGE' ? '20' : '5000'} style={{ ...fieldStyle, width: '100%' }} />
             </div>
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12 }}>
             <div>
-              <label style={labelStyle}>Minimum order (TZS) <small style={{ fontWeight: 400, color: '#999' }}>optional</small></label>
-              <input type="number" min={0} value={minOrder} onChange={(e) => setMinOrder(e.target.value)} placeholder="0" style={{ ...fieldStyle, width: '100%' }} />
+              <label htmlFor="cp-min" style={labelStyle}>Minimum order (TZS) <small style={{ fontWeight: 400, color: '#999' }}>optional</small></label>
+              <input id="cp-min" type="number" min={0} value={minOrder} onChange={(e) => setMinOrder(e.target.value)} placeholder="0" style={{ ...fieldStyle, width: '100%' }} />
             </div>
             <div>
-              <label style={labelStyle}>Total use limit <small style={{ fontWeight: 400, color: '#999' }}>optional</small></label>
-              <input type="number" min={1} value={maxRedemptions} onChange={(e) => setMaxRedemptions(e.target.value)} placeholder="Unlimited" style={{ ...fieldStyle, width: '100%' }} />
+              <label htmlFor="cp-max" style={labelStyle}>Total use limit <small style={{ fontWeight: 400, color: '#999' }}>optional</small></label>
+              <input id="cp-max" type="number" min={1} value={maxRedemptions} onChange={(e) => setMaxRedemptions(e.target.value)} placeholder="Unlimited" style={{ ...fieldStyle, width: '100%' }} />
             </div>
             <div>
-              <label style={labelStyle}>Uses per customer <small style={{ fontWeight: 400, color: '#999' }}>optional</small></label>
-              <input type="number" min={1} value={maxPerCustomer} onChange={(e) => setMaxPerCustomer(e.target.value)} placeholder="Unlimited" style={{ ...fieldStyle, width: '100%' }} />
+              <label htmlFor="cp-per" style={labelStyle}>Uses per customer <small style={{ fontWeight: 400, color: '#999' }}>optional</small></label>
+              <input id="cp-per" type="number" min={1} value={maxPerCustomer} onChange={(e) => setMaxPerCustomer(e.target.value)} placeholder="Unlimited" style={{ ...fieldStyle, width: '100%' }} />
             </div>
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
             <div>
-              <label style={labelStyle}>Starts <small style={{ fontWeight: 400, color: '#999' }}>optional</small></label>
-              <input type="date" value={startsAt} onChange={(e) => setStartsAt(e.target.value)} style={{ ...fieldStyle, width: '100%' }} />
+              <label htmlFor="cp-start" style={labelStyle}>Starts <small style={{ fontWeight: 400, color: '#999' }}>optional</small></label>
+              <input id="cp-start" type="date" value={startsAt} onChange={(e) => setStartsAt(e.target.value)} style={{ ...fieldStyle, width: '100%' }} />
             </div>
             <div>
-              <label style={labelStyle}>Ends <small style={{ fontWeight: 400, color: '#999' }}>optional</small></label>
-              <input type="date" value={endsAt} onChange={(e) => setEndsAt(e.target.value)} style={{ ...fieldStyle, width: '100%' }} />
+              <label htmlFor="cp-end" style={labelStyle}>Ends <small style={{ fontWeight: 400, color: '#999' }}>optional</small></label>
+              <input id="cp-end" type="date" value={endsAt} onChange={(e) => setEndsAt(e.target.value)} style={{ ...fieldStyle, width: '100%' }} />
             </div>
           </div>
           <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
@@ -212,8 +226,8 @@ export function CouponManagement() {
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                   <span style={{ fontSize: 11, color: '#999' }}>Created {new Date(c.createdAt).toLocaleDateString()}</span>
                   <span style={{ display: 'flex', gap: 12 }}>
-                    <button type="button" onClick={() => startEdit(c)} style={{ fontSize: 11, fontWeight: 700, background: 'none', border: 'none', cursor: 'pointer' }}>EDIT</button>
-                    <button type="button" onClick={() => toggleActive(c)} style={{ fontSize: 11, fontWeight: 700, background: 'none', border: 'none', color: c.active ? '#b45309' : '#166534', cursor: 'pointer' }}>
+                    <button type="button" onClick={() => startEdit(c)} aria-label={`Edit coupon ${c.code}`} style={{ fontSize: 11, fontWeight: 700, background: 'none', border: 'none', cursor: 'pointer' }}>EDIT</button>
+                    <button type="button" onClick={() => toggleActive(c)} aria-label={`${c.active ? 'Deactivate' : 'Activate'} coupon ${c.code}`} style={{ fontSize: 11, fontWeight: 700, background: 'none', border: 'none', color: c.active ? '#b45309' : '#166534', cursor: 'pointer' }}>
                       {c.active ? 'DEACTIVATE' : 'ACTIVATE'}
                     </button>
                     <button type="button" onClick={() => remove(c)} aria-label={`Delete coupon ${c.code}`} style={{ fontSize: 11, fontWeight: 700, background: 'none', border: 'none', color: '#b91c1c', cursor: 'pointer' }}>DELETE</button>

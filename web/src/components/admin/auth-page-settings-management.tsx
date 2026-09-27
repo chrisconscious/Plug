@@ -113,7 +113,7 @@ export function AuthPageSettingsManagement() {
                 <Trash2 size={14} /> {removeBg.pending ? 'Removing…' : 'Remove image'}
               </button>
             )}
-            {uploadBg.error && <p role="alert" style={{ color: '#c00', fontSize: 12 }}>{uploadBg.error}</p>}
+            {(uploadBg.error || removeBg.error) && <p role="alert" style={{ color: '#c00', fontSize: 12 }}>{uploadBg.error ?? removeBg.error}</p>}
           </div>
         </div>
       </section>
@@ -124,16 +124,16 @@ export function AuthPageSettingsManagement() {
         <p style={{ fontSize: 12.5, color: '#71717a', margin: '0 0 16px' }}>The text shown on the login/register page alongside the form. Both sets of fields are editable — when a user visits <code>/login</code> the "Login" fields are shown; on <code>/register</code> the "Register" ones.</p>
 
         <h4 style={{ font: '800 13px Manrope', margin: '0 0 10px', color: '#333' }}>Login page (/login)</h4>
-        <label style={{ display: 'block', fontSize: 12, fontWeight: 600, marginBottom: 4 }}>Headline</label>
-        <input value={loginHeadline} onChange={(e) => setLoginHeadline(e.target.value)} maxLength={200} style={{ width: '100%', padding: '10px 12px', border: '1px solid #d4d4d4', borderRadius: 6, fontSize: 14, marginBottom: 12 }} />
-        <label style={{ display: 'block', fontSize: 12, fontWeight: 600, marginBottom: 4 }}>Subtitle</label>
-        <input value={loginSubtitle} onChange={(e) => setLoginSubtitle(e.target.value)} maxLength={200} style={{ width: '100%', padding: '10px 12px', border: '1px solid #d4d4d4', borderRadius: 6, fontSize: 14, marginBottom: 16 }} />
+        <label htmlFor="ap-login-headline" style={{ display: 'block', fontSize: 12, fontWeight: 600, marginBottom: 4 }}>Headline</label>
+        <input id="ap-login-headline" value={loginHeadline} onChange={(e) => setLoginHeadline(e.target.value)} maxLength={200} style={{ width: '100%', padding: '10px 12px', border: '1px solid #d4d4d4', borderRadius: 6, fontSize: 14, marginBottom: 12 }} />
+        <label htmlFor="ap-login-subtitle" style={{ display: 'block', fontSize: 12, fontWeight: 600, marginBottom: 4 }}>Subtitle</label>
+        <input id="ap-login-subtitle" value={loginSubtitle} onChange={(e) => setLoginSubtitle(e.target.value)} maxLength={200} style={{ width: '100%', padding: '10px 12px', border: '1px solid #d4d4d4', borderRadius: 6, fontSize: 14, marginBottom: 16 }} />
 
         <h4 style={{ font: '800 13px Manrope', margin: '0 0 10px', color: '#333' }}>Register page (/register)</h4>
-        <label style={{ display: 'block', fontSize: 12, fontWeight: 600, marginBottom: 4 }}>Headline</label>
-        <input value={registerHeadline} onChange={(e) => setRegisterHeadline(e.target.value)} maxLength={200} style={{ width: '100%', padding: '10px 12px', border: '1px solid #d4d4d4', borderRadius: 6, fontSize: 14, marginBottom: 12 }} />
-        <label style={{ display: 'block', fontSize: 12, fontWeight: 600, marginBottom: 4 }}>Subtitle</label>
-        <input value={registerSubtitle} onChange={(e) => setRegisterSubtitle(e.target.value)} maxLength={200} style={{ width: '100%', padding: '10px 12px', border: '1px solid #d4d4d4', borderRadius: 6, fontSize: 14, marginBottom: 14 }} />
+        <label htmlFor="ap-register-headline" style={{ display: 'block', fontSize: 12, fontWeight: 600, marginBottom: 4 }}>Headline</label>
+        <input id="ap-register-headline" value={registerHeadline} onChange={(e) => setRegisterHeadline(e.target.value)} maxLength={200} style={{ width: '100%', padding: '10px 12px', border: '1px solid #d4d4d4', borderRadius: 6, fontSize: 14, marginBottom: 12 }} />
+        <label htmlFor="ap-register-subtitle" style={{ display: 'block', fontSize: 12, fontWeight: 600, marginBottom: 4 }}>Subtitle</label>
+        <input id="ap-register-subtitle" value={registerSubtitle} onChange={(e) => setRegisterSubtitle(e.target.value)} maxLength={200} style={{ width: '100%', padding: '10px 12px', border: '1px solid #d4d4d4', borderRadius: 6, fontSize: 14, marginBottom: 14 }} />
 
         {saveDetails.error && <p role="alert" style={{ color: '#c00', fontSize: 12, marginBottom: 10 }}>{saveDetails.error}</p>}
         <button className="blackButton" disabled={saveDetails.pending} onClick={() => saveDetails.run()}>

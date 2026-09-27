@@ -1,7 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, type CSSProperties } from 'react';
 import * as api from '../../lib/api';
 import { useAsyncAction } from '../../hooks/useAsyncAction';
-import { Plus, Trash2, GripVertical } from 'lucide-react';
+import { Plus, Trash2, GripVertical, ChevronUp, ChevronDown } from 'lucide-react';
 
 export function AnnouncementManagement() {
   const [items, setItems] = useState<api.Announcement[] | null>(null);
@@ -10,13 +10,15 @@ export function AnnouncementManagement() {
   const [banner, setBanner] = useState<{ text: string; tone: 'ok' | 'error' } | null>(null);
   const [dragId, setDragId] = useState<string | null>(null);
 
-  const load = () => {
-    setStatus('loading');
-    api.listAdminAnnouncements()
+  // Only the first load shows the loading state; reloads after an edit refresh
+  // the list in place (no flash, focus and scroll kept).
+  const load = (initial = false) => {
+    if (initial) setStatus('loading');
+    return api.listAdminAnnouncements()
       .then((r) => { setItems(r.announcements); setStatus('success'); })
-      .catch(() => setStatus('error'));
+      .catch(() => { if (initial) setStatus('error'); else showBanner("Saved, but the list couldn't be refreshed — reload the page.", 'error'); });
   };
-  useEffect(load, []);
+  useEffect(() => { void load(true); }, []);
 
   const showBanner = (text: string, tone: 'ok' | 'error') => {
     setBanner({ text, tone });
@@ -29,30 +31,53 @@ export function AnnouncementManagement() {
     await api.createAnnouncement({ message: text });
     setNewMessage('');
     showBanner('Announcement created.', 'ok');
-    load();
+    await load();
   });
 
   const remove = useAsyncAction(async (id: string) => {
     await api.deleteAnnouncement(id);
     showBanner('Announcement removed.', 'ok');
-    load();
+    await load();
   });
 
   const toggleActive = useAsyncAction(async (item: api.Announcement) => {
     await api.updateAnnouncement(item.id, { active: !item.active });
-    load();
+    await load();
   });
 
-  const editMessage = useAsyncAction(async (item: api.Announcement, message: string) => {
-    if (!message.trim() || message.trim() === item.message) return;
-    await api.updateAnnouncement(item.id, { message: message.trim() });
-    load();
+  // Saved when the field loses focus. A blank or failed edit puts the saved
+  // text back so the box never shows something the storefront doesn't.
+  const editMessage = useAsyncAction(async (item: api.Announcement, input: HTMLInputElement) => {
+    const message = input.value.trim();
+    if (message === item.message) return;
+    if (!message) {
+      input.value = item.message;
+      showBanner("An announcement can't be empty — use the bin to delete it.", 'error');
+      return;
+    }
+    try {
+      await api.updateAnnouncement(item.id, { message });
+    } catch (e) {
+      input.value = item.message;
+      throw e;
+    }
+    showBanner('Announcement saved.', 'ok');
+    await load();
   });
 
   const reorder = useAsyncAction(async (orderedIds: string[]) => {
     await api.reorderAnnouncements(orderedIds);
-    load();
+    await load();
   });
+  // Buttons, not just drag-and-drop: HTML5 drag doesn't work on touch screens.
+  const move = (index: number, delta: -1 | 1) => {
+    if (!items) return;
+    const ids = items.map((i) => i.id);
+    const target = index + delta;
+    if (target < 0 || target >= ids.length) return;
+    [ids[index], ids[target]] = [ids[target], ids[index]];
+    reorder.run(ids);
+  };
 
   const onDrop = (targetId: string) => {
     if (!items || !dragId || dragId === targetId) { setDragId(null); return; }
@@ -71,7 +96,7 @@ export function AnnouncementManagement() {
     return (
       <div style={{ padding: 40 }}>
         <p style={{ color: '#c00', marginBottom: 12 }}>Couldn't load announcements.</p>
-        <button className="blackButton" onClick={load}>RETRY</button>
+        <button className="blackButton" onClick={() => load(true)}>RETRY</button>
       </div>
     );
   }
@@ -79,7 +104,7 @@ export function AnnouncementManagement() {
   return (
     <div style={{ maxWidth: 640, display: 'flex', flexDirection: 'column', gap: 18 }}>
       <p style={{ fontSize: 12.5, color: '#71717a', margin: 0 }}>
-        Messages shown in the header announcement bar, in order. Drag to reorder. Only active messages appear on the storefront.
+        Messages shown in the header announcement bar, in order. Use the arrows (or drag) to reorder; edits save when you leave the field. Only active messages appear on the storefront.
       </p>
 
       {banner && (
@@ -90,6 +115,7 @@ export function AnnouncementManagement() {
 
       <div style={{ display: 'flex', gap: 8 }}>
         <input
+          aria-label="New announcement"
           value={newMessage}
           onChange={(e) => setNewMessage(e.target.value)}
           placeholder="e.g. Complimentary delivery on selected orders"
@@ -106,7 +132,7 @@ export function AnnouncementManagement() {
         <p style={{ fontSize: 13, color: '#a3a3a3', padding: '20px 0' }}>No announcements yet — add one above. Until then, the header shows nothing.</p>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-          {items.map((item) => (
+          {items.map((item, index) => (
             <div
               key={item.id}
               draggable
@@ -117,18 +143,24 @@ export function AnnouncementManagement() {
             >
               <GripVertical size={15} style={{ color: '#bbb', cursor: 'grab', flexShrink: 0 }} />
               <input
+                key={item.message}
+                aria-label={`Announcement ${index + 1} text`}
                 defaultValue={item.message}
                 maxLength={200}
-                onBlur={(e) => editMessage.run(item, e.target.value)}
-                style={{ flex: 1, border: 'none', outline: 'none', fontSize: 13, background: 'transparent' }}
+                onBlur={(e) => editMessage.run(item, e.currentTarget)}
+                onKeyDown={(e) => { if (e.key === 'Enter') e.currentTarget.blur(); }}
+                style={{ flex: 1, minWidth: 0, border: '1px solid transparent', borderBottomColor: '#e5e5e5', outline: 'none', fontSize: 13, background: 'transparent', padding: '4px 2px' }}
               />
+              <button type="button" title="Move up" aria-label={`Move announcement ${index + 1} up`} disabled={index === 0 || reorder.pending} onClick={() => move(index, -1)} style={arrowBtn}><ChevronUp size={15} /></button>
+              <button type="button" title="Move down" aria-label={`Move announcement ${index + 1} down`} disabled={index === items.length - 1 || reorder.pending} onClick={() => move(index, 1)} style={arrowBtn}><ChevronDown size={15} /></button>
               <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, flexShrink: 0 }}>
-                <input type="checkbox" checked={item.active} onChange={() => toggleActive.run(item)} disabled={toggleActive.pending} />
+                <input type="checkbox" aria-label={`Announcement ${index + 1} active`} checked={item.active} onChange={() => toggleActive.run(item)} disabled={toggleActive.pending} />
                 Active
               </label>
               <button
                 type="button"
                 title="Delete"
+                aria-label={`Delete announcement ${index + 1}`}
                 onClick={() => { if (confirm('Remove this announcement?')) remove.run(item.id); }}
                 disabled={remove.pending}
                 style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#c00', flexShrink: 0 }}
@@ -145,3 +177,5 @@ export function AnnouncementManagement() {
     </div>
   );
 }
+
+const arrowBtn: CSSProperties = { background: 'none', border: 'none', cursor: 'pointer', color: '#555', flexShrink: 0, display: 'flex', padding: 2 };

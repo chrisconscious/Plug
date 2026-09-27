@@ -482,8 +482,8 @@ export function listBrands(): Promise<{ brands: Brand[] }> {
 export type BrandSectionSpeed = "slow" | "medium" | "fast";
 
 /** Public storefront setting — the "Shop by brands" marquee autoplay speed. */
-export function getBrandSectionSettings(): Promise<{ speed: BrandSectionSpeed }> {
-  return request<{ speed: BrandSectionSpeed }>("/api/v1/settings/brand-section");
+export function getBrandSectionSettings(opts: { fresh?: boolean } = {}): Promise<{ speed: BrandSectionSpeed }> {
+  return request<{ speed: BrandSectionSpeed }>("/api/v1/settings/brand-section", opts.fresh ? { cache: "no-store" } : undefined);
 }
 
 export interface BrandPageData {
@@ -781,7 +781,7 @@ export interface FooterContactLink {
 
 /** Public — only channels that are active AND configured, in display order. */
 export function listFooterContactLinks(): Promise<{ links: FooterContactLink[] }> {
-  return request<{ links: FooterContactLink[] }>("/api/v1/footer-contact-links");
+  return request<{ links: FooterContactLink[] }>("/api/v1/footer-contact-links", { cache: "no-store" });
 }
 
 export function listAdminFooterContactLinks(): Promise<{ links: FooterContactLink[] }> {
@@ -1004,7 +1004,7 @@ export type HeroSlideDraft = {
 };
 
 export function listHeroSlides(): Promise<{ slides: PublicHeroSlide[] }> {
-  return request<{ slides: PublicHeroSlide[] }>("/api/v1/hero-slides");
+  return request<{ slides: PublicHeroSlide[] }>("/api/v1/hero-slides", { cache: "no-store" });
 }
 
 export interface PlatformSettings {
@@ -1337,8 +1337,11 @@ export function deleteAttributeOption(id: string): Promise<{ success: boolean }>
 }
 
 /** Public — which attribute groups (with their active options) apply to a category, by SLUG (matching every other slug-addressed public route in this app), for the storefront filter UI. */
-export function listCategoryAttributes(categorySlug: string): Promise<{ groups: AttributeGroup[] }> {
-  return request<{ groups: AttributeGroup[] }>(`/api/v1/categories/${encodeURIComponent(categorySlug)}/attributes`);
+// The endpoint is publicly cacheable (max-age=300) for shoppers. Admin screens
+// pass `fresh` so a group or option created a moment ago shows up right away
+// instead of after the browser cache expires.
+export function listCategoryAttributes(categorySlug: string, opts: { fresh?: boolean } = {}): Promise<{ groups: AttributeGroup[] }> {
+  return request<{ groups: AttributeGroup[] }>(`/api/v1/categories/${encodeURIComponent(categorySlug)}/attributes`, opts.fresh ? { cache: "no-store" } : undefined);
 }
 
 export function getProductAttributeOptionIds(productId: string): Promise<{ optionIds: string[] }> {
@@ -1936,7 +1939,8 @@ export interface PaymentMethod {
 
 /** Active payment methods offered at checkout (public). */
 export function listPaymentMethods(): Promise<{ methods: PaymentMethod[] }> {
-  return request<{ methods: PaymentMethod[] }>("/api/v1/payment-methods");
+  // no-store: a network the admin just paused must not stay selectable from a cached list.
+  return request<{ methods: PaymentMethod[] }>("/api/v1/payment-methods", { cache: "no-store" });
 }
 
 export function listAdminPaymentMethods(): Promise<{ methods: PaymentMethod[] }> {

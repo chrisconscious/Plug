@@ -26,17 +26,23 @@ export function FooterContactManagement() {
   const [drafts, setDrafts] = useState<Record<string, string>>({});
   const [banner, setBanner] = useState<{ text: string; tone: 'ok' | 'error' } | null>(null);
 
-  const load = () => {
-    setStatus('loading');
-    api.listAdminFooterContactLinks()
+  // `resetPlatform`: after saving one channel, only that channel's box is
+  // reset to the stored value — unsaved text typed into the OTHER channels is
+  // kept (a full reset used to wipe it). Only the first load shows "Loading…".
+  const load = (initial = false, resetPlatform?: api.FooterPlatform) => {
+    if (initial) setStatus('loading');
+    return api.listAdminFooterContactLinks()
       .then((r) => {
         setLinks(r.links);
-        setDrafts(Object.fromEntries(r.links.map((l) => [l.platform, l.value ?? ''])));
+        setDrafts((cur) => Object.fromEntries(r.links.map((l) => [
+          l.platform,
+          initial || l.platform === resetPlatform || cur[l.platform] === undefined ? (l.value ?? '') : cur[l.platform],
+        ])));
         setStatus('success');
       })
-      .catch(() => setStatus('error'));
+      .catch(() => { if (initial) setStatus('error'); else showBanner("Saved, but the list couldn't be refreshed — reload the page.", 'error'); });
   };
-  useEffect(load, []);
+  useEffect(() => { void load(true); }, []);
 
   const showBanner = (text: string, tone: 'ok' | 'error') => {
     setBanner({ text, tone });
@@ -47,7 +53,7 @@ export function FooterContactManagement() {
     const draft = (drafts[link.platform] ?? '').trim();
     await api.updateFooterContactLink(link.platform, { value: draft || null });
     showBanner(`${PLATFORM_LABELS[link.platform]} updated.`, 'ok');
-    load();
+    await load(false, link.platform);
   });
 
   const toggleActive = useAsyncAction(async (link: api.FooterContactLink) => {
@@ -56,7 +62,8 @@ export function FooterContactManagement() {
       return;
     }
     await api.updateFooterContactLink(link.platform, { active: !link.active });
-    load();
+    showBanner(`${PLATFORM_LABELS[link.platform]} ${link.active ? 'hidden from' : 'shown in'} the footer.`, 'ok');
+    await load();
   });
 
   if (status === 'loading') {
@@ -66,7 +73,7 @@ export function FooterContactManagement() {
     return (
       <div style={{ padding: 40 }}>
         <p style={{ color: '#c00', marginBottom: 12 }}>Couldn't load footer contact links.</p>
-        <button className="blackButton" onClick={load}>RETRY</button>
+        <button className="blackButton" onClick={() => load(true)}>RETRY</button>
       </div>
     );
   }
@@ -95,18 +102,19 @@ export function FooterContactManagement() {
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
                 <b style={{ fontSize: 13.5 }}>{PLATFORM_LABELS[link.platform]}</b>
                 <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12 }}>
-                  <input type="checkbox" checked={link.active} onChange={() => toggleActive.run(link)} disabled={toggleActive.pending} />
+                  <input type="checkbox" aria-label={`${PLATFORM_LABELS[link.platform]} active`} checked={link.active} onChange={() => toggleActive.run(link)} disabled={toggleActive.pending} />
                   Active
                 </label>
               </div>
               <div style={{ display: 'flex', gap: 8 }}>
                 <input
+                  aria-label={`${PLATFORM_LABELS[link.platform]} link or number`}
                   value={draft}
                   onChange={(e) => setDrafts((cur) => ({ ...cur, [link.platform]: e.target.value }))}
                   placeholder={PLATFORM_PLACEHOLDERS[link.platform]}
                   style={{ flex: 1, padding: '9px 11px', border: '1px solid #d4d4d4', borderRadius: 6, fontSize: 13 }}
                 />
-                <button className="blackButton" disabled={!dirty || saveValue.pending} onClick={() => saveValue.run(link)}>
+                <button className="blackButton" aria-label={`Save ${PLATFORM_LABELS[link.platform]}`} disabled={!dirty || saveValue.pending} onClick={() => saveValue.run(link)}>
                   {saveValue.pending ? 'Saving…' : 'Save'}
                 </button>
               </div>

@@ -58,8 +58,15 @@ function validateCouponFields(input: {
   };
   const maxRedemptions = toNullableInt(input.maxRedemptions, "maxRedemptions");
   const maxRedemptionsPerCustomer = toNullableInt(input.maxRedemptionsPerCustomer, "maxRedemptionsPerCustomer");
-  const startsAt = input.startsAt ? new Date(input.startsAt as string).toISOString() : null;
-  const endsAt = input.endsAt ? new Date(input.endsAt as string).toISOString() : null;
+  // A malformed date must be a 400 with a field message, not a RangeError (500).
+  const toIso = (v: unknown, field: string) => {
+    if (!v) return null;
+    const d = new Date(String(v));
+    if (Number.isNaN(d.getTime())) throw new ValidationError("Validation failed.", { [field]: "Enter a valid date." });
+    return d.toISOString();
+  };
+  const startsAt = toIso(input.startsAt, "startsAt");
+  const endsAt = toIso(input.endsAt, "endsAt");
   if (startsAt && endsAt && new Date(startsAt) >= new Date(endsAt)) {
     throw new ValidationError("Validation failed.", { endsAt: "The end date must be after the start date." });
   }

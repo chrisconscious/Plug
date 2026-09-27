@@ -1,7 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, type CSSProperties } from 'react';
 import * as api from '../../lib/api';
 import { useAsyncAction } from '../../hooks/useAsyncAction';
-import { Plus, Trash2, GripVertical } from 'lucide-react';
+import { Plus, Trash2, GripVertical, ChevronUp, ChevronDown } from 'lucide-react';
 
 export function PromoBannerManagement() {
   const [items, setItems] = useState<string[]>([]);
@@ -24,8 +24,11 @@ export function PromoBannerManagement() {
     setTimeout(() => setBanner(null), 4000);
   };
 
-  const save = useAsyncAction(async (msgs: string[]) => {
+  // `clearNew` empties the add box — only reached when the save succeeded, so a
+  // failed add keeps what the admin typed.
+  const save = useAsyncAction(async (msgs: string[], clearNew = false) => {
     await api.updateAdminPromoBanner(msgs);
+    if (clearNew) setNewMessage('');
     setItems(msgs);
     setDirty(false);
     showBanner('Promo banner updated.', 'ok');
@@ -34,13 +37,21 @@ export function PromoBannerManagement() {
   const addMessage = () => {
     const text = newMessage.trim();
     if (!text || items.length >= 10) return;
-    const next = [...items, text];
-    setNewMessage('');
-    save.run(next);
+    save.run([...items, text], true);
   };
 
   const removeMessage = (idx: number) => {
+    if (!window.confirm(`Remove "${items[idx]}" from the promo banner?`)) return;
     const next = items.filter((_, i) => i !== idx);
+    save.run(next);
+  };
+
+  // Buttons, not just drag-and-drop: HTML5 drag doesn't work on touch screens.
+  const move = (idx: number, delta: -1 | 1) => {
+    const target = idx + delta;
+    if (target < 0 || target >= items.length) return;
+    const next = [...items];
+    [next[idx], next[target]] = [next[target], next[idx]];
     save.run(next);
   };
 
@@ -86,6 +97,7 @@ export function PromoBannerManagement() {
 
       <div style={{ display: 'flex', gap: 8 }}>
         <input
+          aria-label="New promo message"
           value={newMessage}
           onChange={(e) => setNewMessage(e.target.value)}
           placeholder="e.g. COMPLIMENTARY DELIVERY ON SELECTED ORDERS"
@@ -115,14 +127,18 @@ export function PromoBannerManagement() {
             >
               <GripVertical size={15} style={{ color: '#bbb', cursor: 'grab', flexShrink: 0 }} />
               <input
+                aria-label={`Promo message ${i + 1}`}
                 value={msg}
                 maxLength={200}
                 onChange={(e) => editMessage(i, e.target.value)}
-                style={{ flex: 1, border: 'none', outline: 'none', fontSize: 13, background: 'transparent' }}
+                style={{ flex: 1, minWidth: 0, border: '1px solid transparent', borderBottomColor: '#e5e5e5', outline: 'none', fontSize: 13, background: 'transparent', padding: '4px 2px' }}
               />
+              <button type="button" title="Move up" aria-label={`Move promo message ${i + 1} up`} disabled={i === 0 || save.pending || dirty} onClick={() => move(i, -1)} style={arrowBtn}><ChevronUp size={15} /></button>
+              <button type="button" title="Move down" aria-label={`Move promo message ${i + 1} down`} disabled={i === items.length - 1 || save.pending || dirty} onClick={() => move(i, 1)} style={arrowBtn}><ChevronDown size={15} /></button>
               <button
                 type="button"
                 title="Remove"
+                aria-label={`Remove promo message ${i + 1}`}
                 onClick={() => removeMessage(i)}
                 disabled={save.pending}
                 style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#c00', flexShrink: 0 }}
@@ -148,3 +164,5 @@ export function PromoBannerManagement() {
     </div>
   );
 }
+
+const arrowBtn: CSSProperties = { background: 'none', border: 'none', cursor: 'pointer', color: '#555', flexShrink: 0, display: 'flex', padding: 2 };

@@ -6,6 +6,8 @@ import { StoreHeader } from '../components/shop/StoreHeader';
 import { useAuth } from '../lib/AuthContext';
 import { loginUrl, currentLocation } from '../lib/returnTo';
 import { safeReturnTo } from '../lib/returnTo';
+import { userMessage } from '../lib/errors';
+import { announceNotificationsChanged } from '../lib/notificationsSync';
 
 const CATEGORY_ICON: Record<api.NotificationCategory, React.ReactNode> = {
   ORDER: <Package size={16} />,
@@ -73,18 +75,23 @@ function Notifications() {
   const openNotification = async (n: api.AppNotification) => {
     if (!n.isRead) {
       setItems((cur) => cur.map((x) => (x.id === n.id ? { ...x, isRead: true } : x)));
-      api.markNotificationRead(n.id).catch(() => {});
+      api.markNotificationRead(n.id).catch(() => {}).finally(announceNotificationsChanged);
     }
     // Only ever an in-store page (same rule as sign-in return links).
     const target = safeReturnTo(n.actionUrl);
     if (target) nav(target);
   };
 
+  const [markError, setMarkError] = useState<string | null>(null);
   const markAllRead = async () => {
+    setMarkError(null);
     try {
       await api.markAllNotificationsRead();
       setItems((cur) => cur.map((x) => ({ ...x, isRead: true })));
-    } catch { /* the header bell's own poll will reconcile regardless */ }
+      announceNotificationsChanged(); // header bell badge drops to 0 now, not on its next poll
+    } catch (e) {
+      setMarkError(userMessage(e, "Couldn't mark your notifications as read — please try again."));
+    }
   };
 
   const loadMore = () => {
@@ -120,6 +127,7 @@ function Notifications() {
         <div className="notifPageHead">
           <h1>Notifications</h1>
           {items.some((n) => !n.isRead) && <button type="button" className="accLinkBtn" onClick={markAllRead}>MARK ALL AS READ</button>}
+          {markError && <p role="alert" style={{ fontSize: 12, color: '#b91c1c', margin: '6px 0 0' }}>{markError}</p>}
         </div>
 
         <div className="notifTabs" role="tablist">

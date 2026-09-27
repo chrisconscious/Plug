@@ -10,7 +10,7 @@
     "check:openapi-drift": "node scripts/check-openapi-drift.mjs",
     "check:migrations": "node scripts/check-migrations.mjs",
     "typecheck": "tsc --noEmit",
-    "lint": "next lint",
+    "lint": "eslint src --ext .ts,.tsx --max-warnings=0",
     "test": "vitest run",
     "test:watch": "vitest",
     "db:migrate": "tsx db/scripts/migrate.ts",
@@ -19,23 +19,23 @@
     "media:analyze-logo-tones": "tsx db/scripts/analyze-logo-tones.ts"
   },
   "dependencies": {
-    "next": "^14.2.5",
-    "pg": "^8.12.0",
     "@aws-sdk/client-s3": "^3.687.0",
     "ioredis": "^5.4.1",
-    "react": "^18.3.1",
-    "react-dom": "^18.3.1"
+    "next": "^15.5.26",
+    "pg": "^8.12.0",
+    "react": "^19.3.0",
+    "react-dom": "^19.3.0"
   },
   "devDependencies": {
-    "js-yaml": "^4.1.0",
     "@types/js-yaml": "^4.0.9",
     "@types/node": "^20.14.0",
     "@types/pg": "^8.11.6",
-    "@types/react": "^18.3.3",
+    "@types/react": "^19.3.0",
+    "eslint": "^8.57.0",
+    "eslint-config-next": "^15.5.26",
+    "js-yaml": "^4.1.0",
     "tsx": "^4.16.2",
     "typescript": "^5.5.4",
-    "eslint": "^8.57.0",
-    "eslint-config-next": "14.2.5",
     "vitest": "^2.1.9"
   },
   "engines": {
@@ -43,5 +43,8 @@
   },
   "allowScripts": {
     "esbuild@0.28.2": true
+  },
+  "overrides": {
+    "postcss": "^8.5.28"
   }
 }

@@ -64,6 +64,16 @@ surface this codebase depends on (every route file uses the stable
 `withRoute`/`NextRequest`/`NextResponse` pattern — none of that changes
 within a patch release).
 
+> **Status: Phase 2 done — the API runs on Next.js 15.5 with React 19.**
+> The audit this section asked for found: all 116 route files export their
+> handlers through `withRoute`; `withRoute` now awaits the Promise-based
+> `params` once and hands handlers a plain record, so no handler changed;
+> nothing imports `cookies()`/`headers()` from `next/headers` — cookies are
+> read from `NextRequest.cookies`, which stayed synchronous. `next lint`
+> (deprecated in 15.5) was replaced by the ESLint CLI (`npm run lint`), and
+> an npm override pins Next's bundled PostCSS to a patched release
+> (`npm audit --omit=dev`: 0 vulnerabilities).
+
 **Phase 2 (real work, do deliberately, not reflexively): Next.js 15.**
 Do NOT bundle this with Phase 1. Next.js 15 made several previously
 synchronous APIs asynchronous — most relevantly, dynamic route params and

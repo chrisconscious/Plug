@@ -41,7 +41,10 @@ export function FloatingWhatsAppButton({ label = 'Need Help?' }: { label?: strin
     return () => { timers.current.forEach(clearTimeout); timers.current = []; };
   }, [location.pathname, href]);
 
-  if (!href) return null;
+  // A customer help button: never on the backoffice, where it sat on top of
+  // row actions and pagination in the bottom-right corner.
+  const isBackoffice = /^\/(super-)?admin(\/|$)/.test(location.pathname);
+  if (!href || isBackoffice) return null;
 
   const expanded = phase === 'expanded';
 

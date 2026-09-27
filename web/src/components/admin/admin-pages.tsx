@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useMemo, useState, useRef, useId, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useState, useRef, useId, type ReactNode } from "react";
 import { Link } from "react-router-dom";
-import { Plus, Search, Filter, Download, X, Check, ShieldAlert, Image, Eye, EyeOff, Trash2 } from "lucide-react";
+import { Plus, Search, Filter, Download, X, Check, ShieldAlert, Image, ImagePlus, ImageMinus, ImageOff, Pencil, Eye, EyeOff, Trash2 } from "lucide-react";
 import * as api from "../../lib/api";
 import { formatTZS } from "../../lib/currency";
 import { listBrands, listCategories } from "../../lib/api";
@@ -76,7 +76,9 @@ function describeApiError(e: unknown, fallback: string): string {
 // Any admin API call that answers 401 means the session is no longer valid
 // (access token expired and refresh couldn't recover it). Redirect the user to
 // sign back in with a clear note instead of leaving a bare failed action.
-function handleAuthError(e: unknown, setBanner: (m: string) => void): boolean {
+type BannerTone = "ok" | "error";
+
+function handleAuthError(e: unknown, _setBanner: (m: string, tone?: BannerTone) => void): boolean {
   if (e instanceof api.ApiError && e.status === 401) {
     api.logout().catch(() => {});
     redirectToLoginExpired();
@@ -151,14 +153,19 @@ function GenericManagementPage({ title, desc, superRole }: { title: string; desc
   const [notImplemented, setNotImplemented] = useState(false);
   const [add, setAdd] = useState<AddForm>({ open: false, fields: [] });
   const [productReload, setProductReload] = useState(0);
-  const [banner, setBanner] = useState("");
+  // Every success AND failure in the backoffice lands in this one banner, so it
+  // carries a tone: failures render red (role="alert"), never as a green success.
+  const [bannerState, setBannerState] = useState<{ text: string; tone: BannerTone } | null>(null);
+  const setBanner = useCallback((text: string, tone: BannerTone = "ok") => setBannerState(text ? { text, tone } : null), []);
+  const banner = bannerState?.text ?? "";
   // One timer per message: a new message restarts it, so an older action's
   // timer can never wipe a newer message (e.g. the reason a delete was refused).
+  // Failures stay up until the next message (longer, so they can be read).
   useEffect(() => {
-    if (!banner) return;
-    const t = setTimeout(() => setBanner(""), 6000);
+    if (!bannerState) return;
+    const t = setTimeout(() => setBanner(""), bannerState.tone === "error" ? 15000 : 6000);
     return () => clearTimeout(t);
-  }, [banner]);
+  }, [bannerState, setBanner]);
   const [catalogData, setCatalogData] = useState<{ brands: AdminRow[]; categories: AdminRow[] }>({ brands: [], categories: [] });
   const [catalogToAdd, setCatalogToAdd] = useState<"brand" | "category" | null>(null);
   const [editingBrand, setEditingBrand] = useState<api.Brand | null>(null);
@@ -189,7 +196,7 @@ function GenericManagementPage({ title, desc, superRole }: { title: string; desc
     if (!catName) return;
     const cat = catalogOptionsRef.current.categories.find((c) => c.name === catName);
     if (!cat?.slug) return;
-    api.listCategoryAttributes(cat.slug).then((r) => setCreateAttrGroups(r.groups)).catch(() => setCreateAttrGroups([]));
+    api.listCategoryAttributes(cat.slug, { fresh: true }).then((r) => setCreateAttrGroups(r.groups)).catch(() => setCreateAttrGroups([]));
   };
 
 
@@ -361,7 +368,7 @@ function GenericManagementPage({ title, desc, superRole }: { title: string; desc
         // Catch every input the backend would reject *before* POSTing, with a
         // message naming the field, instead of a generic "Validation failed.".
         const fail = (message: string) => {
-          setBanner(message);
+          setBanner(message, "error");
         };
         if (!(formData.name ?? "").trim()) return fail("Enter a product name.");
         if (!brandId) return fail("Select a brand for the product.");
@@ -382,10 +389,11 @@ function GenericManagementPage({ title, desc, superRole }: { title: string; desc
         // the admins/catalog branches use below).
         const genderAudiences = (formData.genderAudiences ?? "").split(",").map((s) => s.trim().toLowerCase()).filter(Boolean);
         if (genderAudiences.length === 0) {
-          setBanner("Select at least one gender / audience (Women, Men or Unisex) for the product.");
+          setBanner("Select at least one gender / audience (Women, Men or Unisex) for the product.", "error");
           return;
         }
         const tags = (formData.tags ?? "").split(",").map((s) => s.trim()).filter(Boolean);
+        let attrWarning = "";
         const created = await api.createAdminProduct({
           // Always send a clean URL-safe slug (the server also normalizes it
           // and adds a suffix if taken). Never omit it: an API build from
@@ -415,9 +423,12 @@ function GenericManagementPage({ title, desc, superRole }: { title: string; desc
         if (created?.product?.id && created.product.id) {
           try {
             await api.setProductAttributeValues(created.product.id, createAttrSelected);
-          } catch { /* attributes are best-effort; product creation already succeeded */ }
+          } catch (e) {
+            // The product exists; say plainly that its attributes did not save.
+            attrWarning = ` Its attributes could not be saved (${userMessage(e, "please try again")}) — set them in the editor.`;
+          }
         }
-        msg = "Product created as a draft — now add images and color/size stock, then tick Published.";
+        msg = "Product created as a draft — now add images and color/size stock, then tick Published." + attrWarning;
         if (created?.product?.id) {
           // Continue straight into the editor so the admin can add images and
           // variants and publish, instead of hunting for the new draft.
@@ -430,19 +441,26 @@ function GenericManagementPage({ title, desc, superRole }: { title: string; desc
         // reject with a 400 validation error (empty/invalid input). Keeps the
         // console free of spurious 400 "Failed to load resource" noise.
         if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-          setBanner("Enter a valid email address.");
+          setBanner("Enter a valid email address.", "error");
           return;
         }
-        if (password.length < 8) {
-          setBanner("Password must be at least 8 characters.");
+        // Same rule the server enforces (api/src/lib/validate.ts isStrongPassword).
+        const missing = [
+          password.length < 10 && "at least 10 characters",
+          !/[a-z]/.test(password) && "a lowercase letter",
+          !/[A-Z]/.test(password) && "an uppercase letter",
+          !/[0-9]/.test(password) && "a number",
+        ].filter(Boolean) as string[];
+        if (missing.length > 0) {
+          setBanner(`The new admin's password needs ${missing.join(", ")}.`, "error");
           return;
         }
         if (!formData.actorPassword) {
-          setBanner("Enter your current password to confirm this action.");
+          setBanner("Enter your current password to confirm this action.", "error");
           return;
         }
         if (!formData.role || (formData.role !== "ADMIN" && formData.role !== "SUPER_ADMIN")) {
-          setBanner("Select a role for the new admin.");
+          setBanner("Select a role for the new admin.", "error");
           return;
         }
         await api.createAdmin({
@@ -461,7 +479,7 @@ function GenericManagementPage({ title, desc, superRole }: { title: string; desc
           const { brand } = await api.updateAdminBrand(editingBrand.id, {
             name: formData.name || undefined,
             slug: formData.slug || undefined,
-            active: formData.active ? formData.active === "true" : undefined,
+            active: formData.active ? formData.active === "Active" : undefined,
             logoTone: toneChanged ? pickedTone! : undefined,
           });
           if (logoFile) await api.uploadBrandLogo(brand.id, logoFile);
@@ -472,8 +490,9 @@ function GenericManagementPage({ title, desc, superRole }: { title: string; desc
             await api.updateAdminCategory(editingCategory.id, {
               name: formData.name || undefined,
               slug: formData.slug || undefined,
-              active: formData.active !== undefined ? formData.active === "true" : undefined,
+              active: formData.active !== undefined ? formData.active === "Active" : undefined,
               displayOrder: formData.displayOrder ? Number(formData.displayOrder) : undefined,
+              icon: formData.icon && formData.icon !== editingCategory.icon ? formData.icon : undefined,
             });
             msg = "Category updated ✓";
           } else {
@@ -494,7 +513,7 @@ function GenericManagementPage({ title, desc, superRole }: { title: string; desc
           });
           if (dupe) {
             const raw = dupe.raw as api.Brand | undefined;
-            setBanner(`A brand named "${dupe.primary}" (slug /${raw?.slug ?? ""}) already exists. Edit that brand instead of creating a duplicate.`);
+            setBanner(`A brand named "${dupe.primary}" (slug /${raw?.slug ?? ""}) already exists. Edit that brand instead of creating a duplicate.`, "error");
             return;
           }
           const { brand } = await api.createAdminBrand({ name: formData.name, slug: formData.slug || undefined });
@@ -511,18 +530,18 @@ function GenericManagementPage({ title, desc, superRole }: { title: string; desc
       await load();
     } catch (e) {
       if (handleAuthError(e, setBanner)) return; // session expired -> redirect to login
-      setBanner(describeApiError(e, "Could not save"));
+      setBanner(describeApiError(e, "Could not save"), "error");
     }
   };
 
   const handleOrderStatus = async (r: AdminRow, next: string) => {
     try {
       await api.updateOrderStatus(r.id, next as api.AdminOrder["status"]);
-      setBanner(`${r.primary} → ${next}`);
+      setBanner(`${r.primary} → ${ORDER_STATUS_LABEL[next as api.AdminOrder["status"]] ?? next}`);
       await load();
     } catch (e) {
       if (handleAuthError(e, setBanner)) return;
-      setBanner(userMessage(e, "Could not update order status"));
+      setBanner(userMessage(e, "Could not update order status"), "error");
     }
   };
 
@@ -540,7 +559,7 @@ function GenericManagementPage({ title, desc, superRole }: { title: string; desc
       await load();
     } catch (e) {
       if (handleAuthError(e, setBanner)) return;
-      setBanner(userMessage(e, "Could not update admin"));
+      setBanner(userMessage(e, "Could not update admin"), "error");
     }
   };
 
@@ -564,7 +583,7 @@ function GenericManagementPage({ title, desc, superRole }: { title: string; desc
       fields: [
         { name: "name", label: "Brand name", kind: "text" },
         { name: "slug", label: "Slug (URL key, optional)", kind: "text" },
-        { name: "active", label: "Status", kind: "select", options: ["true", "false"] },
+        { name: "active", label: "Status", kind: "select", options: ["Active", "Inactive"] },
         ...(brand.logo ? [{ name: "logoTone", label: "Logo tone (how the logo is shown on light backgrounds)", kind: "select" as const, options: Object.values(LOGO_TONE_LABELS) }] : []),
       ],
     });
@@ -577,7 +596,7 @@ function GenericManagementPage({ title, desc, superRole }: { title: string; desc
       await load();
     } catch (e) {
       if (handleAuthError(e, setBanner)) return; // session expired -> redirect to login
-      setBanner(userMessage(e, "Upload failed"));
+      setBanner(userMessage(e, "Upload failed"), "error");
     }
   };
 
@@ -588,7 +607,7 @@ function GenericManagementPage({ title, desc, superRole }: { title: string; desc
       await load();
     } catch (e) {
       if (handleAuthError(e, setBanner)) return; // session expired -> redirect to login
-      setBanner(userMessage(e, "Could not remove logo"));
+      setBanner(userMessage(e, "Could not remove logo"), "error");
     }
   };
 
@@ -599,7 +618,7 @@ function GenericManagementPage({ title, desc, superRole }: { title: string; desc
       await load();
     } catch (e) {
       if (handleAuthError(e, setBanner)) return;
-      setBanner(userMessage(e, "Upload failed"));
+      setBanner(userMessage(e, "Upload failed"), "error");
     }
   };
 
@@ -610,7 +629,7 @@ function GenericManagementPage({ title, desc, superRole }: { title: string; desc
       await load();
     } catch (e) {
       if (handleAuthError(e, setBanner)) return;
-      setBanner(userMessage(e, "Could not remove campaign image"));
+      setBanner(userMessage(e, "Could not remove campaign image"), "error");
     }
   };
 
@@ -623,7 +642,8 @@ function GenericManagementPage({ title, desc, superRole }: { title: string; desc
         { name: "name", label: "Category name", kind: "text" },
         { name: "slug", label: "Slug (URL key, optional)", kind: "text" },
         { name: "displayOrder", label: "Display order (lower shows first)", kind: "text" },
-        { name: "active", label: "Status", kind: "select", options: ["true", "false"] },
+        { name: "active", label: "Status", kind: "select", options: ["Active", "Inactive"] },
+        { name: "icon", label: "Icon (small icon-library key, not a photo)", kind: "icon" },
       ],
     });
   };
@@ -635,7 +655,7 @@ function GenericManagementPage({ title, desc, superRole }: { title: string; desc
       await load();
     } catch (e) {
       if (handleAuthError(e, setBanner)) return;
-      setBanner(userMessage(e, "Upload failed"));
+      setBanner(userMessage(e, "Upload failed"), "error");
     }
   };
 
@@ -646,7 +666,7 @@ function GenericManagementPage({ title, desc, superRole }: { title: string; desc
       await load();
     } catch (e) {
       if (handleAuthError(e, setBanner)) return;
-      setBanner(userMessage(e, "Could not remove image"));
+      setBanner(userMessage(e, "Could not remove image"), "error");
     }
   };
 
@@ -690,7 +710,9 @@ function GenericManagementPage({ title, desc, superRole }: { title: string; desc
         )}
       </div>
 
-      {banner && <div style={{ padding: '10px 14px', background: '#eef8f1', color: '#018849', fontSize: 12, marginBottom: 14, border: '1px solid #d5efe0' }}>{banner}</div>}
+      {bannerState && (
+        <div role={bannerState.tone === "error" ? "alert" : "status"} data-tone={bannerState.tone} style={{ padding: '10px 14px', background: bannerState.tone === "error" ? '#fef2f2' : '#eef8f1', color: bannerState.tone === "error" ? '#b91c1c' : '#018849', fontSize: 12, marginBottom: 14, border: `1px solid ${bannerState.tone === "error" ? '#fecaca' : '#d5efe0'}` }}>{bannerState.text}</div>
+      )}
 
       {kind === "catalog" ? (
         <>
@@ -711,7 +733,7 @@ function GenericManagementPage({ title, desc, superRole }: { title: string; desc
                 await load(); // show exactly what the server now holds
               } catch (e) {
                 if (handleAuthError(e, setBanner)) return;
-                setBanner(userMessage(e, `Could not ${active ? "activate" : "deactivate"} it.`));
+                setBanner(userMessage(e, `Could not ${active ? "activate" : "deactivate"} it.`), "error");
               }
             }}
             onDelete={async (section, row) => {
@@ -723,7 +745,7 @@ function GenericManagementPage({ title, desc, superRole }: { title: string; desc
                 await load();
               } catch (e) {
                 if (handleAuthError(e, setBanner)) return;
-                setBanner(userMessage(e, "Could not delete it."));
+                setBanner(userMessage(e, "Could not delete it."), "error");
               }
             }}
             onAdd={(section) => {
@@ -788,9 +810,9 @@ function GenericManagementPage({ title, desc, superRole }: { title: string; desc
           fields={add.fields}
           initial={
             editingBrand
-              ? { name: editingBrand.name, slug: editingBrand.slug, active: String(editingBrand.active), ...(editingBrand.logo ? { logoTone: logoToneLabel(editingBrand) } : {}) }
+              ? { name: editingBrand.name, slug: editingBrand.slug, active: editingBrand.active ? "Active" : "Inactive", ...(editingBrand.logo ? { logoTone: logoToneLabel(editingBrand) } : {}) }
               : editingCategory
-              ? { name: editingCategory.name, slug: editingCategory.slug, displayOrder: String(editingCategory.displayOrder), active: String(editingCategory.active) }
+              ? { name: editingCategory.name, slug: editingCategory.slug, displayOrder: String(editingCategory.displayOrder), active: editingCategory.active ? "Active" : "Inactive", icon: editingCategory.icon ?? "box" }
               : undefined
           }
           title={editingBrand ? "Edit Brand" : editingCategory ? "Edit Category" : kind === "admins" ? "Add New Admin" : kind === "products" ? "Add New Product" : kind === "catalog" ? (catalogToAdd === "category" ? "Add New Category" : "Add New Brand") : "Add New"}
@@ -890,7 +912,7 @@ function CatalogManagementTable({ title, query, setQuery, loading, filtered, han
         {canAdd && <button className="blackButton" onClick={handleAdd}><Plus size={16} /> Add New</button>}
       </div>
 
-      <div className="tableCard">
+      <div className={`tableCard${extra || viewHref ? " wideActions" : ""}`}>
         <div className="tableHead"><span>NAME / REFERENCE</span><span>STATUS</span><span>META</span><span>ACTIONS</span></div>
         {loading ? (
           <div className="tableRow"><div className="rowPrimary"><span>Loading…</span></div></div>
@@ -902,7 +924,7 @@ function CatalogManagementTable({ title, query, setQuery, loading, filtered, han
               <div className="rowPrimary"><div className="miniThumb">{i + 1}</div><div><b>{r.primary}</b>{r.sub ? <small style={{ display: 'block', color: '#888', fontSize: 11 }}>{r.sub}</small> : null}</div></div>
               <span className={`status ${r.statusTone === 'warn' ? 'warning' : r.statusTone === 'err' ? 'danger' : ''}`}>{r.status}</span>
               <span>{r.meta ?? ''}</span>
-              <span style={{ display: 'flex', gap: 6 }}>
+              <span style={{ display: 'flex', flexWrap: 'wrap', gap: 6, alignItems: 'center', justifyContent: 'flex-end' }}>
                 {extra?.(r)}
                 {viewHref && <Link to={viewHref(r)} title="View details" aria-label={`View ${r.primary}`} className="tableIconLink"><Eye size={15} /></Link>}
               </span>
@@ -958,7 +980,7 @@ function BrandCarouselSpeedSetting() {
   const [state, setState] = useState<"idle" | "saving" | "saved" | "error">("idle");
   const [message, setMessage] = useState("");
   useEffect(() => {
-    api.getBrandSectionSettings().then((r) => setSpeed(r.speed)).catch(() => setState("error"));
+    api.getBrandSectionSettings({ fresh: true }).then((r) => setSpeed(r.speed)).catch(() => setState("error"));
   }, []);
   const change = async (next: api.BrandSectionSpeed) => {
     const prev = speed;
@@ -991,10 +1013,10 @@ function AdminToggleActions({ r, onToggle, onPermissions }: { r: AdminRow; onTog
   const a = r.raw as api.AdminUser;
   return (
     <>
-      <button title={a.disabled ? "Re-activate" : "Suspend"} onClick={() => onToggle(r, "disable")}>{a.disabled ? "↻" : "⊘"}</button>
-      <button title="Toggle role (ADMIN / SUPER_ADMIN)" onClick={() => onToggle(r, "role")}>{a.role === "SUPER_ADMIN" ? "▼" : "▲"}</button>
+      <button title={a.disabled ? "Re-activate" : "Suspend"} aria-label={`${a.disabled ? "Re-activate" : "Suspend"} ${a.email}`} onClick={() => onToggle(r, "disable")}>{a.disabled ? "↻" : "⊘"}</button>
+      <button title="Toggle role (ADMIN / SUPER_ADMIN)" aria-label={`Make ${a.email} ${a.role === "SUPER_ADMIN" ? "an Admin" : "a Super Admin"}`} onClick={() => onToggle(r, "role")}>{a.role === "SUPER_ADMIN" ? "▼" : "▲"}</button>
       {a.role === "ADMIN" && onPermissions && (
-        <button title={`Grant or revoke permissions for ${a.email}`} onClick={() => onPermissions(r)}>⚿</button>
+        <button title={`Grant or revoke permissions for ${a.email}`} aria-label={`Permissions for ${a.email}`} onClick={() => onPermissions(r)}>⚿</button>
       )}
     </>
   );
@@ -1021,7 +1043,15 @@ function CatalogPanels({ loading, error, load, query, setQuery, brands, categori
   onRemoveCategoryImage: (category: api.Category) => void;
 }) {
   const q = query.trim().toLowerCase();
-  const filterRows = (rows: AdminRow[]) => (q ? rows.filter((r) => `${r.primary} ${r.sub ?? ''}`.toLowerCase().includes(q)) : rows);
+  const [statusFilter, setStatusFilter] = useState<"all" | "active" | "inactive" | "no-image">("all");
+  const filterRows = (rows: AdminRow[], kind: "brand" | "category") => rows.filter((r) => {
+    if (q && !`${r.primary} ${r.sub ?? ''}`.toLowerCase().includes(q)) return false;
+    const raw = r.raw as (api.Brand & api.Category) | undefined;
+    if (statusFilter === "active") return !!raw?.active;
+    if (statusFilter === "inactive") return !raw?.active;
+    if (statusFilter === "no-image") return kind === "brand" ? !raw?.logo : !raw?.imageUrl;
+    return true;
+  });
 
   const [uploadTarget, setUploadTarget] = useState<api.Brand | null>(null);
   const [campaignImageTarget, setCampaignImageTarget] = useState<api.Brand | null>(null);
@@ -1090,7 +1120,7 @@ function CatalogPanels({ loading, error, load, query, setQuery, brands, categori
         <div className="tableRow"><div className="rowPrimary"><span>No {label.toLowerCase()} found.</span></div></div>
       ) : (
         rows.map((r, i) => (
-          <div className="tableRow" key={r.id || i} style={{ alignItems: 'center' }}>
+          <div className="tableRow catalogRow" key={r.id || i} style={{ alignItems: 'center' }}>
             <div className="rowPrimary">
               {label === "Brands" ? (
                 <BrandLogoThumb brand={r.raw as api.Brand} />
@@ -1113,52 +1143,31 @@ function CatalogPanels({ loading, error, load, query, setQuery, brands, categori
             <span>{r.meta ?? ''}</span>
             {label === "Brands" ? (
               <>
-                <span style={{ display: 'flex', gap: 6 }}>
-                  <button title="Edit brand" onClick={() => onEditBrand(r.raw as api.Brand)}><Check size={15} /></button>
-                  <button title={(r.raw as api.Brand)?.logo ? "Replace logo" : "Upload logo"} onClick={() => triggerUpload(r.raw as api.Brand)}><Plus size={15} /></button>
+                <span className="catalogActions">
+                  <button title="Edit brand" aria-label={`Edit brand ${r.primary}`} onClick={() => onEditBrand(r.raw as api.Brand)}><Pencil size={15} /></button>
+                  <button title={(r.raw as api.Brand)?.logo ? "Replace logo" : "Upload logo"} aria-label={`${(r.raw as api.Brand)?.logo ? "Replace" : "Upload"} logo for ${r.primary}`} onClick={() => triggerUpload(r.raw as api.Brand)}><ImagePlus size={15} /></button>
                   {(r.raw as api.Brand)?.logo && (
-                    <button title="Remove logo" onClick={() => onRemoveLogo(r.raw as api.Brand)}><X size={15} /></button>
+                    <button title="Remove logo" aria-label={`Remove logo from ${r.primary}`} onClick={() => onRemoveLogo(r.raw as api.Brand)}><ImageMinus size={15} /></button>
                   )}
-                  <button title={(r.raw as api.Brand)?.campaignImage ? "Replace campaign image" : "Upload campaign image"} onClick={() => triggerCampaignImageUpload(r.raw as api.Brand)}><Image size={15} /></button>
+                  <button title={(r.raw as api.Brand)?.campaignImage ? "Replace campaign image" : "Upload campaign image"} aria-label={`${(r.raw as api.Brand)?.campaignImage ? "Replace" : "Upload"} campaign image for ${r.primary}`} onClick={() => triggerCampaignImageUpload(r.raw as api.Brand)}><Image size={15} /></button>
                   {(r.raw as api.Brand)?.campaignImage && (
-                    <button title="Remove campaign image" onClick={() => onRemoveCampaignImage(r.raw as api.Brand)}><X size={15} /></button>
+                    <button title="Remove campaign image" aria-label={`Remove campaign image from ${r.primary}`} onClick={() => onRemoveCampaignImage(r.raw as api.Brand)}><ImageOff size={15} /></button>
                   )}
-                  <button title={(r.raw as api.Brand)?.active ? "Deactivate brand (hide from the store)" : "Activate brand"} onClick={() => onSetActive("brand", r.id, !(r.raw as api.Brand)?.active)}>{(r.raw as api.Brand)?.active ? <EyeOff size={15} /> : <Eye size={15} />}</button>
+                  <button title={(r.raw as api.Brand)?.active ? "Deactivate brand (hide from the store)" : "Activate brand"} aria-label={`${(r.raw as api.Brand)?.active ? "Deactivate" : "Activate"} brand ${r.primary}`} onClick={() => onSetActive("brand", r.id, !(r.raw as api.Brand)?.active)}>{(r.raw as api.Brand)?.active ? <EyeOff size={15} /> : <Eye size={15} />}</button>
                   <button title="Delete brand" aria-label={`Delete brand ${r.primary}`} onClick={() => onDelete("brand", r)}><Trash2 size={15} /></button>
                 </span>
-                <input
-                  id="brand-campaign-image-input"
-                  type="file"
-                  accept="image/png,image/jpeg,image/webp"
-                  style={{ display: 'none' }}
-                  onChange={onCampaignImageFile}
-                />
-                <input
-                  id="brand-logo-input"
-                  type="file"
-                  accept="image/png,image/jpeg,image/webp"
-                  style={{ display: 'none' }}
-                  onChange={onLogoFile}
-                />
               </>
             ) : (
               <>
-                <span style={{ display: 'flex', gap: 6 }}>
-                  <button title="Edit category" onClick={() => onEditCategory(r.raw as api.Category)}><Check size={15} /></button>
-                  <button title={(r.raw as api.Category)?.imageUrl ? "Replace image" : "Upload image"} onClick={() => triggerCategoryImageUpload(r.raw as api.Category)}><Plus size={15} /></button>
+                <span className="catalogActions">
+                  <button title="Edit category" aria-label={`Edit category ${r.primary}`} onClick={() => onEditCategory(r.raw as api.Category)}><Pencil size={15} /></button>
+                  <button title={(r.raw as api.Category)?.imageUrl ? "Replace image" : "Upload image"} aria-label={`${(r.raw as api.Category)?.imageUrl ? "Replace" : "Upload"} image for ${r.primary}`} onClick={() => triggerCategoryImageUpload(r.raw as api.Category)}><ImagePlus size={15} /></button>
                   {(r.raw as api.Category)?.imageUrl && (
-                    <button title="Remove image" onClick={() => onRemoveCategoryImage(r.raw as api.Category)}><X size={15} /></button>
+                    <button title="Remove image" aria-label={`Remove image from ${r.primary}`} onClick={() => onRemoveCategoryImage(r.raw as api.Category)}><ImageMinus size={15} /></button>
                   )}
-                  <button title={(r.raw as api.Category)?.active ? "Deactivate category (hide from the store)" : "Activate category"} onClick={() => onSetActive("category", r.id, !(r.raw as api.Category)?.active)}>{(r.raw as api.Category)?.active ? <EyeOff size={15} /> : <Eye size={15} />}</button>
+                  <button title={(r.raw as api.Category)?.active ? "Deactivate category (hide from the store)" : "Activate category"} aria-label={`${(r.raw as api.Category)?.active ? "Deactivate" : "Activate"} category ${r.primary}`} onClick={() => onSetActive("category", r.id, !(r.raw as api.Category)?.active)}>{(r.raw as api.Category)?.active ? <EyeOff size={15} /> : <Eye size={15} />}</button>
                   <button title="Delete category" aria-label={`Delete category ${r.primary}`} onClick={() => onDelete("category", r)}><Trash2 size={15} /></button>
                 </span>
-                <input
-                  id="category-image-input"
-                  type="file"
-                  accept="image/png,image/jpeg,image/webp"
-                  style={{ display: 'none' }}
-                  onChange={onCategoryImageFile}
-                />
               </>
             )}
           </div>
@@ -1169,13 +1178,26 @@ function CatalogPanels({ loading, error, load, query, setQuery, brands, categori
 
   return (
     <div>
+      {/* One hidden picker per upload kind (they used to be repeated in every
+          row, all sharing the same id). The row buttons set the target first. */}
+      <input id="brand-logo-input" type="file" accept="image/png,image/jpeg,image/webp" style={{ display: 'none' }} onChange={onLogoFile} />
+      <input id="brand-campaign-image-input" type="file" accept="image/png,image/jpeg,image/webp" style={{ display: 'none' }} onChange={onCampaignImageFile} />
+      <input id="category-image-input" type="file" accept="image/png,image/jpeg,image/webp" style={{ display: 'none' }} onChange={onCategoryImageFile} />
       <div className="managementToolbar">
         <div className="searchBox"><Search size={16} /><input placeholder="Search brands & categories..." value={query} onChange={(e) => setQuery(e.target.value)} /></div>
-        <button><Filter size={16} /> Filters</button>
+        <label style={{ display: 'flex', alignItems: 'center', gap: 6, border: '1px solid #ddd', background: '#fff', padding: '0 10px', fontSize: 11 }}>
+          <Filter size={16} aria-hidden="true" />
+          <select aria-label="Filter brands and categories" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value as typeof statusFilter)} style={{ border: 0, background: 'transparent', padding: '10px 0', fontSize: 11 }}>
+            <option value="all">All</option>
+            <option value="active">Active</option>
+            <option value="inactive">Inactive</option>
+            <option value="no-image">Missing logo / image</option>
+          </select>
+        </label>
       </div>
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
-        <Panel label="Brands" rows={filterRows(brands)} />
-        <Panel label="Categories" rows={filterRows(categories)} />
+      <div className="catalogPanels">
+        <Panel label="Brands" rows={filterRows(brands, "brand")} />
+        <Panel label="Categories" rows={filterRows(categories, "category")} />
       </div>
     </div>
   );
@@ -1217,6 +1239,7 @@ function AddModal({ fields, title, onClose, onSubmit, initial, logoSection, onDa
   const [data, setData] = useState<Record<string, string>>(initial ?? {});
   const [checkErr, setCheckErr] = useState<Record<string, boolean>>({});
   const titleId = useId();
+  const fieldId = (name: string) => `${titleId}-f-${name}`; // ties each label to its control
   const dialogRef = useRef<HTMLDivElement>(null);
 
   const patch = (field: string, value: string) => {
@@ -1266,9 +1289,9 @@ function AddModal({ fields, title, onClose, onSubmit, initial, logoSection, onDa
         <div style={{ display: 'grid', gap: 12, marginTop: logoSection ? 14 : 0 }}>
           {fields.map((f) => (
             <div key={f.name}>
-              <label style={{ display: 'block', fontSize: 11, fontWeight: 600, marginBottom: 4, color: '#555' }}>{f.label}</label>
+              <label htmlFor={f.kind === "check" || f.kind === "icon" ? undefined : fieldId(f.name)} style={{ display: 'block', fontSize: 11, fontWeight: 600, marginBottom: 4, color: '#555' }}>{f.label}</label>
               {f.kind === "select" ? (
-                <select style={{ width: '100%', border: '1px solid #ddd', padding: '9px 10px', fontSize: 12 }} value={data[f.name] ?? ''} onChange={(e) => patch(f.name, e.target.value)}>
+                <select id={fieldId(f.name)} style={{ width: '100%', border: '1px solid #ddd', padding: '9px 10px', fontSize: 12 }} value={data[f.name] ?? ''} onChange={(e) => patch(f.name, e.target.value)}>
                   <option value="">Select…</option>
                   {(f.options ?? []).map((o) => <option key={o} value={o}>{o}</option>)}
                 </select>
@@ -1316,6 +1339,7 @@ function AddModal({ fields, title, onClose, onSubmit, initial, logoSection, onDa
                 </div>
               ) : (
                 <input
+                  id={fieldId(f.name)}
                   type={f.kind === "password" ? "password" : f.kind === "email" ? "email" : "text"}
                   autoComplete={f.kind === "password" ? (f.name === "actorPassword" ? "current-password" : "new-password") : undefined}
                   style={{ width: '100%', border: '1px solid #ddd', padding: '9px 10px', fontSize: 12 }}
@@ -1479,10 +1503,28 @@ export function ProductEditorModal({ product, onClose, onSaved }: {
       if (product.category?.slug) {
         try {
           const [ag, pav] = await Promise.all([
-            api.listCategoryAttributes(product.category.slug),
+            api.listCategoryAttributes(product.category.slug, { fresh: true }),
             api.getProductAttributeOptionIds(product.id),
           ]);
-          if (alive) { setAttributeGroups(ag.groups); setSelectedAttributeOptionIds(pav.optionIds); }
+          const groups = ag.groups.map((g) => ({ ...g, options: [...(g.options ?? [])] }));
+          // The storefront list omits inactive groups/options. If this product
+          // still carries one, load it from the admin endpoints and show it
+          // (marked inactive) so it can be unticked — otherwise it could never
+          // be removed, and the group/option could never be deleted.
+          const shown = new Set(groups.flatMap((g) => g.options.map((o) => o.id)));
+          const hidden = pav.optionIds.filter((id) => !shown.has(id));
+          if (hidden.length > 0) {
+            // Every group, not just this category's: a product moved to another
+            // category keeps its old values until they are unticked here.
+            for (const g of (await api.listAdminAttributeGroups()).groups) {
+              const opts = (await api.listAttributeOptions(g.id)).options.filter((o) => hidden.includes(o.id));
+              if (opts.length === 0) continue;
+              const existing = groups.find((x) => x.id === g.id);
+              if (existing) existing.options.push(...opts);
+              else groups.push({ ...g, options: opts });
+            }
+          }
+          if (alive) { setAttributeGroups(groups); setSelectedAttributeOptionIds(pav.optionIds); }
         } catch { /* attribute assignment is optional — never block the editor on it */ }
       }
     })();
@@ -1504,6 +1546,14 @@ export function ProductEditorModal({ product, onClose, onSaved }: {
       return;
     }
     if (!name.trim()) { setError("Enter a product name."); setBusy(false); return; }
+    // A blank or non-whole stock value must never be saved as 0 by accident.
+    const badStock = variantRows.find((r) => !/^\d+$/.test(r.stockQty.trim()));
+    if (badStock) {
+      setVariantsError(`Enter the stock for ${badStock.color} / ${badStock.size} as a whole number (0 or more).`);
+      setError("Fix the highlighted stock quantity before saving.");
+      setBusy(false);
+      return;
+    }
     try {
       // Variants first: publishing is validated server-side against the
       // SAVED variants/images, so a product published in the same save as
@@ -1514,7 +1564,7 @@ export function ProductEditorModal({ product, onClose, onSaved }: {
           id: r.id ?? null,
           size: r.size.trim(),
           color: r.color.trim(),
-          stockQty: Math.max(0, Math.floor(Number(r.stockQty) || 0)),
+          stockQty: Number(r.stockQty.trim()),
           sku: r.sku.trim() || null,
         }))
       );
@@ -1736,7 +1786,7 @@ export function ProductEditorModal({ product, onClose, onSaved }: {
             {attributeGroups.map((group) => (
               <div key={group.id} style={{ marginBottom: 14 }}>
                 <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 6 }}>
-                  {group.name} <small style={{ color: '#888', fontWeight: 400 }}>({group.selectionType === 'single_select' ? 'choose one' : 'choose any that apply'})</small>
+                  {group.name} <small style={{ color: '#888', fontWeight: 400 }}>({group.selectionType === 'single_select' ? 'choose one' : 'choose any that apply'}){group.active === false ? ' · inactive, hidden from shoppers' : ''}</small>
                 </div>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
                   {(group.options ?? []).map((opt) => {
@@ -1762,7 +1812,7 @@ export function ProductEditorModal({ product, onClose, onSaved }: {
                             });
                           }}
                         />
-                        {opt.name}
+                        {opt.name}{opt.active === false ? ' (inactive)' : ''}
                       </label>
                     );
                   })}

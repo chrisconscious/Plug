@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState, type ChangeEvent, type ReactNode } from "react";
-import { Plus, X, Check, Banknote, Smartphone, GripVertical, ShieldAlert, Power, Trash2, Wallet, Pencil, Truck, MapPin, CreditCard, MessageSquareText } from "lucide-react";
+import { Plus, X, ChevronUp, ChevronDown, Banknote, Smartphone, ShieldAlert, Power, Trash2, Wallet, Pencil, Truck, MapPin, CreditCard, MessageSquareText } from "lucide-react";
 import * as api from "../../lib/api";
 import { formatTZS } from "../../lib/currency";
 import { usePlatformSettings } from "../../lib/PlatformSettingsContext";
@@ -26,7 +26,7 @@ export function PaymentMethodsPage() {
   const { darEsSalaamFeeTzs, outsideDarFeeTzs, codMessage, loading: platformLoading, refresh: refreshPlatformSettings } = usePlatformSettings();
   const [methods, setMethods] = useState<api.PaymentMethod[] | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [banner, setBanner] = useState("");
+  const [banner, setBanner] = useState<{ text: string; tone: "ok" | "error" } | null>(null);
   const [editor, setEditor] = useState<EditorState>(null);
   const [busy, setBusy] = useState(false);
   const [iconTarget, setIconTarget] = useState<api.PaymentMethod | null>(null);
@@ -67,7 +67,8 @@ export function PaymentMethodsPage() {
       flash(`${target.name} icon updated ✓`);
       await load();
     } catch (err) {
-      setError(userMessage(err, "Could not upload icon."));
+      if (handleAuthError(err)) return;
+      fail(userMessage(err, "Could not upload icon."));
     }
   };
 
@@ -77,7 +78,8 @@ export function PaymentMethodsPage() {
       flash(`${method.name} icon removed`);
       await load();
     } catch (err) {
-      setError(userMessage(err, "Could not remove icon."));
+      if (handleAuthError(err)) return;
+      fail(userMessage(err, "Could not remove icon."));
     }
   };
 
@@ -94,15 +96,22 @@ export function PaymentMethodsPage() {
 
   useEffect(() => { load(); }, [load]);
 
-  const flash = (m: string) => { setBanner(m); setTimeout(() => setBanner(""), 3200); };
+  const flash = (text: string) => { setBanner({ text, tone: "ok" }); setTimeout(() => setBanner((b) => (b?.tone === "ok" && b.text === text ? null : b)), 3200); };
+  // Failures stay until the next action so they can't be missed.
+  const fail = (text: string) => setBanner({ text, tone: "error" });
 
   const cash = methods?.find((m) => m.kind === "CASH") ?? null;
   const online = methods?.filter((m) => m.kind === "ONLINE") ?? [];
 
   const saveDelivery = async () => {
     if (!delivery) return;
-    const dar = Math.max(0, Math.round(Number(delivery.dar) || 0));
-    const outside = Math.max(0, Math.round(Number(delivery.outside) || 0));
+    // A cleared box must not silently become a free delivery fee.
+    if (delivery.dar.trim() === "" || delivery.outside.trim() === "") {
+      setDeliveryError("Enter both transport fees (use 0 for free delivery).");
+      return;
+    }
+    const dar = Math.max(0, Math.round(Number(delivery.dar)));
+    const outside = Math.max(0, Math.round(Number(delivery.outside)));
     setSavingDelivery(true);
     setDeliveryError(null);
     try {
@@ -145,7 +154,7 @@ export function PaymentMethodsPage() {
       await load();
     } catch (e) {
       if (handleAuthError(e)) return;
-      flash(userMessage(e, "Could not save"));
+      fail(userMessage(e, "Could not save"));
     } finally { setBusy(false); }
   };
 
@@ -156,7 +165,7 @@ export function PaymentMethodsPage() {
       await load();
     } catch (e) {
       if (handleAuthError(e)) return;
-      flash(userMessage(e, "Could not update"));
+      fail(userMessage(e, "Could not update"));
     }
   };
 
@@ -168,22 +177,27 @@ export function PaymentMethodsPage() {
       await load();
     } catch (e) {
       if (handleAuthError(e)) return;
-      flash(userMessage(e, "Could not remove"));
+      fail(userMessage(e, "Could not remove"));
     }
   };
 
+  // `idx` is the row's position among the ONLINE networks (the list the
+  // buttons live in). Swap within that list, then rebuild the full order with
+  // Cash on Delivery kept in its own slot.
   const move = async (dir: -1 | 1, idx: number) => {
     if (!methods) return;
-    const next = [...methods];
+    const nextOnline = methods.filter((m) => m.kind === "ONLINE");
     const j = idx + dir;
-    if (j < 0 || j >= next.length) return;
-    [next[idx], next[j]] = [next[j], next[idx]];
+    if (j < 0 || j >= nextOnline.length) return;
+    [nextOnline[idx], nextOnline[j]] = [nextOnline[j], nextOnline[idx]];
+    let k = 0;
+    const full = methods.map((m) => (m.kind === "ONLINE" ? nextOnline[k++] : m));
     try {
-      const r = await api.reorderAdminPaymentMethods(next.map((m) => m.id));
+      const r = await api.reorderAdminPaymentMethods(full.map((m) => m.id));
       setMethods([...r.methods].sort((a, b) => a.displayOrder - b.displayOrder));
     } catch (e) {
       if (handleAuthError(e)) return;
-      flash(userMessage(e, "Reorder failed"));
+      fail(userMessage(e, "Reorder failed"));
       await load();
     }
   };
@@ -267,7 +281,7 @@ export function PaymentMethodsPage() {
       />
 
       {/* Hero header */}
-      <div className="managementHero" style={{ display: "flex", alignItems: "center", gap: 14, padding: "22px 24px", background: "#111", color: "#fff", borderRadius: 16, marginBottom: 18 }}>
+      <div className="pmHero" style={{ display: "flex", alignItems: "center", gap: 14, padding: "22px 24px", background: "#111", color: "#fff", borderRadius: 16, marginBottom: 18 }}>
         <span style={{ width: 44, height: 44, borderRadius: 12, display: "inline-flex", alignItems: "center", justifyContent: "center", background: "#fff", color: "#111" }}>
           <Wallet size={22} />
         </span>
@@ -282,10 +296,14 @@ export function PaymentMethodsPage() {
         </button>
       </div>
 
-      {banner && <div style={{ padding: "10px 14px", background: "#eef8f1", color: "#018849", fontSize: 12, marginBottom: 14, border: "1px solid #d5efe0", borderRadius: 8 }}>{banner}</div>}
+      {banner && (
+        <div role={banner.tone === "error" ? "alert" : "status"} style={{ padding: "10px 14px", background: banner.tone === "error" ? "#fef2f2" : "#eef8f1", color: banner.tone === "error" ? "#b91c1c" : "#018849", fontSize: 12, marginBottom: 14, border: `1px solid ${banner.tone === "error" ? "#fecaca" : "#d5efe0"}`, borderRadius: 8 }}>
+          {banner.text}
+        </div>
+      )}
 
       {/* Live overview strip */}
-      <div style={{ display: "grid", gap: 12, gridTemplateColumns: "repeat(3, 1fr)", marginBottom: 18 }}>
+      <div className="pmStats">
         {[
           { icon: <Truck size={16} />, label: "Dar es Salaam transport", value: formatTZS(darEsSalaamFeeTzs || 0), tint: "#e7eef8", ink: "#1e4e8c" },
           { icon: <MapPin size={16} />, label: "Outside Dar transport", value: formatTZS(outsideDarFeeTzs || 0), tint: "#f0f1e8", ink: "#575c2f" },
@@ -305,12 +323,13 @@ export function PaymentMethodsPage() {
       <section style={{ background: "#fff", border: "1px solid #ececec", borderRadius: 16, overflow: "hidden", marginBottom: 18 }}>
         {sectionLabel(<Truck size={16} />, "Delivery & checkout", "Transport fees are charged by the customer's chosen delivery location — the same amount regardless of online or cash payment.")}
         <div style={{ padding: "20px" }}>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 18 }}>
+          <div className="pmFees">
             <div>
-              <label style={{ display: "block", fontSize: 11.5, fontWeight: 700, marginBottom: 6, color: "#3f3f46" }}>Dar es Salaam transport fee</label>
+              <label htmlFor="pm-fee-dar" style={{ display: "block", fontSize: 11.5, fontWeight: 700, marginBottom: 6, color: "#3f3f46" }}>Dar es Salaam transport fee</label>
               <div style={{ display: "flex", alignItems: "center", border: `1px solid ${deliveryUnsaved ? "#111" : "#e4e4e7"}`, borderRadius: 10, overflow: "hidden", background: "#fafafa" }}>
                 <span style={{ padding: "10px 12px", fontSize: 12, fontWeight: 700, color: "#71717a", background: "#f4f4f5", borderRight: "1px solid #e4e4e7" }}>TZS</span>
                 <input
+                  id="pm-fee-dar"
                   value={delivery.dar}
                   onChange={(e) => { setDelivery({ ...delivery, dar: e.target.value.replace(/[^0-9]/g, "") }); setDeliveryUnsaved(true); }}
                   inputMode="numeric"
@@ -321,10 +340,11 @@ export function PaymentMethodsPage() {
               <small style={{ display: "block", marginTop: 5, fontSize: 10.5, color: "#a1a1aa" }}>Applies to every delivery inside Dar es Salaam.</small>
             </div>
             <div>
-              <label style={{ display: "block", fontSize: 11.5, fontWeight: 700, marginBottom: 6, color: "#3f3f46" }}>Outside Dar es Salaam transport fee</label>
+              <label htmlFor="pm-fee-outside" style={{ display: "block", fontSize: 11.5, fontWeight: 700, marginBottom: 6, color: "#3f3f46" }}>Outside Dar es Salaam transport fee</label>
               <div style={{ display: "flex", alignItems: "center", border: `1px solid ${deliveryUnsaved ? "#111" : "#e4e4e7"}`, borderRadius: 10, overflow: "hidden", background: "#fafafa" }}>
                 <span style={{ padding: "10px 12px", fontSize: 12, fontWeight: 700, color: "#71717a", background: "#f4f4f5", borderRight: "1px solid #e4e4e7" }}>TZS</span>
                 <input
+                  id="pm-fee-outside"
                   value={delivery.outside}
                   onChange={(e) => { setDelivery({ ...delivery, outside: e.target.value.replace(/[^0-9]/g, "") }); setDeliveryUnsaved(true); }}
                   inputMode="numeric"
@@ -337,10 +357,11 @@ export function PaymentMethodsPage() {
           </div>
 
           <div style={{ marginBottom: 16 }}>
-            <label style={{ display: "block", fontSize: 11.5, fontWeight: 700, marginBottom: 6, color: "#3f3f46" }}>
+            <label htmlFor="pm-cod-message" style={{ display: "block", fontSize: 11.5, fontWeight: 700, marginBottom: 6, color: "#3f3f46" }}>
               Cash on Delivery message <small style={{ fontWeight: 400, color: "#a1a1aa" }}>— shown when a customer selects Cash on Delivery at checkout. Leave blank to use the default wording.</small>
             </label>
             <textarea
+              id="pm-cod-message"
               value={delivery.codMessage}
               onChange={(e) => { setDelivery({ ...delivery, codMessage: e.target.value }); setDeliveryUnsaved(true); }}
               maxLength={500}
@@ -367,7 +388,7 @@ export function PaymentMethodsPage() {
       </section>
 
       {/* Payment methods */}
-      <div style={{ display: "grid", gap: 16, gridTemplateColumns: "1fr 1.2fr", alignItems: "start" }}>
+      <div className="pmCols">
         <section style={{ background: "#fff", border: "1px solid #ececec", borderRadius: 16, overflow: "hidden" }}>
           {sectionLabel(<Banknote size={16} />, "Cash on delivery", "Pay in cash when the order arrives.")}
           <CashCard />
@@ -397,20 +418,20 @@ export function PaymentMethodsPage() {
                 </span>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                    <GripVertical size={14} style={{ color: "#cbd5e1", cursor: "grab" }} />
                     <b style={{ fontSize: 13, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{m.name}</b>
                     {statusPill(m.isActive)}
                   </div>
-                  <small style={{ display: "block", color: "#888", fontSize: 11, marginTop: 2, paddingLeft: 22 }}>{m.paymentNumber ?? "—"}</small>
+                  <small style={{ display: "block", color: "#888", fontSize: 11, marginTop: 2, }}>{m.paymentNumber ?? "—"}</small>
                 </div>
                 <div style={{ display: "flex", alignItems: "center", gap: 6, flexShrink: 0 }}>
                   <span style={{ fontSize: 10, color: "#a1a1aa", fontWeight: 700, fontVariantNumeric: "tabular-nums" }}>#{m.displayOrder}</span>
-                  <button title="Move up" onClick={() => move(-1, i)} disabled={i === 0}><Check size={15} /></button>
-                  <button title="Edit" onClick={() => setEditor({ mode: "edit", id: m.id, kind: "ONLINE", name: m.name, paymentNumber: m.paymentNumber ?? "", instructions: m.instructions ?? "" })} data-role="edit-network"><Pencil size={14} /></button>
-                  <button title={m.isActive ? "Pause" : "Activate"} data-role="toggle-network" onClick={() => toggleActive(m)} style={{ color: m.isActive ? "#16a34a" : "#9ca3af" }}><Power size={15} /></button>
-                  <button title={m.iconUrl ? "Replace icon" : "Upload icon"} onClick={() => triggerIconUpload(m)}><Plus size={15} /></button>
-                  {m.iconUrl && <button title="Remove icon" onClick={() => removeIcon(m)}><X size={15} /></button>}
-                  <button title="Remove" onClick={() => remove(m)} style={{ color: "#e5484d" }}><Trash2 size={15} /></button>
+                  <button title="Move up" aria-label={`Move ${m.name} up`} onClick={() => move(-1, i)} disabled={i === 0}><ChevronUp size={15} /></button>
+                  <button title="Move down" aria-label={`Move ${m.name} down`} onClick={() => move(1, i)} disabled={i === online.length - 1}><ChevronDown size={15} /></button>
+                  <button title="Edit" aria-label={`Edit ${m.name}`} onClick={() => setEditor({ mode: "edit", id: m.id, kind: "ONLINE", name: m.name, paymentNumber: m.paymentNumber ?? "", instructions: m.instructions ?? "" })} data-role="edit-network"><Pencil size={14} /></button>
+                  <button title={m.isActive ? "Pause" : "Activate"} aria-label={`${m.isActive ? "Pause" : "Activate"} ${m.name}`} data-role="toggle-network" onClick={() => toggleActive(m)} style={{ color: m.isActive ? "#16a34a" : "#9ca3af" }}><Power size={15} /></button>
+                  <button title={m.iconUrl ? "Replace icon" : "Upload icon"} aria-label={`${m.iconUrl ? "Replace" : "Upload"} icon for ${m.name}`} onClick={() => triggerIconUpload(m)}><Plus size={15} /></button>
+                  {m.iconUrl && <button title="Remove icon" aria-label={`Remove icon from ${m.name}`} onClick={() => removeIcon(m)}><X size={15} /></button>}
+                  <button title="Remove" aria-label={`Remove ${m.name}`} onClick={() => remove(m)} style={{ color: "#e5484d" }}><Trash2 size={15} /></button>
                 </div>
               </div>
             ))

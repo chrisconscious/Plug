@@ -30,7 +30,7 @@ function AdminOrderDetailPage() {
   const [customer, setCustomer] = useState<api.AdminOrderDetail['customer']>(null);
   const [status, setStatus] = useState<'loading' | 'success' | 'not_found' | 'forbidden' | 'error'>('loading');
   const [updating, setUpdating] = useState(false);
-  const [banner, setBanner] = useState('');
+  const [banner, setBanner] = useState<{ text: string; tone: 'ok' | 'error' } | null>(null);
 
   const load = () => {
     if (!id) return;
@@ -52,12 +52,12 @@ function AdminOrderDetailPage() {
     try {
       const r = await api.updateOrderStatus(id, next);
       setOrder((cur) => (cur ? { ...cur, status: r.order.status } : cur));
-      setBanner('Status updated.');
+      setBanner({ text: 'Status updated.', tone: 'ok' });
     } catch (e) {
-      setBanner(userMessage(e, 'Could not update status.'));
+      setBanner({ text: userMessage(e, 'Could not update status.'), tone: 'error' });
     } finally {
       setUpdating(false);
-      setTimeout(() => setBanner(''), 3000);
+      setTimeout(() => setBanner((b) => (b?.tone === 'ok' ? null : b)), 3000);
     }
   };
 
@@ -72,7 +72,7 @@ function AdminOrderDetailPage() {
     <div style={{ maxWidth: 820, padding: 24 }}>
       <Link to="/admin/orders" style={{ fontSize: 12, fontWeight: 700, color: '#666' }}>&larr; ALL ORDERS</Link>
 
-      {banner && <div style={{ margin: '12px 0', padding: '8px 12px', borderRadius: 6, fontSize: 12.5, background: '#f0fdf4', color: '#166534' }}>{banner}</div>}
+      {banner && <div role={banner.tone === 'error' ? 'alert' : 'status'} style={{ margin: '12px 0', padding: '8px 12px', borderRadius: 6, fontSize: 12.5, background: banner.tone === 'error' ? '#fef2f2' : '#f0fdf4', color: banner.tone === 'error' ? '#b91c1c' : '#166534' }}>{banner.text}</div>}
 
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', margin: '16px 0' }}>
         <h1 style={{ font: '800 20px Manrope', margin: 0 }}>Order #{orderNumber}</h1>

@@ -77,26 +77,26 @@ export function NotificationBroadcastManagement() {
         </p>
         <form onSubmit={send} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
           <div>
-            <label style={{ display: 'block', fontSize: 11, fontWeight: 600, marginBottom: 4, color: '#555' }}>Audience</label>
-            <select value={roleScope} onChange={(e) => setRoleScope(e.target.value as typeof roleScope)} style={{ padding: '9px 10px', border: '1px solid #d4d4d4', borderRadius: 6, fontSize: 13, width: 220 }}>
+            <label style={{ display: 'block', fontSize: 11, fontWeight: 600, marginBottom: 4, color: '#555' }} htmlFor="nb-audience">Audience</label>
+            <select id="nb-audience" value={roleScope} onChange={(e) => setRoleScope(e.target.value as typeof roleScope)} style={{ padding: '9px 10px', border: '1px solid #d4d4d4', borderRadius: 6, fontSize: 13, width: 220 }}>
               <option value="CUSTOMER">Customers</option>
               <option value="ADMIN">Admins</option>
               <option value="SUPER_ADMIN">Super Admins</option>
             </select>
           </div>
           <div>
-            <label style={{ display: 'block', fontSize: 11, fontWeight: 600, marginBottom: 4, color: '#555' }}>Title</label>
-            <input value={title} onChange={(e) => setTitle(e.target.value)} maxLength={100} placeholder="NEW SEASON HAS ARRIVED" style={{ width: '100%', padding: '9px 11px', border: '1px solid #d4d4d4', borderRadius: 6, fontSize: 13 }} />
+            <label style={{ display: 'block', fontSize: 11, fontWeight: 600, marginBottom: 4, color: '#555' }} htmlFor="nb-title">Title</label>
+            <input id="nb-title" value={title} onChange={(e) => setTitle(e.target.value)} maxLength={100} placeholder="NEW SEASON HAS ARRIVED" style={{ width: '100%', padding: '9px 11px', border: '1px solid #d4d4d4', borderRadius: 6, fontSize: 13 }} />
           </div>
           <div>
-            <label style={{ display: 'block', fontSize: 11, fontWeight: 600, marginBottom: 4, color: '#555' }}>Message</label>
-            <textarea value={message} onChange={(e) => setMessage(e.target.value)} maxLength={300} placeholder="Explore the latest PLUG collection." style={{ width: '100%', padding: '9px 11px', border: '1px solid #d4d4d4', borderRadius: 6, fontSize: 13, minHeight: 64, fontFamily: 'inherit', resize: 'vertical' }} />
+            <label style={{ display: 'block', fontSize: 11, fontWeight: 600, marginBottom: 4, color: '#555' }} htmlFor="nb-message">Message</label>
+            <textarea id="nb-message" value={message} onChange={(e) => setMessage(e.target.value)} maxLength={300} placeholder="Explore the latest PLUG collection." style={{ width: '100%', padding: '9px 11px', border: '1px solid #d4d4d4', borderRadius: 6, fontSize: 13, minHeight: 64, fontFamily: 'inherit', resize: 'vertical' }} />
           </div>
           <div>
-            <label style={{ display: 'block', fontSize: 11, fontWeight: 600, marginBottom: 4, color: '#555' }}>
+            <label htmlFor="nb-link" style={{ display: 'block', fontSize: 11, fontWeight: 600, marginBottom: 4, color: '#555' }}>
               Link <small style={{ fontWeight: 400, color: '#999' }}>(optional — where tapping the notification takes the user, e.g. /shop?collection=new-season)</small>
             </label>
-            <input value={actionUrl} onChange={(e) => setActionUrl(e.target.value)} placeholder="/shop" style={{ width: '100%', padding: '9px 11px', border: '1px solid #d4d4d4', borderRadius: 6, fontSize: 13 }} />
+            <input id="nb-link" value={actionUrl} onChange={(e) => setActionUrl(e.target.value)} placeholder="/shop" style={{ width: '100%', padding: '9px 11px', border: '1px solid #d4d4d4', borderRadius: 6, fontSize: 13 }} />
           </div>
           <button type="submit" className="blackButton" disabled={sending} style={{ alignSelf: 'flex-start' }}>
             {sending ? 'Sending…' : 'SEND NOTIFICATION'}
@@ -126,7 +126,7 @@ export function NotificationBroadcastManagement() {
                 <p style={{ fontSize: 12.5, color: '#666', margin: '0 0 8px' }}>{n.message}</p>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                   <span style={{ fontSize: 11, color: '#999' }}>{new Date(n.createdAt).toLocaleString()}</span>
-                  <button type="button" onClick={() => toggleActive(n)} style={{ fontSize: 11, fontWeight: 700, background: 'none', border: 'none', color: n.active ? '#b91c1c' : '#166534', cursor: 'pointer' }}>
+                  <button type="button" onClick={() => toggleActive(n)} aria-label={`${n.active ? 'Deactivate' : 'Activate'} notification ${n.title}`} style={{ fontSize: 11, fontWeight: 700, background: 'none', border: 'none', color: n.active ? '#b91c1c' : '#166534', cursor: 'pointer' }}>
                     {n.active ? 'DEACTIVATE' : 'ACTIVATE'}
                   </button>
                 </div>

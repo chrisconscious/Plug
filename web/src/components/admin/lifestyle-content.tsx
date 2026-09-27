@@ -338,6 +338,7 @@ export function LifestyleManagementPage() {
                     <button
                       type="button"
                       className="lsadm-ghost"
+                      aria-label={`Edit ${l.name}`}
                       onClick={() => setEditor({ mode: "edit", lifestyle: l })}
                     >
                       <Pencil size={13} /> Edit
@@ -345,6 +346,7 @@ export function LifestyleManagementPage() {
                     <button
                       type="button"
                       className="lsadm-ghost danger"
+                      aria-label={`Delete ${l.name}`}
                       onClick={() => setDeleteTarget(l)}
                       disabled={busyId !== null}
                     >

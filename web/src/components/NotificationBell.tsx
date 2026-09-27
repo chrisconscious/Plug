@@ -3,6 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { Bell, Package, CreditCard, Tag, Megaphone, Heart, Boxes, Users, ShieldAlert, Shield } from 'lucide-react';
 import * as api from '../lib/api';
 import { safeReturnTo } from '../lib/returnTo';
+import { userMessage } from '../lib/errors';
+import { announceNotificationsChanged, onNotificationsChanged } from '../lib/notificationsSync';
 
 const CATEGORY_ICON: Record<api.NotificationCategory, React.ReactNode> = {
   ORDER: <Package size={15} />,
@@ -44,6 +46,7 @@ export function NotificationBell({ alwaysVisible = false }: { alwaysVisible?: bo
   const [items, setItems] = useState<api.AppNotification[] | null>(null);
   const [loadFailed, setLoadFailed] = useState(false);
   const [marking, setMarking] = useState(false);
+  const [markError, setMarkError] = useState<string | null>(null);
   const panelRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -51,7 +54,8 @@ export function NotificationBell({ alwaysVisible = false }: { alwaysVisible?: bo
     const poll = () => api.getUnreadNotificationCount().then((r) => { if (on) setUnread(r.count); }).catch(() => {});
     poll();
     const id = setInterval(poll, 30000);
-    return () => { on = false; clearInterval(id); };
+    const off = onNotificationsChanged(poll);
+    return () => { on = false; clearInterval(id); off(); };
   }, []);
 
   useEffect(() => {
@@ -75,7 +79,8 @@ export function NotificationBell({ alwaysVisible = false }: { alwaysVisible?: bo
     if (!n.isRead) {
       setItems((cur) => cur?.map((x) => (x.id === n.id ? { ...x, isRead: true } : x)) ?? cur);
       setUnread((c) => Math.max(0, c - 1));
-      api.markNotificationRead(n.id).catch(() => {});
+      // Whether it saved or not, every surface re-reads the real count.
+      api.markNotificationRead(n.id).catch(() => {}).finally(announceNotificationsChanged);
     }
     setOpen(false);
     // Only ever an in-store page (same rule as sign-in return links).
@@ -85,12 +90,14 @@ export function NotificationBell({ alwaysVisible = false }: { alwaysVisible?: bo
 
   const markAllRead = async () => {
     setMarking(true);
+    setMarkError(null);
     try {
       await api.markAllNotificationsRead();
       setItems((cur) => cur?.map((x) => ({ ...x, isRead: true })) ?? cur);
       setUnread(0);
-    } catch {
-      /* best-effort — the next poll will reconcile the real count regardless */
+      announceNotificationsChanged();
+    } catch (e) {
+      setMarkError(userMessage(e, "Couldn't mark them as read — please try again."));
     } finally {
       setMarking(false);
     }
@@ -119,6 +126,7 @@ export function NotificationBell({ alwaysVisible = false }: { alwaysVisible?: bo
               <button type="button" className="notifMarkAll" disabled={marking} onClick={markAllRead}>Mark all as read</button>
             )}
           </div>
+          {markError && <p role="alert" style={{ margin: '4px 16px 8px', fontSize: 12, color: '#b91c1c' }}>{markError}</p>}
           <div className="notifList">
             {items === null && loadFailed ? (
               <div className="notifEmpty" role="alert">

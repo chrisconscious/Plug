@@ -136,10 +136,10 @@ export function PlatformBrandingSettings() {
       <section style={{ border: '1px solid #e5e5e5', borderRadius: 10, padding: 20 }}>
         <h3 style={{ font: '800 15px Manrope', margin: '0 0 4px' }}>Platform identity</h3>
         <p style={{ fontSize: 12.5, color: '#71717a', margin: '0 0 16px' }}>Shown across the entire storefront — header, footer, browser tab, and every customer-facing page.</p>
-        <label style={{ display: 'block', fontSize: 12, fontWeight: 600, marginBottom: 6 }}>Platform name</label>
-        <input value={name} onChange={(e) => setName(e.target.value)} maxLength={60} style={{ width: '100%', padding: '10px 12px', border: '1px solid #d4d4d4', borderRadius: 6, fontSize: 14, marginBottom: 14 }} />
-        <label style={{ display: 'block', fontSize: 12, fontWeight: 600, marginBottom: 6 }}>Tagline (optional)</label>
-        <input value={tagline} onChange={(e) => setTagline(e.target.value)} maxLength={140} placeholder="e.g. Style, plugged in." style={{ width: '100%', padding: '10px 12px', border: '1px solid #d4d4d4', borderRadius: 6, fontSize: 14, marginBottom: 14 }} />
+        <label htmlFor="pb-name" style={{ display: 'block', fontSize: 12, fontWeight: 600, marginBottom: 6 }}>Platform name</label>
+        <input id="pb-name" value={name} onChange={(e) => setName(e.target.value)} maxLength={60} style={{ width: '100%', padding: '10px 12px', border: '1px solid #d4d4d4', borderRadius: 6, fontSize: 14, marginBottom: 14 }} />
+        <label htmlFor="pb-tagline" style={{ display: 'block', fontSize: 12, fontWeight: 600, marginBottom: 6 }}>Tagline (optional)</label>
+        <input id="pb-tagline" value={tagline} onChange={(e) => setTagline(e.target.value)} maxLength={140} placeholder="e.g. Style, plugged in." style={{ width: '100%', padding: '10px 12px', border: '1px solid #d4d4d4', borderRadius: 6, fontSize: 14, marginBottom: 14 }} />
         {saveDetails.error && <p role="alert" style={{ color: '#c00', fontSize: 12, marginBottom: 10 }}>{saveDetails.error}</p>}
         <button className="blackButton" disabled={saveDetails.pending} onClick={() => saveDetails.run()}>
           {saveDetails.pending ? 'Saving…' : 'Save changes'}
@@ -174,7 +174,7 @@ export function PlatformBrandingSettings() {
               <Upload size={14} /> {uploadLogo.pending ? 'Uploading…' : settings.logoUrl ? 'Replace logo' : 'Upload logo'}
             </button>
             {settings.logoUrl && (
-              <button type="button" onClick={() => removeLogo.run()} disabled={removeLogo.pending} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, color: '#c00', background: 'none', border: 'none', cursor: 'pointer', fontSize: 13, padding: 0 }}>
+              <button type="button" onClick={() => { if (window.confirm("Remove the logo? The platform name will show as text until a new logo is uploaded.")) removeLogo.run(); }} disabled={removeLogo.pending} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, color: '#c00', background: 'none', border: 'none', cursor: 'pointer', fontSize: 13, padding: 0 }}>
                 <Trash2 size={14} /> {removeLogo.pending ? 'Removing…' : 'Remove logo'}
               </button>
             )}
@@ -207,7 +207,7 @@ export function PlatformBrandingSettings() {
               <Upload size={14} /> {uploadFavicon.pending ? 'Uploading…' : settings.faviconUrl ? 'Replace favicon' : 'Upload favicon'}
             </button>
             {settings.faviconUrl && (
-              <button type="button" onClick={() => removeFavicon.run()} disabled={removeFavicon.pending} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, color: '#c00', background: 'none', border: 'none', cursor: 'pointer', fontSize: 13, padding: 0 }}>
+              <button type="button" onClick={() => { if (window.confirm("Remove the favicon? Browsers will show a default icon.")) removeFavicon.run(); }} disabled={removeFavicon.pending} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, color: '#c00', background: 'none', border: 'none', cursor: 'pointer', fontSize: 13, padding: 0 }}>
                 <Trash2 size={14} /> {removeFavicon.pending ? 'Removing…' : 'Remove favicon'}
               </button>
             )}
@@ -242,7 +242,7 @@ export function PlatformBrandingSettings() {
               <Upload size={14} /> {uploadPwaIcon.pending ? 'Uploading…' : settings.pwaIconUrl ? 'Replace app icon' : 'Upload app icon'}
             </button>
             {settings.pwaIconUrl && (
-              <button type="button" onClick={() => removePwaIcon.run()} disabled={removePwaIcon.pending} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, color: '#c00', background: 'none', border: 'none', cursor: 'pointer', fontSize: 13, padding: 0 }}>
+              <button type="button" onClick={() => { if (window.confirm("Remove the app icon? Installed apps fall back to a default icon.")) removePwaIcon.run(); }} disabled={removePwaIcon.pending} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, color: '#c00', background: 'none', border: 'none', cursor: 'pointer', fontSize: 13, padding: 0 }}>
                 <Trash2 size={14} /> {removePwaIcon.pending ? 'Removing…' : 'Remove app icon'}
               </button>
             )}

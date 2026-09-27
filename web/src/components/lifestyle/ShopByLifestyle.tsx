@@ -183,6 +183,9 @@ function FlowingRows({ items, arrows }: FlowingRowsProps) {
 
   const onPointerDown = (e: React.PointerEvent) => {
     if (reducedRef.current) return;
+    // The arrow buttons live inside this viewport: pressing one is a click,
+    // never the start of a drag.
+    if ((e.target as Element).closest("button")) return;
     engine.dragging = true;
     engine.moved = false;
     engine.momentum = 0;
@@ -190,18 +193,26 @@ function FlowingRows({ items, arrows }: FlowingRowsProps) {
     engine.startX = e.clientX;
     engine.lastX = e.clientX;
     engine.lastT = performance.now();
-    try {
-      (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
-    } catch {
-      /* pointer capture is optional */
-    }
-    vpRef.current?.classList.add("is-dragging");
+    // No pointer capture yet. Capturing on press redirected the click that
+    // follows a plain press/release to this viewport instead of the card link
+    // or arrow under the pointer, so clicking a lifestyle card did nothing and
+    // the arrows never fired. Capture starts only once a real drag begins.
   };
 
   const onPointerMove = (e: React.PointerEvent) => {
     if (!engine.dragging) return;
     const dx = e.clientX - engine.lastX;
     if (!engine.moved && Math.abs(e.clientX - engine.startX) < 6) return;
+    if (!engine.moved) {
+      // Movement passed the threshold: this is a drag. Keep following the
+      // pointer even when it leaves the row.
+      try {
+        (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+      } catch {
+        /* pointer capture is optional */
+      }
+      vpRef.current?.classList.add("is-dragging");
+    }
     engine.moved = true;
     const nowT = performance.now();
     const dtt = Math.max(1, nowT - engine.lastT);
@@ -216,7 +227,8 @@ function FlowingRows({ items, arrows }: FlowingRowsProps) {
     if (!engine.dragging) return;
     engine.dragging = false;
     try {
-      (e.currentTarget as HTMLElement).releasePointerCapture?.(e.pointerId);
+      const el = e.currentTarget as HTMLElement;
+      if (el.hasPointerCapture?.(e.pointerId)) el.releasePointerCapture(e.pointerId);
     } catch {
       /* pointer capture is optional */
     }

@@ -66,7 +66,7 @@ export function ProductManagementTable({
   canAdd: boolean;
   onAdd: () => void;
   onEdit: (p: api.Product) => void;
-  setBanner: (msg: string) => void;
+  setBanner: (msg: string, tone?: "ok" | "error") => void;
 }) {
   const [items, setItems] = useState<api.Product[]>([]);
   const [total, setTotal] = useState(0);
@@ -114,10 +114,8 @@ export function ProductManagementTable({
 
   useEffect(() => { void load(); }, [load, reloadKey]);
 
-  const flash = (msg: string) => {
-    setBanner(msg);
-    window.setTimeout(() => setBanner(""), 4500);
-  };
+  // The parent banner owns the dismiss timer (errors stay up longer).
+  const flash = (msg: string, tone: "ok" | "error" = "ok") => setBanner(msg, tone);
 
   const run = async (p: api.Product, action: () => Promise<unknown>, ok: string) => {
     setBusyId(p.id);
@@ -126,7 +124,7 @@ export function ProductManagementTable({
       flash(ok);
       await load();
     } catch (e) {
-      flash(describe(e, "That didn't work — please try again."));
+      flash(describe(e, "That didn't work — please try again."), "error");
     } finally {
       setBusyId(null);
     }

@@ -108,7 +108,7 @@ export function HeroContentPage() {
       const r = await reorderAdminHeroSlides(ordered);
       setSlides(r.slides);
     } catch (e) {
-      setNotice(`Reorder failed: ${userMessage(e, "unknown error")}`);
+      setError(`Reorder failed: ${userMessage(e, "unknown error")}`);
     }
   };
 
@@ -119,7 +119,7 @@ export function HeroContentPage() {
       setSlides((prev) => prev.filter((x) => x.id !== s.id));
       setNotice("Hero advertisement deleted.");
     } catch (e) {
-      setNotice(`Delete failed: ${userMessage(e, "unknown error")}`);
+      setError(`Delete failed: ${userMessage(e, "unknown error")}`);
     }
   };
 
@@ -140,14 +140,14 @@ export function HeroContentPage() {
       </div>
 
       {error && (
-        <div style={{ padding: 14, borderRadius: 8, border: "1px solid #fecaca", background: "#fef2f2", color: "#b91c1c", marginBottom: 16 }}>
+        <div role="alert" style={{ padding: 14, borderRadius: 8, border: "1px solid #fecaca", background: "#fef2f2", color: "#b91c1c", marginBottom: 16 }}>
           {error}
           <button onClick={loadSlides} style={{ marginLeft: 12, textDecoration: "underline" }}>Retry</button>
           <button onClick={dismissError} style={{ marginLeft: 12, textDecoration: "underline" }}>Dismiss</button>
         </div>
       )}
       {notice && (
-        <div style={{ padding: 12, borderRadius: 8, border: "1px solid #d1d5db", background: "#f8fafc", color: "#334155", marginBottom: 16 }}>
+        <div role="status" style={{ padding: 12, borderRadius: 8, border: "1px solid #d1d5db", background: "#f8fafc", color: "#334155", marginBottom: 16 }}>
           {notice}
           <button onClick={() => setNotice(null)} style={{ marginLeft: 12, textDecoration: "underline" }}>Dismiss</button>
         </div>
@@ -245,16 +245,16 @@ export function HeroContentPage() {
                   </p>
                 </div>
                 <div style={{ display: "flex", gap: 6, flexShrink: 0 }}>
-                  <button title="Move up" onClick={() => onReorder(s.id, -1)} disabled={i === 0} className="iconBtn" style={i === 0 ? { opacity: 0.3, cursor: "not-allowed" } : undefined}>
+                  <button title="Move up" aria-label={`Move ${s.headline} up`} onClick={() => onReorder(s.id, -1)} disabled={i === 0} className="iconBtn" style={i === 0 ? { opacity: 0.3, cursor: "not-allowed" } : undefined}>
                     <ChevronUp size={16} />
                   </button>
-                  <button title="Move down" onClick={() => onReorder(s.id, 1)} disabled={i === slides.length - 1} className="iconBtn" style={i === slides.length - 1 ? { opacity: 0.3, cursor: "not-allowed" } : undefined}>
+                  <button title="Move down" aria-label={`Move ${s.headline} down`} onClick={() => onReorder(s.id, 1)} disabled={i === slides.length - 1} className="iconBtn" style={i === slides.length - 1 ? { opacity: 0.3, cursor: "not-allowed" } : undefined}>
                     <ChevronDown size={16} />
                   </button>
-                  <button title="Edit" onClick={() => setEditor({ mode: "edit", slide: s })} className="iconBtn">
+                  <button title="Edit" aria-label={`Edit ${s.headline}`} onClick={() => setEditor({ mode: "edit", slide: s })} className="iconBtn">
                     <Pencil size={16} />
                   </button>
-                  <button title="Delete" onClick={() => onDelete(s)} className="iconBtn" style={{ color: "#b91c1c" }}>
+                  <button title="Delete" aria-label={`Delete ${s.headline}`} onClick={() => onDelete(s)} className="iconBtn" style={{ color: "#b91c1c" }}>
                     <Trash2 size={16} />
                   </button>
                 </div>
@@ -541,52 +541,52 @@ function HeroEditor({
           </div>
         </div>
 
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
+        <div className="heroGrid2" style={{ display: "grid", gap: 14 }}>
           <div>
             <span style={labelStyle}>Campaign label</span>
-            <input style={inputStyle} value={campaignLabel} onChange={(e) => setCampaignLabel(e.target.value)} placeholder="e.g. SS25 Collection" />
+            <input aria-label="Campaign label" style={inputStyle} value={campaignLabel} onChange={(e) => setCampaignLabel(e.target.value)} placeholder="e.g. SS25 Collection" />
           </div>
           <div>
             <span style={labelStyle}>Headline</span>
-            <input style={inputStyle} value={headline} onChange={(e) => setHeadline(e.target.value)} placeholder="e.g. The Season's New Arrivals" />
+            <input aria-label="Headline" style={inputStyle} value={headline} onChange={(e) => setHeadline(e.target.value)} placeholder="e.g. The Season's New Arrivals" />
           </div>
         </div>
 
         <div style={{ marginTop: 14 }}>
           <span style={labelStyle}>Description</span>
-          <textarea style={{ ...inputStyle, minHeight: 64, resize: "vertical" }} value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Short supporting copy for the slide" />
+          <textarea aria-label="Description" style={{ ...inputStyle, minHeight: 64, resize: "vertical" }} value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Short supporting copy for the slide" />
         </div>
 
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14, marginTop: 14 }}>
+        <div className="heroGrid2" style={{ display: "grid", gap: 14, marginTop: 14 }}>
           <div>
             <span style={labelStyle}>CTA text</span>
-            <input style={inputStyle} value={ctaText} onChange={(e) => setCtaText(e.target.value)} placeholder="e.g. Shop Now" />
+            <input aria-label="CTA text" style={inputStyle} value={ctaText} onChange={(e) => setCtaText(e.target.value)} placeholder="e.g. Shop Now" />
           </div>
           <div>
             <span style={labelStyle}>CTA link</span>
-            <input style={inputStyle} value={ctaUrl} onChange={(e) => setCtaUrl(e.target.value)} placeholder="/shop?collection=new" />
+            <input aria-label="CTA link" style={inputStyle} value={ctaUrl} onChange={(e) => setCtaUrl(e.target.value)} placeholder="/shop?collection=new" />
           </div>
         </div>
 
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14, marginTop: 14 }}>
+        <div className="heroGrid2" style={{ display: "grid", gap: 14, marginTop: 14 }}>
           <div>
             <span style={labelStyle}>Second button text <small style={{ fontWeight: 400, color: "#888" }}>(optional — e.g. for a Men/Women choice slide)</small></span>
-            <input style={inputStyle} value={cta2Text} onChange={(e) => setCta2Text(e.target.value)} placeholder="e.g. Shop Women" />
+            <input aria-label="Second button text" style={inputStyle} value={cta2Text} onChange={(e) => setCta2Text(e.target.value)} placeholder="e.g. Shop Women" />
           </div>
           <div>
             <span style={labelStyle}>Second button link <small style={{ fontWeight: 400, color: "#888" }}>(required if the text above is set)</small></span>
-            <input style={inputStyle} value={cta2Url} onChange={(e) => setCta2Url(e.target.value)} placeholder="/category/women" />
+            <input aria-label="Second button link" style={inputStyle} value={cta2Url} onChange={(e) => setCta2Url(e.target.value)} placeholder="/shop?gender=women" />
           </div>
         </div>
 
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14, marginTop: 14 }}>
+        <div className="heroGrid2" style={{ display: "grid", gap: 14, marginTop: 14 }}>
           <div>
             <span style={labelStyle}>Badge text</span>
-            <input style={inputStyle} value={badgeText} onChange={(e) => setBadgeText(e.target.value)} placeholder="e.g. New Season (optional)" />
+            <input aria-label="Badge text" style={inputStyle} value={badgeText} onChange={(e) => setBadgeText(e.target.value)} placeholder="e.g. New Season (optional)" />
           </div>
           <div>
             <span style={labelStyle}>Editorial text</span>
-            <input style={inputStyle} value={editorialText} onChange={(e) => setEditorialText(e.target.value)} placeholder="Magazine caption (editorial only)" />
+            <input aria-label="Editorial text" style={inputStyle} value={editorialText} onChange={(e) => setEditorialText(e.target.value)} placeholder="Magazine caption (editorial only)" />
           </div>
         </div>
 
@@ -615,14 +615,14 @@ function HeroEditor({
           </div>
         </div>
 
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14, marginTop: 14 }}>
+        <div className="heroGrid2" style={{ display: "grid", gap: 14, marginTop: 14 }}>
           <div>
             <span style={labelStyle}>Start date</span>
-            <input type="datetime-local" style={inputStyle} value={startDate} onChange={(e) => setStartDate(e.target.value)} />
+            <input aria-label="Start date" type="datetime-local" style={inputStyle} value={startDate} onChange={(e) => setStartDate(e.target.value)} />
           </div>
           <div>
             <span style={labelStyle}>End date</span>
-            <input type="datetime-local" style={inputStyle} value={endDate} onChange={(e) => setEndDate(e.target.value)} />
+            <input aria-label="End date" type="datetime-local" style={inputStyle} value={endDate} onChange={(e) => setEndDate(e.target.value)} />
           </div>
         </div>
 

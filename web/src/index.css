@@ -1792,3 +1792,25 @@ body.install-prompt-visible .waFab{
 .adminHeader>div>button{border:1px solid #e4e4e4;background:#fff;padding:7px 10px;border-radius:5px;cursor:pointer}
 .adminHeader .notifBellBtn{border:0}
 @media(max-width:900px){.adminMenuBtn{display:inline-flex}.adminSidebar .navSection,.adminSidebar .visitStore{display:none}.adminSidebar.open .navSection,.adminSidebar.open .visitStore{display:flex;flex-direction:column}.adminHeader{padding:0 14px}.adminHeader>div{gap:10px}.adminHeader>div>span{display:none}}
+/* Categories & Brands panels: the action column sizes to its buttons and
+   wraps inside the row, so no action is ever clipped or covered by the next row. */
+.catalogPanels{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.catalogRow{grid-template-columns:minmax(0,1fr) 56px 64px auto}
+.catalogActions{display:flex;flex-wrap:wrap;gap:2px 4px;justify-content:flex-end;max-width:132px}
+.catalogActions button{display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:5px;cursor:pointer}
+.catalogActions button:hover{background:#f1efe9}
+@media(max-width:1100px){.catalogPanels{grid-template-columns:1fr}}
+
+/* Payments page: stack its grids on small screens and keep the header action visible. */
+.pmStats{display:grid;gap:12px;grid-template-columns:repeat(3,minmax(0,1fr));margin-bottom:18px}
+.pmFees{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:18px}
+.pmCols{display:grid;gap:16px;grid-template-columns:1fr 1.2fr;align-items:start}
+@media(max-width:900px){.pmStats,.pmFees,.pmCols{grid-template-columns:1fr}.pmHero{flex-wrap:wrap}.pmHero .blackButton{width:100%}}
+/* Tables whose rows carry actions (order status select + view link, admin toggles): the fixed
+   70px/50px actions column is too narrow, so the controls spilled past the row edge. */
+.wideActions .tableHead,.wideActions .tableRow{grid-template-columns:minmax(0,2fr) minmax(0,1fr) minmax(0,1fr) auto}
+@media(max-width:900px){.wideActions .tableHead,.wideActions .tableRow{grid-template-columns:minmax(0,2fr) minmax(0,1fr) auto}}
+
+/* Hero slide editor: two-up fields stack on phones. */
+.heroGrid2{grid-template-columns:1fr 1fr}
+@media(max-width:600px){.heroGrid2{grid-template-columns:1fr}}

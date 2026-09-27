@@ -1,35 +1,38 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
-import { useEffect } from 'react';
+import { lazy, Suspense, useEffect } from 'react';
 import { reportClientError } from './lib/api';
 import Index from './pages/Index';
 import { MobileBottomNav } from './components/MobileBottomNav';
 import { InstallPrompt } from './components/InstallPrompt';
 import { NotificationToaster } from './components/NotificationToaster';
 import { FloatingWhatsAppButton } from './components/FloatingWhatsAppButton';
-import NotFound from './pages/NotFound';
-import ProductDetail from './pages/ProductDetail';
-import Cart from './pages/Cart';
-import Checkout from './pages/Checkout';
-import Confirmation from './pages/Confirmation';
-import Auth from './pages/Auth';
-import VerifyEmail from './pages/VerifyEmail';
-import ForgotPassword from './pages/ForgotPassword';
-import ResetPassword from './pages/ResetPassword';
-import Profile from './pages/Profile';
-import Orders from './pages/Orders';
-import OrderDetail from './pages/OrderDetail';
-import AdminOrderDetail from './pages/AdminOrderDetail';
-import Wishlist from './pages/Wishlist';
-import Notifications from './pages/Notifications';
-import Brands from './pages/Brands';
-import Lifestyles from './pages/Lifestyles';
-import Backoffice from './pages/Backoffice';
-import { ProductListingPage } from './components/shop/ProductListingPage';
-import { LifestylePage } from './components/lifestyle/LifestylePage';
 import { superItems, adminItems } from './lib/adminNav';
 import { RequireRole } from './components/RequireRole';
 import { AuthProvider } from './lib/AuthContext';
 import { PlatformSettingsProvider } from './lib/PlatformSettingsContext';
+
+// Every page except the homepage is loaded on demand, so a first visit only
+// downloads the homepage (checkout, account and admin code come later).
+const NotFound = lazy(() => import('./pages/NotFound'));
+const ProductDetail = lazy(() => import('./pages/ProductDetail'));
+const Cart = lazy(() => import('./pages/Cart'));
+const Checkout = lazy(() => import('./pages/Checkout'));
+const Confirmation = lazy(() => import('./pages/Confirmation'));
+const Auth = lazy(() => import('./pages/Auth'));
+const VerifyEmail = lazy(() => import('./pages/VerifyEmail'));
+const ForgotPassword = lazy(() => import('./pages/ForgotPassword'));
+const ResetPassword = lazy(() => import('./pages/ResetPassword'));
+const Profile = lazy(() => import('./pages/Profile'));
+const Orders = lazy(() => import('./pages/Orders'));
+const OrderDetail = lazy(() => import('./pages/OrderDetail'));
+const AdminOrderDetail = lazy(() => import('./pages/AdminOrderDetail'));
+const Wishlist = lazy(() => import('./pages/Wishlist'));
+const Notifications = lazy(() => import('./pages/Notifications'));
+const Brands = lazy(() => import('./pages/Brands'));
+const Lifestyles = lazy(() => import('./pages/Lifestyles'));
+const Backoffice = lazy(() => import('./pages/Backoffice'));
+const ProductListingPage = lazy(() => import('./components/shop/ProductListingPage').then((m) => ({ default: m.ProductListingPage })));
+const LifestylePage = lazy(() => import('./components/lifestyle/LifestylePage').then((m) => ({ default: m.LifestylePage })));
 
 function App() {
   useEffect(() => {
@@ -102,6 +105,7 @@ function App() {
     <PlatformSettingsProvider>
     <AuthProvider>
       <BrowserRouter basename={import.meta.env.BASE_URL} future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+      <Suspense fallback={<div aria-busy="true" style={{ minHeight: '60vh' }} />}>
       <Routes>
         <Route path="/" element={<Index />} />
         <Route path="/shop" element={<ProductListingPage />} />
@@ -128,6 +132,7 @@ function App() {
         <Route path="/admin/orders/:id" element={<RequireRole roles={['ADMIN', 'SUPER_ADMIN']}><AdminOrderDetail /></RequireRole>} />
         <Route path="*" element={<NotFound />} />
       </Routes>
+      </Suspense>
       <MobileBottomNav />
       <InstallPrompt />
       <NotificationToaster />

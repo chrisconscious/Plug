@@ -49,6 +49,15 @@ export default defineConfig(() => ({
       "@": path.resolve(__dirname, "./src"),
     },
   },
+  build: {
+    rollupOptions: {
+      output: {
+        // React + router change rarely: a separate file stays in the browser
+        // cache across our deploys instead of being re-downloaded each time.
+        manualChunks: { react: ["react", "react-dom", "react-router-dom"] },
+      },
+    },
+  },
   server: {
    port: 5173,
    strictPort: true,

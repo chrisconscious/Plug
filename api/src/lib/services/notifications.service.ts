@@ -87,6 +87,26 @@ export async function notifyAdminsNewOrder(orderId: string, totalTzs: number) {
   });
 }
 
+/**
+ * "New arrival" for customers, sent the first time a product goes live.
+ * One broadcast row (read state per customer lives in notification_reads),
+ * never a row per customer. Un-publishing and re-publishing the same product
+ * does not announce it again.
+ */
+export async function notifyCustomersNewProduct(product: { id: string; name: string; slug: string; imageUrl?: string | null; brandName?: string | null }) {
+  if (await notificationsRepo.hasRoleNotificationForEntity("CUSTOMER", "PRODUCT", "product", product.id)) return;
+  await notifyRole({
+    roleScope: "CUSTOMER",
+    category: "PRODUCT",
+    title: "New arrival",
+    message: product.brandName ? `${product.name} by ${product.brandName} is now available.` : `${product.name} is now available.`,
+    entityType: "product",
+    entityId: product.id,
+    actionUrl: `/product/${product.slug}`,
+    imageUrl: product.imageUrl ?? null,
+  });
+}
+
 export async function notifyAdminsLowStock(productName: string, variantId: string, stockQty: number) {
   await notifyRole({
     roleScope: "ADMIN",

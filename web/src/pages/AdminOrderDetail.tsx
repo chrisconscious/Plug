@@ -3,8 +3,19 @@ import { useParams, Link } from 'react-router-dom';
 import * as api from '../lib/api';
 import { ORDER_STATUS_LABEL as STATUS_LABEL } from '../lib/orderStatus';
 import { formatTZS } from '../lib/currency';
+import { userMessage } from "../lib/errors";
 
-const STATUSES: api.Order['status'][] = ['PENDING', 'PAID', 'SHIPPED', 'DELIVERED', 'CANCELLED'];
+/** The moves the API allows from each status (orders.repo VALID_TRANSITIONS) — nothing else is offered. */
+const NEXT_STATUSES: Record<api.Order['status'], api.Order['status'][]> = {
+  PENDING: ['PAID', 'CANCELLED'],
+  PAID: ['SHIPPED', 'CANCELLED'],
+  SHIPPED: ['DELIVERED'],
+  DELIVERED: [],
+  CANCELLED: [],
+};
+
+const card: React.CSSProperties = { border: '1px solid #ece9e2', borderRadius: 8, padding: '12px 14px', fontSize: 13, lineHeight: 1.6 };
+const cardTitle: React.CSSProperties = { fontSize: 11, fontWeight: 800, letterSpacing: '.12em', color: '#71717a', margin: '0 0 6px' };
 
 /**
  * Standalone route, not one of the Backoffice-dispatched nav-item pages —
@@ -15,7 +26,8 @@ const STATUSES: api.Order['status'][] = ['PENDING', 'PAID', 'SHIPPED', 'DELIVERE
  */
 function AdminOrderDetailPage() {
   const { id } = useParams<{ id: string }>();
-  const [order, setOrder] = useState<api.Order | null>(null);
+  const [order, setOrder] = useState<api.AdminOrderDetail['order'] | null>(null);
+  const [customer, setCustomer] = useState<api.AdminOrderDetail['customer']>(null);
   const [status, setStatus] = useState<'loading' | 'success' | 'not_found' | 'forbidden' | 'error'>('loading');
   const [updating, setUpdating] = useState(false);
   const [banner, setBanner] = useState('');
@@ -24,7 +36,7 @@ function AdminOrderDetailPage() {
     if (!id) return;
     setStatus('loading');
     api.getAdminOrder(id)
-      .then((r) => { setOrder(r.order); setStatus('success'); })
+      .then((r) => { setOrder(r.order); setCustomer(r.customer); setStatus('success'); })
       .catch((e) => {
         if (e instanceof api.ApiError && e.status === 404) setStatus('not_found');
         else if (e instanceof api.ApiError && e.status === 403) setStatus('forbidden');
@@ -35,13 +47,14 @@ function AdminOrderDetailPage() {
 
   const changeStatus = async (next: api.Order['status']) => {
     if (!id || !order) return;
+    if (next === 'CANCELLED' && !window.confirm('Cancel this order? Its items go back into stock and any coupon it used is released.')) return;
     setUpdating(true);
     try {
       const r = await api.updateOrderStatus(id, next);
       setOrder((cur) => (cur ? { ...cur, status: r.order.status } : cur));
       setBanner('Status updated.');
     } catch (e) {
-      setBanner(e instanceof api.ApiError ? e.message : 'Could not update status.');
+      setBanner(userMessage(e, 'Could not update status.'));
     } finally {
       setUpdating(false);
       setTimeout(() => setBanner(''), 3000);
@@ -56,27 +69,68 @@ function AdminOrderDetailPage() {
   if (status === 'error' || !order) return <div style={{ padding: 40, fontSize: 13, color: '#c00' }}>Couldn't load this order. <button onClick={load} style={{ marginLeft: 8 }}>RETRY</button></div>;
 
   return (
-    <div style={{ maxWidth: 720, padding: 24 }}>
+    <div style={{ maxWidth: 820, padding: 24 }}>
       <Link to="/admin/orders" style={{ fontSize: 12, fontWeight: 700, color: '#666' }}>&larr; ALL ORDERS</Link>
 
       {banner && <div style={{ margin: '12px 0', padding: '8px 12px', borderRadius: 6, fontSize: 12.5, background: '#f0fdf4', color: '#166534' }}>{banner}</div>}
 
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', margin: '16px 0' }}>
         <h1 style={{ font: '800 20px Manrope', margin: 0 }}>Order #{orderNumber}</h1>
-        <select value={order.status} disabled={updating} onChange={(e) => changeStatus(e.target.value as api.Order['status'])} style={{ padding: '7px 10px', borderRadius: 6, border: '1px solid #d4d4d4', fontSize: 12.5 }}>
-          {STATUSES.map((s) => <option key={s} value={s}>{STATUS_LABEL[s]}</option>)}
-        </select>
+        <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <span className="status" style={{ fontSize: 11, fontWeight: 700, padding: '4px 10px', borderRadius: 20, background: '#f0efe9' }}>{STATUS_LABEL[order.status]}</span>
+          {NEXT_STATUSES[order.status].length > 0 ? (
+            <select aria-label="Change order status" value="" disabled={updating} onChange={(e) => e.target.value && changeStatus(e.target.value as api.Order['status'])} style={{ padding: '7px 10px', borderRadius: 6, border: '1px solid #d4d4d4', fontSize: 12.5 }}>
+              <option value="">{updating ? 'Updating…' : 'Move to…'}</option>
+              {NEXT_STATUSES[order.status].map((s) => <option key={s} value={s}>{STATUS_LABEL[s]}</option>)}
+            </select>
+          ) : (
+            <small style={{ color: '#888' }}>Final status</small>
+          )}
+        </span>
       </div>
       <p style={{ fontSize: 12.5, color: '#888', marginTop: -8 }}>
         Placed {new Date(order.createdAt).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}
       </p>
+
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 10, margin: '16px 0' }}>
+        <section style={card} data-role="order-customer">
+          <p style={cardTitle}>CUSTOMER</p>
+          {customer ? (
+            <>
+              <div><b>{customer.fullName || 'No name on account'}</b></div>
+              {customer.phoneNumber && <div><a href={`tel:${customer.phoneNumber}`}>{customer.phoneNumber}</a></div>}
+              {customer.email && <div><a href={`mailto:${customer.email}`}>{customer.email}</a></div>}
+            </>
+          ) : <div style={{ color: '#888' }}>Account no longer exists</div>}
+        </section>
+        <section style={card} data-role="order-delivery">
+          <p style={cardTitle}>DELIVER TO</p>
+          {order.shippingAddressSnapshot ? (
+            <>
+              <div><b>{order.shippingAddressSnapshot.label}</b></div>
+              <div>{order.shippingAddressSnapshot.line1}{order.shippingAddressSnapshot.line2 ? `, ${order.shippingAddressSnapshot.line2}` : ''}</div>
+              <div>{order.shippingAddressSnapshot.city}, {order.shippingAddressSnapshot.region} {order.shippingAddressSnapshot.postalCode}</div>
+              {order.shippingAddressSnapshot.phone && <div>Phone: <a href={`tel:${order.shippingAddressSnapshot.phone}`}>{order.shippingAddressSnapshot.phone}</a></div>}
+              {order.deliveryLocation && <div style={{ color: '#666' }}>{order.deliveryLocation === 'dar_es_salaam' ? 'Dar es Salaam delivery' : 'Outside Dar es Salaam'}</div>}
+            </>
+          ) : <div style={{ color: '#888' }}>No address recorded</div>}
+        </section>
+        <section style={card} data-role="order-payment">
+          <p style={cardTitle}>PAYMENT</p>
+          <div>{order.paymentMethodName ?? 'Not recorded'}{order.paymentNumber ? ` · ${order.paymentNumber}` : ''}</div>
+          {order.transportPaymentName && (
+            <div>Transport fee via {order.transportPaymentName}{order.transportPaymentNumber ? ` (${order.transportPaymentNumber})` : ''}</div>
+          )}
+          <div style={{ color: '#666' }}>{order.status === 'PENDING' ? 'Awaiting payment confirmation' : order.status === 'CANCELLED' ? 'Cancelled' : 'Payment confirmed'}</div>
+        </section>
+      </div>
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 8, margin: '16px 0' }}>
         {order.items.map((item, i) => (
           <div key={i} style={{ display: 'flex', justifyContent: 'space-between', border: '1px solid #ece9e2', borderRadius: 8, padding: '10px 14px' }}>
             <div>
               <b style={{ fontSize: 13 }}>{item.nameSnapshot}</b>
-              <p style={{ fontSize: 11.5, color: '#888', margin: '2px 0 0' }}>{item.brandSnapshot} · {item.size} / {item.color} · Qty {item.quantity}</p>
+              <p style={{ fontSize: 11.5, color: '#888', margin: '2px 0 0' }}>{item.brandSnapshot} · {[item.size, item.color].filter(Boolean).join(' / ')} · Qty {item.quantity} × {formatTZS(item.unitPriceCentsSnapshot)}</p>
             </div>
             <b style={{ fontSize: 13 }}>{formatTZS(item.lineTotalCents)}</b>
           </div>
@@ -90,12 +144,6 @@ function AdminOrderDetailPage() {
         <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 800, marginTop: 6 }}><span>Total</span><span>{formatTZS(order.totalCents)}</span></div>
       </div>
 
-      {order.paymentMethodName && (
-        <p style={{ fontSize: 12.5, color: '#666', marginTop: 16 }}>
-          Paid via {order.paymentMethodName}
-          {order.deliveryLocation && ` · Delivery to ${order.deliveryLocation === 'dar_es_salaam' ? 'Dar es Salaam' : 'outside Dar es Salaam'}`}
-        </p>
-      )}
     </div>
   );
 }

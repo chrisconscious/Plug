@@ -68,7 +68,9 @@ describe("POST /api/v1/client-errors — end to end", () => {
     const { POST } = await import("../app/api/v1/client-errors/route");
     const req = new NextRequest(`${API_BASE}/api/v1/client-errors`, {
       method: "POST",
-      headers: { origin: FRONTEND_ORIGIN, "content-type": "application/json" },
+      // Exactly what the browser sends: the double-submit CSRF cookie echoed
+      // back in the X-CSRF-Token header (see lib/security/csrf.ts).
+      headers: { origin: FRONTEND_ORIGIN, "content-type": "application/json", cookie: "vv_csrf=test-token", "x-csrf-token": "test-token" },
       body: JSON.stringify({ message: "TypeError: cannot read property of undefined", url: "https://example.com/shop" }),
     });
 
@@ -84,7 +86,9 @@ describe("POST /api/v1/client-errors — end to end", () => {
     const { POST } = await import("../app/api/v1/client-errors/route");
     const req = new NextRequest(`${API_BASE}/api/v1/client-errors`, {
       method: "POST",
-      headers: { origin: FRONTEND_ORIGIN, "content-type": "application/json" },
+      // Exactly what the browser sends: the double-submit CSRF cookie echoed
+      // back in the X-CSRF-Token header (see lib/security/csrf.ts).
+      headers: { origin: FRONTEND_ORIGIN, "content-type": "application/json", cookie: "vv_csrf=test-token", "x-csrf-token": "test-token" },
       body: JSON.stringify({}),
     });
 

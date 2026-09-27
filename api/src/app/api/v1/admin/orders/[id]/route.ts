@@ -8,8 +8,7 @@ import type { Order } from "@/lib/db/types";
 const VALID_STATUSES: Order["status"][] = ["PENDING", "PAID", "SHIPPED", "DELIVERED", "CANCELLED"];
 
 export const GET = withRoute({ permission: "orders.read", rateLimit: RateLimitRules.adminGeneral }, async ({ params }) => {
-  const order = await getOrderForAdmin(params.id!);
-  return json({ order });
+  return json(await getOrderForAdmin(params.id!));
 });
 
 export const PATCH = withRoute({ permission: "orders.update", rateLimit: RateLimitRules.adminGeneral }, async ({ req, user, params }) => {

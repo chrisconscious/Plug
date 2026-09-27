@@ -1,6 +1,7 @@
 import * as couponsRepo from "../db/repos/coupons.repo";
 import type { Coupon } from "../db/repos/coupons.repo";
-import { ValidationError, NotFoundError } from "../errors";
+import { ValidationError, NotFoundError, ConflictError } from "../errors";
+import { query } from "../db/client";
 import { recordAuditEvent } from "../audit";
 import type { Role } from "../rbac";
 
@@ -123,4 +124,22 @@ export async function previewCoupon(code: string, subtotalCents: number): Promis
   const coupon = coupons.find((c) => c.code === code.trim().toUpperCase());
   if (!coupon) throw new ValidationError("Validation failed.", { couponCode: "This coupon code doesn't exist." });
   return { coupon, discountCents: couponsRepo.previewDiscountCents(coupon, subtotalCents) };
+}
+
+/**
+ * Permanently delete a coupon that was never redeemed. Once customers have
+ * used it, the redemptions are part of order history — deactivate it instead.
+ */
+export async function deleteCoupon(actor: { id: string; role: Role }, id: string) {
+  const rows = await query<{ code: string; n: number }>(
+    "SELECT c.code, (SELECT COUNT(*)::int FROM coupon_redemptions r WHERE r.coupon_id = c.id) AS n FROM coupons c WHERE c.id = $1",
+    [id]
+  );
+  const coupon = rows[0];
+  if (!coupon) throw new NotFoundError("Coupon not found.");
+  if (coupon.n > 0) {
+    throw new ConflictError(`${coupon.code} has been used on ${coupon.n} order${coupon.n === 1 ? "" : "s"}, so it can't be deleted. Deactivate it to stop further use.`);
+  }
+  await query("DELETE FROM coupons WHERE id = $1", [id]);
+  await recordAuditEvent({ actorId: actor.id, actorRole: actor.role, action: "coupon.deleted", targetType: "coupon", targetId: id, metadata: { code: coupon.code } });
 }

@@ -27,7 +27,7 @@
  */
 import type { PoolClient } from "pg";
 import { query, queryOne, withTransaction, isPgErrorCode, PG_ERROR_CODES } from "../client";
-import { ConflictError, ValidationError } from "../../errors";
+import { ConflictError, NotFoundError, ValidationError } from "../../errors";
 import { recordAuditEventOnClient } from "./audit.repo";
 import * as couponsRepo from "./coupons.repo";
 import type { Order, OrderItem, Address } from "../types";
@@ -488,7 +488,7 @@ export async function updateOrderStatusTransactional(
   return withTransaction(async (client) => {
     const current = await client.query<OrderRow>("SELECT * FROM orders WHERE id = $1 FOR UPDATE", [orderId]);
     const orderRow = current.rows[0];
-    if (!orderRow) throw new ConflictError("Order not found.");
+    if (!orderRow) throw new NotFoundError("Order not found.");
 
     const allowed = VALID_TRANSITIONS[orderRow.status];
     if (!allowed.includes(nextStatus)) {
@@ -509,6 +509,10 @@ export async function updateOrderStatusTransactional(
           item.quantity,
         ]);
       }
+      // A cancelled order never used its coupon: free the redemption so it
+      // doesn't count against the coupon's total or per-customer limits.
+      // The order keeps its own discount figures as the historical record.
+      await client.query("DELETE FROM coupon_redemptions WHERE order_id = $1", [orderId]);
     }
 
     await recordAuditEventOnClient(client, {

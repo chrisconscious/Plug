@@ -26,6 +26,7 @@ import {
   type HeroType,
 } from "../../lib/api";
 import { resolveImage } from "../../lib/imagePlaceholder";
+import { userMessage } from "../../lib/errors";
 
 const HERO_TYPES: { value: HeroType; label: string; hint: string }[] = [
   { value: "promotional", label: "Promotional", hint: "Big product CTA banner" },
@@ -89,7 +90,7 @@ export function HeroContentPage() {
       })
       .catch((e) => {
         if (!mounted) return;
-        setError(e?.message ?? "Could not load hero advertisements.");
+        setError(userMessage(e, "Could not load hero advertisements."));
         setLoading(false);
       });
     return () => { mounted = false; };
@@ -107,7 +108,7 @@ export function HeroContentPage() {
       const r = await reorderAdminHeroSlides(ordered);
       setSlides(r.slides);
     } catch (e) {
-      setNotice(`Reorder failed: ${(e as Error)?.message ?? "unknown error"}`);
+      setNotice(`Reorder failed: ${userMessage(e, "unknown error")}`);
     }
   };
 
@@ -118,7 +119,7 @@ export function HeroContentPage() {
       setSlides((prev) => prev.filter((x) => x.id !== s.id));
       setNotice("Hero advertisement deleted.");
     } catch (e) {
-      setNotice(`Delete failed: ${(e as Error)?.message ?? "unknown error"}`);
+      setNotice(`Delete failed: ${userMessage(e, "unknown error")}`);
     }
   };
 
@@ -366,7 +367,7 @@ function HeroEditor({
         onSaved(final, false);
       }
     } catch (e) {
-      setErr((e as Error)?.message ?? "Save failed.");
+      setErr(userMessage(e, "Save failed."));
     } finally {
       setSaving(false);
     }
@@ -381,7 +382,7 @@ function HeroEditor({
       setErr(null);
       onSaved(r.slide, false);
     } catch (e) {
-      setErr((e as Error)?.message ?? "Remove failed. Deactivate the slide before removing its image.");
+      setErr(userMessage(e, "Remove failed. Deactivate the slide before removing its image."));
     }
   };
 
@@ -394,7 +395,7 @@ function HeroEditor({
       setErr(null);
       onSaved(r.slide, false);
     } catch (e) {
-      setErr((e as Error)?.message ?? "Remove failed.");
+      setErr(userMessage(e, "Remove failed."));
     }
   };
 

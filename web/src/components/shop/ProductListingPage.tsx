@@ -336,7 +336,6 @@ export function ProductListingPage({ lifestyle: lifestyleSlug }: { lifestyle?: s
     return () => {
       on = false;
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [showGenderShowcase, filters.gender]);
 
 

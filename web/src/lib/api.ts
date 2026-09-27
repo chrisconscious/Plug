@@ -4,10 +4,15 @@
  * Thin typed wrapper around the Next.js backend (../api).
  * The backend authenticates via httpOnly cookies (access + refresh tokens),
  * so every request is sent with `credentials: 'include'`. `baseUrl` comes
- * from VITE_API_BASE_URL (see .env).
+ * from VITE_API_BASE_URL (see .env.example).
+ *
+ * The localhost default applies to the dev server only. A production build
+ * without VITE_API_BASE_URL talks to the API on its own origin (a reverse
+ * proxy serving /api and /uploads) instead of silently calling the
+ * visitor's own machine, which is what a hard-coded localhost URL would do.
  */
-
-const baseUrl = (import.meta.env.VITE_API_BASE_URL as string | undefined) ?? "http://localhost:3001";
+const configuredBaseUrl = (import.meta.env.VITE_API_BASE_URL as string | undefined)?.trim().replace(/\/+$/, "");
+const baseUrl = configuredBaseUrl || (import.meta.env.DEV ? "http://localhost:3001" : "");
 
 /**
  * The backend returns asset URLs (e.g. brand logo `url`, product `images`)
@@ -686,6 +691,11 @@ export function updateAdminBrand(
 }
 
 /** Uploads (or replaces) a brand logo via multipart/form-data. */
+/** Permanently deletes a brand no product uses (409 with the reason otherwise — deactivate instead). */
+export function deleteAdminBrand(id: string): Promise<{ success: boolean }> {
+  return request<{ success: boolean }>(`/api/v1/admin/brands/${encodeURIComponent(id)}`, { method: "DELETE" });
+}
+
 export function uploadBrandLogo(brandId: string, file: File): Promise<{ logo: BrandLogo }> {
   const form = new FormData();
   form.append("file", file);
@@ -855,6 +865,11 @@ export function previewCoupon(couponCode: string, subtotalCents: number): Promis
     method: "POST",
     body: JSON.stringify({ couponCode, subtotalCents }),
   });
+}
+
+/** Permanently deletes a coupon that was never redeemed (409 otherwise — deactivate it instead). */
+export function deleteCoupon(id: string): Promise<{ success: boolean }> {
+  return request<{ success: boolean }>(`/api/v1/admin/coupons/${encodeURIComponent(id)}`, { method: "DELETE" });
 }
 
 export function listAdminBroadcasts(): Promise<{ notifications: AdminBroadcastNotification[] }> {
@@ -1254,6 +1269,11 @@ export function updateAdminCategory(id: string, patch: { name?: string; slug?: s
   });
 }
 
+/** Permanently deletes a category no product uses (409 with the reason otherwise). */
+export function deleteAdminCategory(id: string): Promise<{ success: boolean }> {
+  return request<{ success: boolean }>(`/api/v1/admin/categories/${encodeURIComponent(id)}`, { method: "DELETE" });
+}
+
 export function uploadAdminCategoryImage(id: string, file: File): Promise<{ category: Category }> {
   const formData = new FormData();
   formData.append("file", file);
@@ -1493,6 +1513,7 @@ export interface AdminUser {
   id: string;
   email: string | null;
   phoneNumber: string | null;
+  fullName?: string | null;
   role: "CUSTOMER" | "ADMIN" | "SUPER_ADMIN";
   disabled: boolean;
   createdAt: string;
@@ -1500,38 +1521,76 @@ export interface AdminUser {
   totalSpentCents?: number;
 }
 
-export function listAdminUsers(): Promise<{ users: AdminUser[]; total: number; page: number; pageSize: number }> {
-  // pageSize=100 (the server's max) as a stopgap so existing behavior is
-  // unchanged for any realistic current customer count — see
-  // api/docs/PERFORMANCE.md for why this endpoint was paginated at all,
-  // and that real pagination UI (page controls in the admin table) is a
-  // follow-up not built here; this only prevents an unbounded payload for
-  // a customer base that grows past 100.
-  return request<{ users: AdminUser[]; total: number; page: number; pageSize: number }>("/api/v1/admin/users?pageSize=100");
+/**
+ * Every customer/user account, fetched page by page (the endpoint caps a page
+ * at 100). The admin table searches and exports client-side, so it needs the
+ * full list — a single page silently hid everyone after the 100th account.
+ */
+export async function listAdminUsers(): Promise<{ users: AdminUser[]; total: number }> {
+  const pageSize = 100;
+  const users: AdminUser[] = [];
+  let total = 0;
+  for (let page = 1; page <= 1000; page++) {
+    const r = await request<{ users: AdminUser[]; total: number; page: number; pageSize: number }>(`/api/v1/admin/users?page=${page}&pageSize=${pageSize}`);
+    users.push(...r.users);
+    total = r.total;
+    if (r.users.length < pageSize || users.length >= total) break;
+  }
+  return { users, total };
 }
 
+/** Dashboard headline numbers (all-time, computed in SQL — see api reports.service.ts). */
 export interface AdminStats {
   totals: {
     users: number;
     admins: number;
     customers: number;
     products: number;
+    liveProducts: number;
     categories: number;
     brands: number;
-    orders: number;
-    revenueCents: number;
-    revenueTzs: number;
-    customerSpendCents: number;
     variants: number;
+    lowStockVariants: number;
+    outOfStockVariants: number;
+    /** Placed and not cancelled. */
+    orders: number;
+    pendingOrders: number;
+    /** TZS of orders placed and not cancelled. */
+    orderValueTzs: number;
+    /** TZS of orders confirmed paid (PAID, SHIPPED, DELIVERED). */
+    paidRevenueTzs: number;
   };
-  orderStatusCounts: Record<string, number>;
-  recentOrders: AdminOrder[];
+  orderStatusCounts: Partial<Record<Order["status"], number>>;
+  recentOrders: { id: string; status: Order["status"]; totalTzs: number; createdAt: string; items: number; firstItem: string | null; customer: string | null }[];
+  topCustomers: { id: string; name: string | null; orders: number; spentTzs: number }[];
+  recentCustomers: { id: string; name: string | null; createdAt: string }[];
+  lowStock: LowStockVariant[];
   recentEvents: ActivityLog[];
-  topCustomers: { id: string; email: string; role: string; orderCount: number; totalSpentCents: number }[];
+}
+
+export interface LowStockVariant { variantId: string; productId: string; productName: string; size: string; color: string; stockQty: number }
+
+export type ReportGranularity = "daily" | "weekly" | "monthly";
+
+export interface AdminReport {
+  granularity: ReportGranularity;
+  timezone: string;
+  /** First day (YYYY-MM-DD) of the reported window. */
+  from: string | null;
+  summary: { orders: number; cancelledOrders: number; orderValueTzs: number; paidRevenueTzs: number; pendingValueTzs: number; averageOrderValueTzs: number; newCustomers: number };
+  series: { bucket: string; orders: number; orderValueTzs: number; paidRevenueTzs: number }[];
+  statusCounts: Partial<Record<Order["status"], number>>;
+  topProducts: { productId: string | null; name: string; units: number; valueTzs: number }[];
+  paymentMethods: { name: string; orders: number; valueTzs: number }[];
+  lowStock: LowStockVariant[];
 }
 
 export function getAdminStats(): Promise<AdminStats> {
   return request<AdminStats>("/api/v1/admin/stats");
+}
+
+export function getAdminReport(granularity: ReportGranularity): Promise<AdminReport> {
+  return request<AdminReport>(`/api/v1/admin/reports?granularity=${granularity}`);
 }
 
 // ---- Auth ----
@@ -1789,8 +1848,14 @@ export function getOrder(id: string): Promise<{ order: Order }> {
   return request<{ order: Order }>(`/api/v1/orders/${encodeURIComponent(id)}`);
 }
 
-export function getAdminOrder(id: string): Promise<{ order: Order }> {
-  return request<{ order: Order }>(`/api/v1/admin/orders/${encodeURIComponent(id)}`);
+/** Admin view of an order: the order (incl. its delivery-address snapshot) plus who placed it. */
+export interface AdminOrderDetail {
+  order: Order & { userId: string; shippingAddressSnapshot?: Omit<Address, "id" | "isDefault"> | null };
+  customer: { id: string; fullName: string | null; phoneNumber: string | null; email: string | null } | null;
+}
+
+export function getAdminOrder(id: string): Promise<AdminOrderDetail> {
+  return request<AdminOrderDetail>(`/api/v1/admin/orders/${encodeURIComponent(id)}`);
 }
 
 export interface Address {

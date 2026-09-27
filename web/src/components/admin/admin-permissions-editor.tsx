@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { X, Lock, Key, Save, ShieldCheck } from "lucide-react";
 import * as api from "../../lib/api";
 import { redirectToLoginExpired } from "../../lib/returnTo";
+import { userMessage } from "../../lib/errors";
 
 /** Permissions that a Super Admin may NEVER grant to an Admin — see rbac.ts NON_GRANTABLE_PERMISSIONS. */
 const NON_GRANTABLE = ["admins.manage", "system.manage"];
@@ -50,7 +51,7 @@ export function AdminPermissionsEditor({ admin, onClose, onSaved }: { admin: { i
         const grantCodes = new Set(admPerms.grants.map((g) => g.permissionCode));
         setSelected(grantCodes);
       } catch (e) {
-        if (!handleAuthError(e, setError)) setError(e instanceof api.ApiError ? e.message : "Could not load permissions.");
+        if (!handleAuthError(e, setError)) setError(userMessage(e, "Could not load permissions."));
       } finally { setLoading(false); }
     })();
     return () => { alive = false; };
@@ -67,7 +68,7 @@ export function AdminPermissionsEditor({ admin, onClose, onSaved }: { admin: { i
       setBanner("Permissions saved ✓");
       setTimeout(() => { setBanner(""); onSaved(); }, 1500);
     } catch (e) {
-      if (!handleAuthError(e, setError)) setError(e instanceof api.ApiError ? e.message : "Could not save permissions");
+      if (!handleAuthError(e, setError)) setError(userMessage(e, "Could not save permissions"));
     } finally { setSaving(false); }
   };
 

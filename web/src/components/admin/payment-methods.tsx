@@ -6,6 +6,7 @@ import * as api from "../../lib/api";
 import { formatTZS } from "../../lib/currency";
 import { usePlatformSettings } from "../../lib/PlatformSettingsContext";
 import { redirectToLoginExpired } from "../../lib/returnTo";
+import { userMessage } from "../../lib/errors";
 
 type EditorState =
   | { mode: "create" }
@@ -66,7 +67,7 @@ export function PaymentMethodsPage() {
       flash(`${target.name} icon updated ✓`);
       await load();
     } catch (err) {
-      setError(err instanceof api.ApiError ? err.message : "Could not upload icon.");
+      setError(userMessage(err, "Could not upload icon."));
     }
   };
 
@@ -76,7 +77,7 @@ export function PaymentMethodsPage() {
       flash(`${method.name} icon removed`);
       await load();
     } catch (err) {
-      setError(err instanceof api.ApiError ? err.message : "Could not remove icon.");
+      setError(userMessage(err, "Could not remove icon."));
     }
   };
 
@@ -87,7 +88,7 @@ export function PaymentMethodsPage() {
       setMethods(sorted);
     } catch (e) {
       if (handleAuthError(e)) return;
-      setError(e instanceof api.ApiError ? e.message : "Could not load payment methods");
+      setError(userMessage(e, "Could not load payment methods"));
     }
   }, []);
 
@@ -116,7 +117,7 @@ export function PaymentMethodsPage() {
       flash("Delivery & checkout settings saved ✓");
     } catch (e) {
       if (handleAuthError(e)) return;
-      setDeliveryError(e instanceof api.ApiError ? e.message : "Could not save delivery settings");
+      setDeliveryError(userMessage(e, "Could not save delivery settings"));
     } finally { setSavingDelivery(false); }
   };
 
@@ -144,7 +145,7 @@ export function PaymentMethodsPage() {
       await load();
     } catch (e) {
       if (handleAuthError(e)) return;
-      flash(e instanceof api.ApiError ? e.message : "Could not save");
+      flash(userMessage(e, "Could not save"));
     } finally { setBusy(false); }
   };
 
@@ -155,7 +156,7 @@ export function PaymentMethodsPage() {
       await load();
     } catch (e) {
       if (handleAuthError(e)) return;
-      flash(e instanceof api.ApiError ? e.message : "Could not update");
+      flash(userMessage(e, "Could not update"));
     }
   };
 
@@ -167,7 +168,7 @@ export function PaymentMethodsPage() {
       await load();
     } catch (e) {
       if (handleAuthError(e)) return;
-      flash(e instanceof api.ApiError ? e.message : "Could not remove");
+      flash(userMessage(e, "Could not remove"));
     }
   };
 
@@ -182,7 +183,7 @@ export function PaymentMethodsPage() {
       setMethods([...r.methods].sort((a, b) => a.displayOrder - b.displayOrder));
     } catch (e) {
       if (handleAuthError(e)) return;
-      flash(e instanceof api.ApiError ? e.message : "Reorder failed");
+      flash(userMessage(e, "Reorder failed"));
       await load();
     }
   };

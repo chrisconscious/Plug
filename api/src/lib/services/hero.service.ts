@@ -57,6 +57,23 @@ function assertHeroType(v: unknown): Exclude<HeroType, never> {
   throw new ValidationError("Validation failed.", { heroType: "heroType must be one of promotional, lifestyle, editorial." });
 }
 
+const CTA_URL_RULE = "Use a page on this store starting with / (e.g. /shop?category=hoodies) or a full https:// link.";
+
+/**
+ * A hero button may only link to a page on this store or to an http(s) site.
+ * Anything else — javascript:, data:, protocol-relative //host — would let a
+ * saved slide run script or send shoppers somewhere unexpected.
+ */
+export function isSafeCtaUrl(url: string): boolean {
+  if (/^\/(?![\/\\])/.test(url)) return !/\s/.test(url);
+  try {
+    const u = new URL(url);
+    return u.protocol === "https:" || u.protocol === "http:";
+  } catch {
+    return false;
+  }
+}
+
 function assertNullableDate(v: unknown, field: string): string | null {
   if (v === undefined || v === null || v === "") return null;
   if (typeof v !== "string" || Number.isNaN(Date.parse(v))) {
@@ -98,6 +115,7 @@ export function validateHeroInput(input: {
   if (!description) fields.description = "Description is required.";
   if (!ctaText) fields.ctaText = "CTA text is required.";
   if (!ctaUrl) fields.ctaUrl = "CTA link is required.";
+  else if (!isSafeCtaUrl(ctaUrl)) fields.ctaUrl = CTA_URL_RULE;
 
   // Second CTA is entirely optional, but if either half is provided, both
   // must be — a slide with a button label and no destination (or vice
@@ -105,6 +123,7 @@ export function validateHeroInput(input: {
   // state. Mirrors the DB-level hero_cta2_both_or_neither constraint.
   const cta2Text = str(input.cta2Text) || null;
   const cta2Url = str(input.cta2Url) || null;
+  if (cta2Url !== null && !isSafeCtaUrl(cta2Url)) fields.cta2Url = CTA_URL_RULE;
   if ((cta2Text === null) !== (cta2Url === null)) {
     fields.cta2Text = "Provide both a label and a destination for the second button, or leave both blank.";
   }

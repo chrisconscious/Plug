@@ -17,7 +17,6 @@ export function PromoBanner() {
       .then((r) => { if (on) setMessages(r.messages); })
       .catch((e) => {
         if (!on) return;
-        // eslint-disable-next-line no-console
         console.error("Failed to load promo banner:", e);
         setError(true);
         setMessages([]);

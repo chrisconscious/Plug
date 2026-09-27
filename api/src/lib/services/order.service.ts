@@ -130,8 +130,16 @@ export async function createOrderFromCart(
       const variantIds = [...new Set(order.items.map((it) => it.variantId))];
       const variants = await catalogRepo.findVariantsByIds(variantIds);
       const nameByVariantId = new Map(order.items.map((it) => [it.variantId, it.nameSnapshot]));
+      const orderedQty = new Map<string, number>();
+      for (const it of order.items) orderedQty.set(it.variantId, (orderedQty.get(it.variantId) ?? 0) + it.quantity);
       for (const v of variants) {
-        if (v.stockQty <= 5) {
+        // Alert once, when THIS order takes the variant across the line —
+        // into low stock, or down to zero — not again on every later order
+        // while it stays low (that repeated the same alert per sale).
+        const before = v.stockQty + (orderedQty.get(v.id) ?? 0);
+        const crossedLow = before > LOW_STOCK_THRESHOLD && v.stockQty <= LOW_STOCK_THRESHOLD;
+        const soldOut = before > 0 && v.stockQty === 0;
+        if (crossedLow || soldOut) {
           await notifyAdminsLowStock(nameByVariantId.get(v.id) ?? "A product", v.id, v.stockQty);
         }
       }
@@ -142,6 +150,8 @@ export async function createOrderFromCart(
 
   return order;
 }
+
+const LOW_STOCK_THRESHOLD = 5;
 
 export async function getOrderForUser(userId: string, orderId: string): Promise<Order> {
   const order = await ordersRepo.getOrderById(orderId);
@@ -161,13 +171,19 @@ export async function listAllOrders(): Promise<Order[]> {
   return ordersRepo.listAllOrders();
 }
 
-export async function getOrderForAdmin(orderId: string): Promise<Order> {
+export type OrderCustomer = { id: string; fullName: string | null; phoneNumber: string | null; email: string | null };
+
+export async function getOrderForAdmin(orderId: string): Promise<{ order: Order; customer: OrderCustomer | null }> {
   // No ownership check here (unlike getOrderForUser) — an admin may
   // legitimately view any customer's order; access to this function is
   // gated at the route layer by the orders.read permission instead.
   const order = await ordersRepo.getOrderById(orderId);
   if (!order) throw new NotFoundError("Order not found.");
-  return order;
+  // Who placed it — the account's own contact details, alongside the
+  // delivery contact captured in the order's address snapshot.
+  const user = await usersRepo.findUserById(order.userId);
+  const customer = user ? { id: user.id, fullName: user.fullName, phoneNumber: user.phoneNumber, email: user.email } : null;
+  return { order, customer };
 }
 
 export async function updateOrderStatus(
@@ -175,5 +191,10 @@ export async function updateOrderStatus(
   orderId: string,
   nextStatus: Order["status"]
 ): Promise<Order> {
-  return ordersRepo.updateOrderStatusTransactional(orderId, nextStatus, actor as { id: string; role: "CUSTOMER" | "ADMIN" | "SUPER_ADMIN" });
+  const order = await ordersRepo.updateOrderStatusTransactional(orderId, nextStatus, actor as { id: string; role: "CUSTOMER" | "ADMIN" | "SUPER_ADMIN" });
+  // Tell the customer (Payment received / shipped / delivered / cancelled).
+  // After the commit and best-effort, like the order-placed notice: a
+  // notification hiccup must never undo a status change that already happened.
+  notifyOrderStatusChanged(order.userId, order.id, order.status).catch(() => undefined);
+  return order;
 }

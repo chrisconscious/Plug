@@ -468,8 +468,8 @@ DELETE FROM users WHERE id = (SELECT user_id FROM orders LIMIT 1);
 ```
 
 **Concurrency test** (the "1,000 users, 1 item left" scenario, run with a
-real client against a seeded low-stock variant — `seed.sql` deliberately
-seeds one variant with `stock_qty = 3`):
+real client against a low-stock variant — create a product in the admin
+panel and set one variant's stock to 3 in Inventory):
 - Fire N concurrent `POST /api/v1/orders` requests (each with a unique
   `Idempotency-Key`) for carts that each want that variant.
 - Expected: at most 3 succeed; the rest receive a 409 with the "Only N

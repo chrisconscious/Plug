@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { ShieldCheck, ShieldAlert, Copy, Check } from "lucide-react";
 import * as api from "../../lib/api";
 import { redirectToLoginExpired } from "../../lib/returnTo";
+import { userMessage } from "../../lib/errors";
 
 function handleAuthError(e: unknown): boolean {
   if (e instanceof api.ApiError && e.status === 401) {
@@ -41,7 +42,7 @@ export function MfaSettingsPage() {
   const startSetup = async () => {
     setError(null); setBusy(true);
     try { setSetupSecret(await api.mfaSetup()); }
-    catch (e) { if (!handleAuthError(e)) setError(e instanceof api.ApiError ? e.message : "Could not start setup"); }
+    catch (e) { if (!handleAuthError(e)) setError(userMessage(e, "Could not start setup")); }
     finally { setBusy(false); }
   };
 
@@ -53,7 +54,7 @@ export function MfaSettingsPage() {
       setSetupSecret(null);
       setConfirmCode("");
       await load();
-    } catch (e) { if (!handleAuthError(e)) setError(e instanceof api.ApiError ? e.message : "That code didn't work"); }
+    } catch (e) { if (!handleAuthError(e)) setError(userMessage(e, "That code didn't work")); }
     finally { setBusy(false); }
   };
 
@@ -63,7 +64,7 @@ export function MfaSettingsPage() {
       await api.mfaDisable(disablePassword);
       setDisabling(false); setDisablePassword("");
       await load();
-    } catch (e) { if (!handleAuthError(e)) setError(e instanceof api.ApiError ? e.message : "Could not disable MFA"); }
+    } catch (e) { if (!handleAuthError(e)) setError(userMessage(e, "Could not disable MFA")); }
     finally { setBusy(false); }
   };
 

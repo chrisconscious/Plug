@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useMemo, useState, useRef, useId, type ReactNode } from "react";
-import { Plus, Search, Filter, Download, X, Check, ShieldAlert, Image } from "lucide-react";
+import { Link } from "react-router-dom";
+import { Plus, Search, Filter, Download, X, Check, ShieldAlert, Image, Eye, EyeOff, Trash2 } from "lucide-react";
 import * as api from "../../lib/api";
 import { formatTZS } from "../../lib/currency";
 import { listBrands, listCategories } from "../../lib/api";
@@ -14,6 +15,8 @@ import { AdminPermissionsEditor } from "./admin-permissions-editor";
 import { ProductManagementTable } from "./product-management";
 import { BrandMark } from "../shop/BrandMark";
 import { redirectToLoginExpired } from "../../lib/returnTo";
+import { userMessage } from "../../lib/errors";
+import { ORDER_STATUS_LABEL } from "../../lib/orderStatus";
 
 export type AdminRow = {
   id: string;
@@ -67,9 +70,7 @@ function parseTzsAmount(raw: string | undefined): number | undefined {
 
 /** Turns an API error into one readable line, including the per-field reasons the backend sends with "Validation failed.". */
 function describeApiError(e: unknown, fallback: string): string {
-  if (!(e instanceof api.ApiError)) return fallback;
-  const details = Object.entries(e.fields ?? {}).map(([field, msg]) => `${field}: ${msg}`);
-  return details.length > 0 ? `${e.message} ${details.join(" · ")}` : e.message;
+  return userMessage(e, fallback);
 }
 
 // Any admin API call that answers 401 means the session is no longer valid
@@ -86,7 +87,7 @@ function handleAuthError(e: unknown, setBanner: (m: string) => void): boolean {
 
 type AddForm = {
   open: boolean;
-  fields: { name: string; label: string; kind: "text" | "select" | "check" | "icon"; options?: string[] }[];
+  fields: { name: string; label: string; kind: "text" | "password" | "email" | "select" | "check" | "icon"; options?: string[] }[];
 };
 
 export function FunctionalManagementPage({ title, desc, withHeroOverride = false, withPaymentsOverride = false, withLifestylesOverride = false, withMfaOverride = false, superRole = true }: { title: string; desc: string; withHeroOverride?: boolean; withPaymentsOverride?: boolean; withLifestylesOverride?: boolean; withMfaOverride?: boolean; superRole?: boolean }) {
@@ -151,6 +152,13 @@ function GenericManagementPage({ title, desc, superRole }: { title: string; desc
   const [add, setAdd] = useState<AddForm>({ open: false, fields: [] });
   const [productReload, setProductReload] = useState(0);
   const [banner, setBanner] = useState("");
+  // One timer per message: a new message restarts it, so an older action's
+  // timer can never wipe a newer message (e.g. the reason a delete was refused).
+  useEffect(() => {
+    if (!banner) return;
+    const t = setTimeout(() => setBanner(""), 6000);
+    return () => clearTimeout(t);
+  }, [banner]);
   const [catalogData, setCatalogData] = useState<{ brands: AdminRow[]; categories: AdminRow[] }>({ brands: [], categories: [] });
   const [catalogToAdd, setCatalogToAdd] = useState<"brand" | "category" | null>(null);
   const [editingBrand, setEditingBrand] = useState<api.Brand | null>(null);
@@ -257,10 +265,10 @@ function GenericManagementPage({ title, desc, superRole }: { title: string; desc
             raw: a,
           })));
           setAdd({ open: false, fields: [
-            { name: "email", label: "Email", kind: "text" },
-            { name: "password", label: "Password", kind: "text" },
+            { name: "email", label: "Email", kind: "email" },
+            { name: "password", label: "Password (10+ characters, upper & lower case, a number)", kind: "password" },
             { name: "role", label: "Role", kind: "select", options: ["ADMIN", "SUPER_ADMIN"] },
-            { name: "actorPassword", label: "Your current password (to confirm)", kind: "text" },
+            { name: "actorPassword", label: "Your current password (to confirm)", kind: "password" },
           ] });
           break;
         }
@@ -268,8 +276,8 @@ function GenericManagementPage({ title, desc, superRole }: { title: string; desc
           const r = await api.listAdminUsers();
           setRows(r.users.map((u) => ({
             id: u.id,
-            primary: u.email ?? u.phoneNumber ?? "—",
-            sub: u.role,
+            primary: u.fullName || u.email || u.phoneNumber || "—",
+            sub: [u.phoneNumber, u.email, u.role === "CUSTOMER" ? null : u.role].filter(Boolean).join(" · "),
             status: u.disabled ? "Disabled" : "Active",
             statusTone: u.disabled ? "err" : "ok",
             meta: `${u.orderCount ?? 0} orders`,
@@ -282,8 +290,8 @@ function GenericManagementPage({ title, desc, superRole }: { title: string; desc
           setRows(r.orders.map((o) => ({
             id: o.id,
             primary: `#${o.id.slice(0, 8).toUpperCase()}`,
-            sub: o.items?.[0]?.nameSnapshot ?? "Order",
-            status: o.status,
+            sub: `${new Date(o.createdAt).toLocaleDateString("en-GB", { day: "numeric", month: "short" })} · ${o.items?.length ?? 0} item${o.items?.length === 1 ? "" : "s"}${o.shippingAddressSnapshot?.city ? ` · ${o.shippingAddressSnapshot.city}` : ""}`,
+            status: ORDER_STATUS_LABEL[o.status] ?? o.status,
             statusTone: o.status === "CANCELLED" ? "err" : o.status === "DELIVERED" ? "ok" : "warn",
             meta: formatTZS(o.totalTzs ?? o.totalCents ?? 0),
             raw: o,
@@ -327,14 +335,14 @@ function GenericManagementPage({ title, desc, superRole }: { title: string; desc
         }
       }
     } catch (e) {
-      setError(e instanceof api.ApiError ? e.message : "Could not load data");
+      setError(userMessage(e, "Could not load data"));
       setRows([]);
     } finally {
       setLoading(false);
     }
   };
 
-  useEffect(() => { load(); /* eslint-disable-next-line */ }, [kind]);
+  useEffect(() => { load();   }, [kind]);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -354,7 +362,6 @@ function GenericManagementPage({ title, desc, superRole }: { title: string; desc
         // message naming the field, instead of a generic "Validation failed.".
         const fail = (message: string) => {
           setBanner(message);
-          setTimeout(() => setBanner(""), 5000);
         };
         if (!(formData.name ?? "").trim()) return fail("Enter a product name.");
         if (!brandId) return fail("Select a brand for the product.");
@@ -376,7 +383,6 @@ function GenericManagementPage({ title, desc, superRole }: { title: string; desc
         const genderAudiences = (formData.genderAudiences ?? "").split(",").map((s) => s.trim().toLowerCase()).filter(Boolean);
         if (genderAudiences.length === 0) {
           setBanner("Select at least one gender / audience (Women, Men or Unisex) for the product.");
-          setTimeout(() => setBanner(""), 4000);
           return;
         }
         const tags = (formData.tags ?? "").split(",").map((s) => s.trim()).filter(Boolean);
@@ -425,22 +431,18 @@ function GenericManagementPage({ title, desc, superRole }: { title: string; desc
         // console free of spurious 400 "Failed to load resource" noise.
         if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
           setBanner("Enter a valid email address.");
-          setTimeout(() => setBanner(""), 3000);
           return;
         }
         if (password.length < 8) {
           setBanner("Password must be at least 8 characters.");
-          setTimeout(() => setBanner(""), 3000);
           return;
         }
         if (!formData.actorPassword) {
           setBanner("Enter your current password to confirm this action.");
-          setTimeout(() => setBanner(""), 3000);
           return;
         }
         if (!formData.role || (formData.role !== "ADMIN" && formData.role !== "SUPER_ADMIN")) {
           setBanner("Select a role for the new admin.");
-          setTimeout(() => setBanner(""), 3000);
           return;
         }
         await api.createAdmin({
@@ -493,7 +495,6 @@ function GenericManagementPage({ title, desc, superRole }: { title: string; desc
           if (dupe) {
             const raw = dupe.raw as api.Brand | undefined;
             setBanner(`A brand named "${dupe.primary}" (slug /${raw?.slug ?? ""}) already exists. Edit that brand instead of creating a duplicate.`);
-            setTimeout(() => setBanner(""), 4500);
             return;
           }
           const { brand } = await api.createAdminBrand({ name: formData.name, slug: formData.slug || undefined });
@@ -507,12 +508,10 @@ function GenericManagementPage({ title, desc, superRole }: { title: string; desc
       setEditingBrand(null);
       setEditingCategory(null);
       resetLogo();
-      setTimeout(() => setBanner(""), 2500);
       await load();
     } catch (e) {
       if (handleAuthError(e, setBanner)) return; // session expired -> redirect to login
       setBanner(describeApiError(e, "Could not save"));
-      setTimeout(() => setBanner(""), 6000);
     }
   };
 
@@ -520,12 +519,10 @@ function GenericManagementPage({ title, desc, superRole }: { title: string; desc
     try {
       await api.updateOrderStatus(r.id, next as api.AdminOrder["status"]);
       setBanner(`${r.primary} → ${next}`);
-      setTimeout(() => setBanner(""), 3000);
       await load();
     } catch (e) {
       if (handleAuthError(e, setBanner)) return;
-      setBanner(e instanceof api.ApiError ? e.message : "Could not update order status");
-      setTimeout(() => setBanner(""), 4500);
+      setBanner(userMessage(e, "Could not update order status"));
     }
   };
 
@@ -540,12 +537,10 @@ function GenericManagementPage({ title, desc, superRole }: { title: string; desc
       setBanner(action === "disable"
         ? `${a.email} ${a.disabled ? "re-activated" : "suspended"}`
         : `${a.email} role → ${a.role === "SUPER_ADMIN" ? "ADMIN" : "SUPER_ADMIN"}`);
-      setTimeout(() => setBanner(""), 3000);
       await load();
     } catch (e) {
       if (handleAuthError(e, setBanner)) return;
-      setBanner(e instanceof api.ApiError ? e.message : "Could not update admin");
-      setTimeout(() => setBanner(""), 4500);
+      setBanner(userMessage(e, "Could not update admin"));
     }
   };
 
@@ -558,7 +553,6 @@ function GenericManagementPage({ title, desc, superRole }: { title: string; desc
     a.href = url; a.download = `${title.toLowerCase().replace(/[^a-z0-9]+/g, '-')}.csv`; a.click();
     URL.revokeObjectURL(url);
     setBanner("Exported ✓");
-    setTimeout(() => setBanner(""), 2500);
   };
 
   const handleEditBrand = (brand: api.Brand) => {
@@ -580,12 +574,10 @@ function GenericManagementPage({ title, desc, superRole }: { title: string; desc
     try {
       await api.uploadBrandLogo(brand.id, file);
       setBanner("Logo uploaded ✓");
-      setTimeout(() => setBanner(""), 2500);
       await load();
     } catch (e) {
       if (handleAuthError(e, setBanner)) return; // session expired -> redirect to login
-      setBanner(e instanceof api.ApiError ? e.message : "Upload failed");
-      setTimeout(() => setBanner(""), 4000);
+      setBanner(userMessage(e, "Upload failed"));
     }
   };
 
@@ -593,12 +585,10 @@ function GenericManagementPage({ title, desc, superRole }: { title: string; desc
     try {
       await api.removeBrandLogo(brand.id);
       setBanner("Logo removed ✓");
-      setTimeout(() => setBanner(""), 2500);
       await load();
     } catch (e) {
       if (handleAuthError(e, setBanner)) return; // session expired -> redirect to login
-      setBanner(e instanceof api.ApiError ? e.message : "Could not remove logo");
-      setTimeout(() => setBanner(""), 4000);
+      setBanner(userMessage(e, "Could not remove logo"));
     }
   };
 
@@ -606,12 +596,10 @@ function GenericManagementPage({ title, desc, superRole }: { title: string; desc
     try {
       await api.uploadBrandCampaignImage(brand.id, file);
       setBanner("Campaign image uploaded ✓");
-      setTimeout(() => setBanner(""), 2500);
       await load();
     } catch (e) {
       if (handleAuthError(e, setBanner)) return;
-      setBanner(e instanceof api.ApiError ? e.message : "Upload failed");
-      setTimeout(() => setBanner(""), 4000);
+      setBanner(userMessage(e, "Upload failed"));
     }
   };
 
@@ -619,12 +607,10 @@ function GenericManagementPage({ title, desc, superRole }: { title: string; desc
     try {
       await api.removeBrandCampaignImage(brand.id);
       setBanner("Campaign image removed ✓");
-      setTimeout(() => setBanner(""), 2500);
       await load();
     } catch (e) {
       if (handleAuthError(e, setBanner)) return;
-      setBanner(e instanceof api.ApiError ? e.message : "Could not remove campaign image");
-      setTimeout(() => setBanner(""), 4000);
+      setBanner(userMessage(e, "Could not remove campaign image"));
     }
   };
 
@@ -646,12 +632,10 @@ function GenericManagementPage({ title, desc, superRole }: { title: string; desc
     try {
       await api.uploadAdminCategoryImage(category.id, file);
       setBanner("Category image uploaded ✓");
-      setTimeout(() => setBanner(""), 2500);
       await load();
     } catch (e) {
       if (handleAuthError(e, setBanner)) return;
-      setBanner(e instanceof api.ApiError ? e.message : "Upload failed");
-      setTimeout(() => setBanner(""), 4000);
+      setBanner(userMessage(e, "Upload failed"));
     }
   };
 
@@ -659,12 +643,10 @@ function GenericManagementPage({ title, desc, superRole }: { title: string; desc
     try {
       await api.removeAdminCategoryImage(category.id);
       setBanner("Category image removed ✓");
-      setTimeout(() => setBanner(""), 2500);
       await load();
     } catch (e) {
       if (handleAuthError(e, setBanner)) return;
-      setBanner(e instanceof api.ApiError ? e.message : "Could not remove image");
-      setTimeout(() => setBanner(""), 4000);
+      setBanner(userMessage(e, "Could not remove image"));
     }
   };
 
@@ -712,6 +694,7 @@ function GenericManagementPage({ title, desc, superRole }: { title: string; desc
 
       {kind === "catalog" ? (
         <>
+          <BrandCarouselSpeedSetting />
           <CatalogPanels
             loading={loading}
             error={error}
@@ -720,27 +703,28 @@ function GenericManagementPage({ title, desc, superRole }: { title: string; desc
             setQuery={setQuery}
             brands={catalogData.brands}
             categories={catalogData.categories}
-            onRemove={async (section, id) => {
+            onSetActive={async (section, id, active) => {
               try {
-                if (section === "category") await api.updateAdminCategory(id, { active: false });
-                else await api.updateAdminBrand(id, { active: false });
-                // Reflect the real, now-inactive state rather than remove the
-                // row entirely — a refresh must show the SAME thing this
-                // just did (inactive), not silently bring the item back.
-                // The row stays visible (as Inactive) rather than
-                // disappearing, since this is a deactivation, not a delete.
-                setCatalogData((prev) => ({
-                  ...prev,
-                  [section]: prev[section].map((r) =>
-                    r.id === id ? { ...r, status: "Inactive", statusTone: "warn" as const } : r
-                  ),
-                }));
-                setBanner(`${section === "category" ? "Category" : "Brand"} deactivated`);
+                if (section === "category") await api.updateAdminCategory(id, { active });
+                else await api.updateAdminBrand(id, { active });
+                setBanner(`${section === "category" ? "Category" : "Brand"} ${active ? "activated" : "deactivated"}`);
+                await load(); // show exactly what the server now holds
               } catch (e) {
                 if (handleAuthError(e, setBanner)) return;
-                setBanner(e instanceof api.ApiError ? e.message : "Could not deactivate — it may still be referenced by active products.");
+                setBanner(userMessage(e, `Could not ${active ? "activate" : "deactivate"} it.`));
               }
-              setTimeout(() => setBanner(""), 2500);
+            }}
+            onDelete={async (section, row) => {
+              if (!window.confirm(`Delete ${section} "${row.primary}" permanently? This can't be undone.`)) return;
+              try {
+                if (section === "category") await api.deleteAdminCategory(row.id);
+                else await api.deleteAdminBrand(row.id);
+                setBanner(`${section === "category" ? "Category" : "Brand"} "${row.primary}" deleted`);
+                await load();
+              } catch (e) {
+                if (handleAuthError(e, setBanner)) return;
+                setBanner(userMessage(e, "Could not delete it."));
+              }
             }}
             onAdd={(section) => {
               setCatalogToAdd(section);
@@ -794,13 +778,7 @@ function GenericManagementPage({ title, desc, superRole }: { title: string; desc
           handleExport={handleExport}
           handleAdd={() => { setCreateAttrGroups([]); setCreateAttrSelected([]); lastCreateCategory.current = ""; setAdd({ ...add, open: true }); }}
           canAdd={canAdd}
-          onRemove={async (r) => {
-            // Rows here (e.g. admins) have no delete endpoint — drop them locally only.
-            setRows((rs) => rs.filter((x) => x.id !== r.id));
-            setBanner(`${r.primary} removed`);
-            setTimeout(() => setBanner(""), 2000);
-          }}
-          onEdit={() => undefined}
+          viewHref={kind === "orders" ? (r) => `/admin/orders/${r.id}` : undefined}
           extra={kind === "orders" ? (r) => <OrderStatusActions r={r} onChange={handleOrderStatus} /> : kind === "admins" ? (r) => <AdminToggleActions r={r} onToggle={handleAdminToggle} onPermissions={(row) => setPermsAdmin(row.raw as api.AdminUser)} /> : undefined}
         />
       )}
@@ -891,7 +869,7 @@ function GenericManagementPage({ title, desc, superRole }: { title: string; desc
   );
 }
 
-function CatalogManagementTable({ title, query, setQuery, loading, filtered, handleExport, handleAdd, canAdd, onRemove, onEdit, extra }: {
+function CatalogManagementTable({ title, query, setQuery, loading, filtered, handleExport, handleAdd, canAdd, viewHref, extra }: {
   title: string;
   query: string;
   setQuery: (q: string) => void;
@@ -900,8 +878,8 @@ function CatalogManagementTable({ title, query, setQuery, loading, filtered, han
   handleExport: () => void;
   handleAdd: () => void;
   canAdd: boolean;
-  onRemove: (r: AdminRow) => void;
-  onEdit?: (r: AdminRow) => void;
+  /** Where a row's "View" opens (e.g. the order page). Rows without a detail page show no View button. */
+  viewHref?: (r: AdminRow) => string;
   extra?: (r: AdminRow) => ReactNode;
 }) {
   return (
@@ -926,8 +904,7 @@ function CatalogManagementTable({ title, query, setQuery, loading, filtered, han
               <span>{r.meta ?? ''}</span>
               <span style={{ display: 'flex', gap: 6 }}>
                 {extra?.(r)}
-                <button title={onEdit ? "Edit" : "View"} onClick={() => onEdit?.(r)}><Check size={15} /></button>
-                <button title="Remove" onClick={() => onRemove(r)}><X size={15} /></button>
+                {viewHref && <Link to={viewHref(r)} title="View details" aria-label={`View ${r.primary}`} className="tableIconLink"><Eye size={15} /></Link>}
               </span>
             </div>
           ))
@@ -937,31 +914,78 @@ function CatalogManagementTable({ title, query, setQuery, loading, filtered, han
   );
 }
 
-const ORDER_STATUSES: api.AdminOrder["status"][] = ["PENDING", "PAID", "SHIPPED", "DELIVERED", "CANCELLED"];
+
+/** Moves the API allows from each status (orders.repo VALID_TRANSITIONS). */
+const NEXT_ORDER_STATUSES: Record<api.AdminOrder["status"], api.AdminOrder["status"][]> = {
+  PENDING: ["PAID", "CANCELLED"],
+  PAID: ["SHIPPED", "CANCELLED"],
+  SHIPPED: ["DELIVERED"],
+  DELIVERED: [],
+  CANCELLED: [],
+};
 
 function OrderStatusActions({ r, onChange }: { r: AdminRow; onChange: (r: AdminRow, next: string) => void }) {
-  const current = String((r.raw as api.AdminOrder)?.status ?? r.status ?? "PENDING");
+  const current = ((r.raw as api.AdminOrder)?.status ?? "PENDING") as api.AdminOrder["status"];
+  const next = NEXT_ORDER_STATUSES[current] ?? [];
+  if (next.length === 0) return null;
   return (
     <select
       title="Change order status"
-      value={current}
-      onChange={(e) => onChange(r, e.target.value)}
-      style={{ padding: "3px 6px", fontSize: 11, border: "1px solid #ddd", borderRadius: 4, background: "#fff", maxWidth: 96 }}
+      aria-label={`Change status of order ${r.primary}`}
+      value=""
+      onChange={(e) => {
+        const to = e.target.value;
+        if (!to) return;
+        if (to === "CANCELLED" && !window.confirm(`Cancel order ${r.primary}? Its items go back into stock.`)) return;
+        onChange(r, to);
+      }}
+      style={{ padding: "3px 6px", fontSize: 11, border: "1px solid #ddd", borderRadius: 4, background: "#fff", maxWidth: 110 }}
     >
-      {ORDER_STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}
+      <option value="">Move to…</option>
+      {next.map((s) => <option key={s} value={s}>{ORDER_STATUS_LABEL[s]}</option>)}
     </select>
   );
 }
 
-// ---- Brand logo carousel: the "movement speed" admin control that used to
-// live here was removed along with the carousel's autoplay behavior it
-// configured (see components/brand-carousel.tsx's doc comment) — the
-// setting had nothing left to control. The backing DB table
-// (homepage_brand_settings) and its API route were deliberately left in
-// place rather than torn out here: removing a table/migration is a more
-// invasive, separate decision than removing the now-misleading admin UI
-// that pointed at it, and doing that safely deserves its own explicit
-// pass rather than being folded into an unrelated carousel-behavior fix.
+/**
+ * How fast the homepage "Shop by Brand" logo rail auto-scrolls. The storefront
+ * reads this setting (components/brand-carousel.tsx → GET /settings/brand-section),
+ * so it needs a place to be changed: saved to homepage_brand_settings through
+ * PATCH /admin/settings/brand-section (brands.manage).
+ */
+function BrandCarouselSpeedSetting() {
+  const [speed, setSpeed] = useState<api.BrandSectionSpeed | null>(null);
+  const [state, setState] = useState<"idle" | "saving" | "saved" | "error">("idle");
+  const [message, setMessage] = useState("");
+  useEffect(() => {
+    api.getBrandSectionSettings().then((r) => setSpeed(r.speed)).catch(() => setState("error"));
+  }, []);
+  const change = async (next: api.BrandSectionSpeed) => {
+    const prev = speed;
+    setSpeed(next); setState("saving");
+    try {
+      const r = await api.updateBrandSectionSettings(next);
+      setSpeed(r.speed); setState("saved");
+      setTimeout(() => setState("idle"), 2000);
+    } catch (e) {
+      setSpeed(prev); setState("error");
+      setMessage(userMessage(e, "Could not save the carousel speed."));
+    }
+  };
+  return (
+    <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 14, fontSize: 12 }} data-role="brand-speed">
+      <label htmlFor="brand-speed">Homepage brand carousel speed</label>
+      <select id="brand-speed" value={speed ?? ""} disabled={speed === null || state === "saving"} onChange={(e) => change(e.target.value as api.BrandSectionSpeed)} style={{ border: "1px solid #ddd", padding: "6px 8px", fontSize: 12 }}>
+        {speed === null && <option value="">Loading…</option>}
+        <option value="slow">Slow</option>
+        <option value="medium">Medium</option>
+        <option value="fast">Fast</option>
+      </select>
+      {state === "saved" && <span style={{ color: "#166534" }}>Saved</span>}
+      {state === "error" && <span role="alert" style={{ color: "#b91c1c" }}>{message || "Couldn't load the current speed."}</span>}
+    </div>
+  );
+}
 
 function AdminToggleActions({ r, onToggle, onPermissions }: { r: AdminRow; onToggle: (r: AdminRow, action: "disable" | "role") => void; onPermissions?: (r: AdminRow) => void }) {
   const a = r.raw as api.AdminUser;
@@ -976,7 +1000,7 @@ function AdminToggleActions({ r, onToggle, onPermissions }: { r: AdminRow; onTog
   );
 }
 
-function CatalogPanels({ loading, error, load, query, setQuery, brands, categories, onAdd, onRemove, onEditBrand, onUploadLogo, onRemoveLogo, onUploadCampaignImage, onRemoveCampaignImage, onEditCategory, onUploadCategoryImage, onRemoveCategoryImage }: {
+function CatalogPanels({ loading, error, load, query, setQuery, brands, categories, onAdd, onSetActive, onDelete, onEditBrand, onUploadLogo, onRemoveLogo, onUploadCampaignImage, onRemoveCampaignImage, onEditCategory, onUploadCategoryImage, onRemoveCategoryImage }: {
   loading: boolean;
   error: string | null;
   load: () => void;
@@ -985,7 +1009,8 @@ function CatalogPanels({ loading, error, load, query, setQuery, brands, categori
   brands: AdminRow[];
   categories: AdminRow[];
   onAdd: (section: "brand" | "category") => void;
-  onRemove: (section: "brand" | "category", id: string) => void;
+  onSetActive: (section: "brand" | "category", id: string, active: boolean) => void;
+  onDelete: (section: "brand" | "category", row: AdminRow) => void;
   onEditBrand: (brand: api.Brand) => void;
   onUploadLogo: (brand: api.Brand, file: File) => void;
   onRemoveLogo: (brand: api.Brand) => void;
@@ -1098,7 +1123,8 @@ function CatalogPanels({ loading, error, load, query, setQuery, brands, categori
                   {(r.raw as api.Brand)?.campaignImage && (
                     <button title="Remove campaign image" onClick={() => onRemoveCampaignImage(r.raw as api.Brand)}><X size={15} /></button>
                   )}
-                  <button title="Deactivate brand" onClick={() => onRemove("brand", r.id)}><X size={15} /></button>
+                  <button title={(r.raw as api.Brand)?.active ? "Deactivate brand (hide from the store)" : "Activate brand"} onClick={() => onSetActive("brand", r.id, !(r.raw as api.Brand)?.active)}>{(r.raw as api.Brand)?.active ? <EyeOff size={15} /> : <Eye size={15} />}</button>
+                  <button title="Delete brand" aria-label={`Delete brand ${r.primary}`} onClick={() => onDelete("brand", r)}><Trash2 size={15} /></button>
                 </span>
                 <input
                   id="brand-campaign-image-input"
@@ -1123,7 +1149,8 @@ function CatalogPanels({ loading, error, load, query, setQuery, brands, categori
                   {(r.raw as api.Category)?.imageUrl && (
                     <button title="Remove image" onClick={() => onRemoveCategoryImage(r.raw as api.Category)}><X size={15} /></button>
                   )}
-                  <button title="Deactivate category" onClick={() => onRemove("category", r.id)}><X size={15} /></button>
+                  <button title={(r.raw as api.Category)?.active ? "Deactivate category (hide from the store)" : "Activate category"} onClick={() => onSetActive("category", r.id, !(r.raw as api.Category)?.active)}>{(r.raw as api.Category)?.active ? <EyeOff size={15} /> : <Eye size={15} />}</button>
+                  <button title="Delete category" aria-label={`Delete category ${r.primary}`} onClick={() => onDelete("category", r)}><Trash2 size={15} /></button>
                 </span>
                 <input
                   id="category-image-input"
@@ -1178,7 +1205,7 @@ function BrandLogoThumb({ brand }: { brand: api.Brand }) {
 }
 
 function AddModal({ fields, title, onClose, onSubmit, initial, logoSection, onDataChange, extra }: {
-  fields: { name: string; label: string; kind: "text" | "select" | "check" | "icon"; options?: string[] }[];
+  fields: { name: string; label: string; kind: "text" | "password" | "email" | "select" | "check" | "icon"; options?: string[] }[];
   title: string;
   onClose: () => void;
   onSubmit: (d: Record<string, string>) => void;
@@ -1288,7 +1315,13 @@ function AddModal({ fields, title, onClose, onSubmit, initial, logoSection, onDa
                   })}
                 </div>
               ) : (
-                <input style={{ width: '100%', border: '1px solid #ddd', padding: '9px 10px', fontSize: 12 }} value={data[f.name] ?? ''} onChange={(e) => patch(f.name, e.target.value)} />
+                <input
+                  type={f.kind === "password" ? "password" : f.kind === "email" ? "email" : "text"}
+                  autoComplete={f.kind === "password" ? (f.name === "actorPassword" ? "current-password" : "new-password") : undefined}
+                  style={{ width: '100%', border: '1px solid #ddd', padding: '9px 10px', fontSize: 12 }}
+                  value={data[f.name] ?? ''}
+                  onChange={(e) => patch(f.name, e.target.value)}
+                />
               )}
               {checkErr[f.name] && <div style={{ color: '#c00', fontSize: 11, marginTop: 4 }}>Select at least one.</div>}
             </div>
@@ -1433,14 +1466,14 @@ export function ProductEditorModal({ product, onClose, onSaved }: {
 
   const refresh = async () => {
     try { const r = await api.listProductImages(product.id); setImages(r.images); }
-    catch (e) { setError(e instanceof api.ApiError ? e.message : "Could not load images"); }
+    catch (e) { setError(userMessage(e, "Could not load images")); }
   };
 
   useEffect(() => {
     let alive = true;
     (async () => {
       try { const r = await api.listProductImages(product.id); if (alive) setImages(r.images); }
-      catch (e) { if (alive) setError(e instanceof api.ApiError ? e.message : "Could not load images"); }
+      catch (e) { if (alive) setError(userMessage(e, "Could not load images")); }
       try { const rl = await api.listAdminLifestyles(); if (alive) setLifestyleOptions(rl.items); }
       catch { /* lifestyle membership is optional — never block the editor on it */ }
       if (product.category?.slug) {
@@ -1518,7 +1551,7 @@ export function ProductEditorModal({ product, onClose, onSaved }: {
     if (!file) return;
     setUploadBusy(true); setError(null);
     try { await api.uploadProductImage(product.id, file); await refresh(); }
-    catch (e) { setError(e instanceof api.ApiError ? e.message : "Upload failed"); }
+    catch (e) { setError(userMessage(e, "Upload failed")); }
     finally { setUploadBusy(false); }
   };
 
@@ -1529,7 +1562,7 @@ export function ProductEditorModal({ product, onClose, onSaved }: {
     [next[idx], next[j]] = [next[j], next[idx]];
     setImages(next);
     try { await api.reorderProductImages(product.id, next.map((i) => i.id)); await refresh(); }
-    catch (e) { setError(e instanceof api.ApiError ? e.message : "Reorder failed"); }
+    catch (e) { setError(userMessage(e, "Reorder failed")); }
   };
 
   const onReplaceFile = async (file: File | undefined) => {
@@ -1538,14 +1571,14 @@ export function ProductEditorModal({ product, onClose, onSaved }: {
     if (!file || !img) return;
     setBusy(true); setError(null);
     try { await api.replaceProductImage(img.id, file); await refresh(); }
-    catch (e) { setError(e instanceof api.ApiError ? e.message : "Replace failed"); }
+    catch (e) { setError(userMessage(e, "Replace failed")); }
     finally { setBusy(false); }
   };
 
   const removeImage = async (img: api.ProductImage) => {
     setBusy(true); setError(null);
     try { await api.deleteProductImage(img.id); await refresh(); }
-    catch (e) { setError(e instanceof api.ApiError ? e.message : "Delete failed"); }
+    catch (e) { setError(userMessage(e, "Delete failed")); }
     finally { setBusy(false); }
   };
 

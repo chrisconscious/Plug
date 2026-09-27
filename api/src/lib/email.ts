@@ -82,8 +82,12 @@ export async function sendEmail(email: OutgoingEmail): Promise<void> {
   if (process.env.NODE_ENV === "production") {
     // Loud, not silent: if this ever runs in production without a real
     // provider wired up, whoever's watching the logs should know
-    // immediately that emails are NOT actually being delivered.
+    // immediately that emails are NOT actually being delivered. The body
+    // is never printed here — it carries single-use password-reset and
+    // verification links, and anyone who can read the server logs could
+    // otherwise use them to take over the account.
     logger.warn("email.stub_used_in_production", { to: email.to, subject: email.subject });
+    return;
   }
   logStubEmail(email);
 }

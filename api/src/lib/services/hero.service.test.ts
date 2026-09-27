@@ -195,3 +195,16 @@ describe("deleteHeroSlide", () => {
     await expect(deleteHeroSlide(actor, "nonexistent")).rejects.toThrow();
   });
 });
+
+describe("hero CTA links are safe", () => {
+  const base = { campaignLabel: "SALE", headline: "Big", description: "d", ctaText: "Shop", heroType: "promotional" };
+  it.each(["/shop", "/shop?category=hoodies", "https://instagram.com/plug"])("accepts %j", async (ctaUrl) => {
+    const { validateHeroInput } = await import("./hero.service");
+    expect(() => validateHeroInput({ ...base, ctaUrl })).not.toThrow();
+  });
+  it.each(["javascript:alert(1)", "JaVaScRiPt:alert(1)", "data:text/html,<script>", "//evil.example", "/\\evil.example", "shop"])("rejects %j", async (ctaUrl) => {
+    const { validateHeroInput } = await import("./hero.service");
+    expect(() => validateHeroInput({ ...base, ctaUrl })).toThrow();
+    expect(() => validateHeroInput({ ...base, ctaUrl: "/shop", cta2Text: "More", cta2Url: ctaUrl })).toThrow();
+  });
+});

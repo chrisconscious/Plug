@@ -23,9 +23,6 @@ node -e "console.log(require('crypto').randomBytes(48).toString('hex'))"
 npm install
 npm run typecheck
 npm run db:migrate              # applies db/migrations/*.sql
-npm run db:seed                 # optional, LOCAL DEV ONLY: a few demo brands/products
-                                 # (never run against production — products belong to
-                                 # the admin panel, not to seed files)
 npm run db:create-super-admin   # interactive — creates your first login
 npm run dev                     # http://localhost:3001
 ```

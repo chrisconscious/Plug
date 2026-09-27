@@ -144,10 +144,13 @@ export function withRoute(
   options: RouteOptions,
   handler: (ctx: RouteContext) => Promise<NextResponse>
 ) {
-  return async (req: NextRequest, routeArgs: { params: Record<string, string> } | undefined) => {
+  // Next.js 15 passes dynamic route params as a Promise (they were a plain
+  // object before); resolve them once here so every handler keeps receiving
+  // a ready `params` record.
+  return async (req: NextRequest, routeArgs: { params: Promise<Record<string, string>> }) => {
     const requestId = req.headers.get("x-request-id") ?? newRequestId();
     const start = Date.now();
-    const params = routeArgs?.params ?? {};
+    const params = (await routeArgs?.params) ?? {};
 
     // Everything below runs inside this AsyncLocalStorage context, so every
     // logger.*() call anywhere in the call chain (a service, a repo, a

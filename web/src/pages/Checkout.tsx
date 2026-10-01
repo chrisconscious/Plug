@@ -332,7 +332,7 @@ function Checkout() {
                   </span>
                 </nav>
                 <h1>Checkout</h1>
-                <p className="checkoutSub">{step === 1 ? 'Where should we deliver your order?' : 'Confirm delivery and choose how you will pay.'}</p>
+                {step === 1 && <p className="checkoutSub">Where should we deliver your order?</p>}
               </div>
 
               {err && (
@@ -412,7 +412,6 @@ function Checkout() {
                     networkId={networkId}
                     setNetworkId={setNetworkId}
                     transportFeeTzs={transportFeeTzs}
-                    totalTzs={totalTzs}
                     codMessage={codMessage}
                   />
                 </div>
@@ -493,7 +492,6 @@ function LocationStep({ location, setLocation, darFeeTzs, outsideFeeTzs }: {
   return (
     <div className="pmSection">
       <p className="pmSectionTitle">Delivery location</p>
-      <p className="pmSectionDesc">Your transport fee depends on your delivery area.</p>
       <div className="pmCards">
         <button
           type="button"
@@ -561,7 +559,7 @@ function NetworkRow({ network, groupName, selected, onSelect }: { network: api.P
   );
 }
 
-function PaymentStep({ methods, cash, online, mode, setMode, network, networkId, setNetworkId, transportFeeTzs, totalTzs, codMessage }: {
+function PaymentStep({ methods, cash, online, mode, setMode, network, networkId, setNetworkId, transportFeeTzs, codMessage }: {
   methods: api.PaymentMethod[] | null;
   cash: api.PaymentMethod | null;
   online: api.PaymentMethod[];
@@ -571,7 +569,6 @@ function PaymentStep({ methods, cash, online, mode, setMode, network, networkId,
   networkId: string;
   setNetworkId: (id: string) => void;
   transportFeeTzs: number;
-  totalTzs: number;
   codMessage: string | null;
 }) {
   if (!methods) {
@@ -599,7 +596,6 @@ function PaymentStep({ methods, cash, online, mode, setMode, network, networkId,
     <>
       <div className="pmSection">
         <p className="pmSectionTitle">Payment method</p>
-        <p className="pmSectionDesc">Select how you would like to complete your payment.</p>
 
         <div className="pmCards">
           {hasOnline && (
@@ -647,7 +643,7 @@ function PaymentStep({ methods, cash, online, mode, setMode, network, networkId,
               <NetworkRow key={n.id} network={n} groupName="online-network" selected={n.id === networkId} onSelect={() => setNetworkId(n.id)} />
             ))}
           </div>
-          <p className="opPayNumHint">{network?.instructions || `Send ${formatTZS(totalTzs)} (your full order total) to your chosen number above.`}</p>
+          {network?.instructions && <p className="opPayNumHint">{network.instructions}</p>}
         </div>
       )}
 
@@ -668,7 +664,7 @@ function PaymentStep({ methods, cash, online, mode, setMode, network, networkId,
                   ))}
                 </div>
               ) : (
-                <p role="alert" data-role="no-transport-network" className="codFeeNote" style={{ color: '#b45309' }}>
+                <p role="alert" data-role="no-transport-network" className="codFeeNote codFeeWarn">
                   Mobile-money payment for the transport fee isn't set up yet, so cash-on-delivery orders can't be placed right now. Please contact us to order.
                 </p>
               )}

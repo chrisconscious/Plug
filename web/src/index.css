@@ -1970,3 +1970,172 @@ body.searchOpen .waFab,body.searchOpen .installCard{opacity:0;pointer-events:non
   .spClose span{display:none}
   .spCloseIcon{display:block}
 }
+
+/* ═══════════════════════════════════════════════════════════════════════
+   CHECKOUT — classic monochrome (Delivery details + Payment)
+   Pure black on white, full-strength text, square edges and one spacing
+   rhythm. Every rule is scoped to `.checkout` so it wins over the earlier
+   checkout layers without touching the cart page, and only restyles the
+   existing class names — markup and logic in pages/Checkout.tsx are as-is.
+   ═══════════════════════════════════════════════════════════════════════ */
+.checkout{ --co-ink:#000; --co-text:#111; --co-sub:#2a2a2a; --co-line:#000; --co-paper:#fff; background:var(--co-paper); color:var(--co-text); }
+.checkout .checkoutForm{ gap:36px 56px; }
+.checkout .checkoutSection{ gap:28px; }
+
+/* Head: steps, title, one strong rule underneath */
+.checkout .checkoutHead{ padding-bottom:4px; }
+.checkout .checkoutSteps{ justify-content:flex-start; gap:12px; margin:0 0 22px; font:700 11.5px Manrope; letter-spacing:.12em; }
+.checkout .coStep{ gap:9px; padding:9px 16px; border:1px solid var(--co-ink); border-radius:0; background:var(--co-paper); color:var(--co-ink); box-shadow:none; }
+.checkout .coStepNum{ width:20px; height:20px; background:var(--co-ink); color:#fff; }
+.checkout .coStep.done{ color:var(--co-ink); }
+.checkout .coStep.done .coStepNum{ background:var(--co-ink); color:#fff; }
+.checkout .coStep.active{ background:var(--co-ink); border-color:var(--co-ink); color:#fff; }
+.checkout .coStep.active .coStepNum{ background:#fff; color:var(--co-ink); }
+.checkout .coStepArrow{ color:var(--co-ink); font-size:15px; font-weight:700; }
+.checkout h1{ font:800 clamp(28px,2.4vw + 16px,38px) Manrope; letter-spacing:-.005em; line-height:1.1; color:var(--co-ink); }
+.checkout .checkoutSub{ margin:10px 0 0; font-size:15px; font-weight:500; color:var(--co-sub); }
+
+/* Section headings — one style for every block on both steps */
+.checkout .coBlockTitle,
+.checkout .pmSectionTitle,
+.checkout .opSectionLabel{
+  font:800 12px Manrope; text-transform:uppercase; letter-spacing:.14em; color:var(--co-ink);
+  margin:0 0 18px; padding-bottom:12px; border-bottom:1px solid var(--co-line);
+}
+.checkout .coBlockTitle{ margin-top:30px; margin-bottom:0; }
+.checkout .coBlockTitle:first-child{ margin-top:0; }
+.checkout .pmSectionTitle{ margin-top:0 !important; }
+
+/* Fields */
+.checkout .fieldGrid{ gap:20px 16px; }
+.checkout .coField{ gap:8px; }
+.checkout .coField label{ font:700 11px Manrope; letter-spacing:.1em; color:var(--co-ink); }
+.checkout .coField label span{ color:var(--co-ink); }
+.checkout .coField input{ height:52px; padding:0 16px; border:1px solid var(--co-line); border-radius:0; background:var(--co-paper); font-size:15px; font-weight:500; color:var(--co-ink); }
+.checkout .coField input::placeholder{ color:#6b6b6b; font-weight:400; }
+.checkout .coField input:hover{ box-shadow:inset 0 0 0 1px var(--co-ink); }
+.checkout .coField input:focus{ border-color:var(--co-ink); box-shadow:inset 0 0 0 2px var(--co-ink); }
+
+/* Errors and notices: inverted so they read instantly without colour */
+.checkout .coError{ border:0; border-radius:0; background:var(--co-ink); padding:14px 16px; }
+.checkout .coError p,
+.checkout .coError .coErrorOk{ color:#fff; font-size:13.5px; font-weight:600; }
+.checkout .coErrorLink{ color:#fff; }
+.checkout .coCartError{ border:1px solid var(--co-line); border-radius:0; background:var(--co-paper); }
+.checkout .coCartError p{ color:var(--co-ink); font-weight:600; }
+.checkout .payLoading,
+.checkout .payEmpty{ border:1px solid var(--co-line); border-radius:0; background:var(--co-paper); color:var(--co-ink); font-weight:500; }
+
+/* Step 2 rhythm: fixed space between Delivery location / Payment method / pay flow */
+.checkout .checkoutStepBody{ display:flex; flex-direction:column; gap:36px; }
+.checkout .opSection,
+.checkout .codSection{ margin-top:0; }
+.checkout .opSectionLabel{ margin-top:0; }
+.checkout .codSection .opSectionLabel{ margin-top:28px; }
+
+/* Selection cards (delivery area, pay mode): outlined → inverted when chosen */
+.checkout .pmCards{ gap:14px; }
+.checkout .pmCard{ gap:14px; padding:18px 18px; border:1px solid var(--co-line); border-radius:0; background:var(--co-paper); color:var(--co-ink); }
+.checkout .pmCard:hover{ border-color:var(--co-ink); box-shadow:inset 0 0 0 1px var(--co-ink); }
+.checkout .pmCard:focus-visible{ outline:2px solid var(--co-ink); outline-offset:3px; }
+.checkout .pmCardIcon{ width:42px; height:42px; border-radius:0; border:1px solid var(--co-ink); background:var(--co-paper); color:var(--co-ink); }
+.checkout .pmCardName{ font:800 14.5px Manrope; color:var(--co-ink); margin-bottom:4px; }
+.checkout .pmCardDesc{ font-size:13px; font-weight:500; color:var(--co-sub); line-height:1.45; }
+.checkout .pmCardIndicator{ width:22px; height:22px; border:1.5px solid var(--co-ink); background:var(--co-paper); }
+.checkout .pmCard.active{ background:var(--co-ink); border-color:var(--co-ink); color:#fff; box-shadow:none; }
+.checkout .pmCard.active .pmCardIcon{ background:#fff; border-color:#fff; color:var(--co-ink); }
+.checkout .pmCard.active .pmCardName,
+.checkout .pmCard.active .pmCardDesc{ color:#fff; }
+.checkout .pmCard.active .pmCardIndicator{ background:#fff; border-color:#fff; }
+.checkout .pmCard.active .pmCardCheck{ color:var(--co-ink); }
+
+/* Mobile-money numbers */
+.checkout .networkRows{ gap:12px; }
+.checkout .networkRow{ gap:14px; padding:14px 16px; border:1px solid var(--co-line); border-radius:0; background:var(--co-paper); }
+.checkout .networkRow:hover{ box-shadow:inset 0 0 0 1px var(--co-ink); }
+.checkout .networkRow:focus-within{ outline:2px solid var(--co-ink); outline-offset:3px; }
+.checkout .networkRowLogo{ width:36px; height:36px; border-radius:0; }
+.checkout .networkRowLogoFallback{ background:var(--co-ink); color:#fff; }
+.checkout .networkRowName{ font:800 14px Manrope; color:var(--co-ink); }
+.checkout .networkRowNumber{ font-size:14px; font-weight:600; letter-spacing:.03em; color:var(--co-ink); }
+.checkout .networkRowCheck{ width:22px; height:22px; border:1.5px solid var(--co-ink); background:var(--co-paper); }
+.checkout .copyBtn{ border:1px solid var(--co-ink); border-radius:0; background:var(--co-paper); color:var(--co-ink); padding:8px 12px; font-size:11px; }
+.checkout .copyBtn:hover{ background:var(--co-ink); color:#fff; }
+.checkout .copyBtn:focus-visible{ outline:2px solid var(--co-ink); outline-offset:2px; }
+.checkout .networkRow.active{ background:var(--co-ink); border-color:var(--co-ink); box-shadow:none; }
+.checkout .networkRow.active .networkRowName,
+.checkout .networkRow.active .networkRowNumber{ color:#fff; }
+.checkout .networkRow.active .networkRowLogoFallback{ background:#fff; color:var(--co-ink); }
+.checkout .networkRow.active .networkRowCheck{ background:#fff; border-color:#fff; }
+.checkout .networkRow.active .networkRowCheck svg{ color:var(--co-ink); }
+.checkout .networkRow.active .copyBtn{ background:transparent; border-color:#fff; color:#fff; }
+.checkout .networkRow.active .copyBtn:hover{ background:#fff; color:var(--co-ink); }
+.checkout .opPayNumHint{ margin-top:14px; padding:12px 16px; border:0; border-left:3px solid var(--co-ink); border-radius:0; background:var(--co-paper); font-size:14px; font-weight:500; color:var(--co-text); }
+
+/* Cash on delivery */
+.checkout .codFeeNote{ margin:0; font-size:14px; font-weight:500; line-height:1.6; color:var(--co-text); }
+.checkout .codFeeBox{ margin-top:16px; padding:16px 18px; border:1px solid var(--co-line); border-radius:0; background:var(--co-paper); }
+.checkout .codFeeLabel{ font-size:14px; font-weight:700; color:var(--co-ink); }
+.checkout .codFeeAmount{ font:800 18px Manrope; color:var(--co-ink); }
+.checkout .codFeeWarn{ padding:14px 16px; background:var(--co-ink); color:#fff; font-weight:600; }
+
+/* Order summary */
+.checkout .summary{ border:1px solid var(--co-line); border-top:4px solid var(--co-ink); border-radius:0; padding:24px; background:var(--co-paper); }
+.checkout .summaryHead{ margin-bottom:18px; padding-bottom:14px; border-bottom:1px solid var(--co-line); }
+.checkout .summaryHead h3{ font:800 13px Manrope; letter-spacing:.14em; color:var(--co-ink); border:0; padding:0; }
+.checkout .summaryToggle{ color:var(--co-ink); font-size:11px; text-decoration:underline; text-underline-offset:3px; }
+.checkout .summaryToggle:focus-visible{ outline:2px solid var(--co-ink); }
+.checkout .summaryItems{ gap:16px; padding-bottom:18px; margin-bottom:18px; border-bottom:1px solid var(--co-line); }
+.checkout .summaryItemImg{ width:56px; height:70px; border-radius:0; border:1px solid var(--co-line); background:var(--co-paper); }
+.checkout .summaryItemImgFallback{ background:var(--co-paper); }
+.checkout .summaryItemName{ font:800 13.5px Manrope; color:var(--co-ink); margin-bottom:5px; }
+.checkout .summaryItemMeta{ font-size:13px; font-weight:500; color:var(--co-sub); }
+.checkout .summaryItemWarn{ font-size:12px; font-weight:700; color:var(--co-ink); text-decoration:underline; }
+.checkout .summaryItemPrice{ font:800 13.5px Manrope; color:var(--co-ink); }
+.checkout .couponBox{ margin:0 0 18px; padding-bottom:18px; border-bottom:1px solid var(--co-line); }
+.checkout .couponInputRow{ gap:0; }
+.checkout .couponInputRow input{ height:46px; border:1px solid var(--co-line); border-right:0; border-radius:0; background:var(--co-paper); color:var(--co-ink); font-size:13px; font-weight:600; }
+.checkout .couponInputRow input::placeholder{ color:#6b6b6b; }
+.checkout .couponInputRow input:focus{ box-shadow:inset 0 0 0 1px var(--co-ink); }
+.checkout .couponApplyBtn{ height:46px; padding:0 20px; border:1px solid var(--co-ink); border-radius:0; background:var(--co-ink); color:#fff; font-size:11.5px; letter-spacing:.1em; text-transform:uppercase; }
+.checkout .couponApplyBtn:disabled{ opacity:1; background:var(--co-paper); color:var(--co-ink); }
+.checkout .couponApplied{ border:1px solid var(--co-line); border-radius:0; background:var(--co-paper); color:var(--co-ink); font-weight:500; }
+.checkout .couponRemoveBtn{ color:var(--co-ink); }
+.checkout .couponError{ font-size:12.5px; font-weight:700; color:var(--co-ink); margin-top:8px; }
+.checkout .summaryTotals > div{ padding:7px 0; font-size:14px; }
+.checkout .summaryTotals dt{ color:var(--co-text); font-weight:500; }
+.checkout .summaryTotals dd{ color:var(--co-ink); font-weight:800; }
+.checkout .summaryDiscount dt,
+.checkout .summaryDiscount dd{ color:var(--co-ink); }
+.checkout .summaryTotal{ margin-top:14px; padding:16px 18px !important; border-radius:0; background:var(--co-ink); }
+.checkout .summaryTotal dt{ color:#fff !important; font:800 12px Manrope !important; letter-spacing:.12em; text-transform:uppercase; }
+.checkout .summaryTotal dd{ color:#fff !important; font:800 18px Manrope; }
+.checkout .summaryTotals > .summaryNote{ margin-top:12px; padding:12px 14px; border:0; border-left:3px solid var(--co-ink); border-radius:0; background:var(--co-paper); font-size:13px; font-weight:500; color:var(--co-text); }
+.checkout .secure{ margin-top:18px; font-size:12px; font-weight:600; color:var(--co-ink); }
+
+/* Footer + primary action */
+.checkout .checkoutFooter{ padding-top:24px; border-top:1px solid var(--co-line); }
+.checkout .secureTag{ font-size:12.5px; font-weight:600; color:var(--co-ink); }
+.checkout .secureTag svg{ color:var(--co-ink); }
+.checkout .btnCheckout{ min-height:54px; border-radius:0; background:var(--co-ink); border:1px solid var(--co-ink); color:#fff; font-size:13px; letter-spacing:.14em; }
+.checkout .btnCheckout:hover{ background:#fff; color:var(--co-ink); }
+.checkout .btnCheckout:focus-visible{ outline:2px solid var(--co-ink); outline-offset:3px; }
+.checkout .btnCheckout:disabled:hover{ background:var(--co-ink); color:#fff; }
+.checkout .checkoutEmpty p{ color:var(--co-sub); font-weight:500; }
+
+@media(max-width:767px){
+  .checkout .checkoutForm{ gap:28px; }
+  .checkout .coField input{ font-size:16px; }
+  .checkout .summary{ padding:20px 18px; }
+}
+@media(max-width:599px){
+  .checkout .checkoutSteps{ gap:8px; letter-spacing:.08em; font-size:10.5px; }
+  .checkout .coStep{ padding:8px 11px; }
+  .checkout .pmCard{ padding:16px 14px; }
+  .checkout .networkRow{ padding:12px; gap:10px; }
+  .checkout .checkoutStepBody{ gap:30px; }
+}
+@media(max-width:480px){
+  .checkout .couponInputRow input{ border-right:1px solid var(--co-line); border-bottom:0; }
+}
+@media(prefers-reduced-motion:reduce){ .checkout .btnCheckout, .checkout .copyBtn{ transition:none; } }

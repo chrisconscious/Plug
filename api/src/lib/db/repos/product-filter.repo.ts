@@ -63,12 +63,13 @@ export type ProductFilters = {
   attributeOptionIds?: string[];
   search?: string;
   availability?: "in_stock" | "out_of_stock";
-  sort?: "recommended" | "newest" | "price_asc" | "price_desc";
+  sort?: "recommended" | "relevance" | "newest" | "price_asc" | "price_desc";
   page?: number;
   pageSize?: number;
 };
 
-type Where = { clause: string; params: unknown[] };
+/** `rank` is set only when a search term is active: a SQL score (higher = better match) for ORDER BY. */
+type Where = { clause: string; params: unknown[]; rank?: string };
 
 /**
  * Builds `WHERE active = true` (+ any active filters, minus those named in
@@ -186,24 +187,53 @@ export function buildProductWhere(filters: ProductFilters, exclude: (keyof Produ
     );
   }
 
+  let rank: string | undefined;
   if (X("search") && filters.search) {
-    const prefixQuery = toPrefixTsQuery(filters.search);
-    if (prefixQuery) {
-      // Prefix match on the product name ("shir" finds "shirt") via the GIN
-      // index, plus brand / category name matches (both tiny tables).
-      const tq = `$${params.length + 1}`;
-      const like = `$${params.length + 2}`;
-      push(
-        `(p.search_vector @@ to_tsquery('english', ${tq})
-          OR p.brand_id IN (SELECT b.id FROM brands b WHERE b.name ILIKE ${like})
-          OR p.category_id IN (SELECT c.id FROM categories c WHERE c.name ILIKE ${like}))`,
-        prefixQuery,
-        `%${filters.search.trim().replace(/[\\%_]/g, (c) => "\\" + c)}%`
+    const words = searchWords(filters.search);
+    if (words.length) {
+      // Every word must match somewhere in the product's search document
+      // (migration 0058: name, keywords, brand, category, attributes,
+      // colours, sizes, audiences, lifestyles, tags, SKU, descriptions), as
+      // a prefix, in either the stemmed ('english': shoes = shoe) or literal
+      // ('simple': "runn" -> running) form. Word order doesn't matter, so
+      // "nike shoes" and "shoes nike" behave the same.
+      const tsq = words
+        .map((w) => {
+          params.push(`${w}:*`);
+          const i = `$${params.length}`;
+          return `(to_tsquery('english', ${i}) || to_tsquery('simple', ${i}))`;
+        })
+        .join(" && ");
+      params.push(normalizeSearchPhrase(filters.search));
+      const ph = `$${params.length}`;
+      conds.push(
+        `(EXISTS (SELECT 1 FROM product_search ps WHERE ps.product_id = p.id AND ps.document @@ (${tsq}))
+          OR lower(p.sku) = ${ph}
+          OR EXISTS (SELECT 1 FROM product_variants pv WHERE pv.product_id = p.id AND lower(pv.sku) = ${ph}))`
       );
+      // Relevance: weighted full-text rank (name/keywords > brand/category >
+      // attributes/colours > description) plus explicit boosts so an exact
+      // name, keyword, SKU, brand or category hit always beats a word that
+      // merely appears in a description.
+      rank = `(
+        COALESCE((SELECT ts_rank_cd('{0.1,0.3,0.6,1.0}', ps.document, (${tsq})) FROM product_search ps WHERE ps.product_id = p.id), 0) * 4
+        + CASE WHEN lower(p.name) = ${ph} THEN 10
+               WHEN position(${ph} in lower(p.name)) = 1 THEN 5
+               WHEN position(${ph} in lower(p.name)) > 0 THEN 3 ELSE 0 END
+        + CASE WHEN ${ph} = ANY(p.keywords) THEN 4
+               WHEN EXISTS (SELECT 1 FROM unnest(p.keywords) k WHERE position(${ph} in k) > 0) THEN 1.5 ELSE 0 END
+        + CASE WHEN lower(p.sku) = ${ph} THEN 20 ELSE 0 END
+        + COALESCE((SELECT CASE WHEN lower(b.name) = ${ph} THEN 3
+                                WHEN position(lower(b.name) in ${ph}) > 0 THEN 2 ELSE 0 END
+                    FROM brands b WHERE b.id = p.brand_id), 0)
+        + COALESCE((SELECT CASE WHEN lower(c.name) = ${ph} THEN 2.5
+                                WHEN position(lower(c.name) in ${ph}) > 0 THEN 1.5 ELSE 0 END
+                    FROM categories c WHERE c.id = p.category_id), 0)
+      )`;
     }
   }
 
-  return { clause: conds.join(" AND "), params };
+  return { clause: conds.join(" AND "), params, rank };
 }
 
 /**
@@ -211,6 +241,31 @@ export function buildProductWhere(filters: ProductFilters, exclude: (keyof Produ
  * text: only letters/digits survive, so user input can never inject tsquery
  * operators. Returns null when nothing searchable remains.
  */
+/** Max search input we act on — longer input is cut, never an error. */
+export const MAX_SEARCH_LENGTH = 100;
+
+/** Lowercased, single-spaced, length-capped phrase (for exact/contains boosts). */
+export function normalizeSearchPhrase(input: string): string {
+  return input.slice(0, MAX_SEARCH_LENGTH).toLowerCase().replace(/\s+/g, " ").trim();
+}
+
+/**
+ * The words of a search (letters/digits only, so nothing can inject tsquery
+ * operators), at most 8, each at most 40 characters.
+ */
+export function searchWords(input: string): string[] {
+  const words = normalizeSearchPhrase(input)
+    .split(/[^\p{L}\p{N}]+/u)
+    .filter(Boolean)
+    .map((w) => w.slice(0, 40));
+  // Filler words ("sneakers for men", "shirt with collar") would otherwise
+  // have to match too; they are dropped unless they are the whole query.
+  const meaningful = words.filter((w) => !SEARCH_STOPWORDS.has(w));
+  return (meaningful.length ? meaningful : words).slice(0, 8);
+}
+
+const SEARCH_STOPWORDS = new Set(["a", "an", "and", "the", "for", "of", "in", "on", "with", "to", "by", "or", "&"]);
+
 export function toPrefixTsQuery(input: string): string | null {
   const words = input
     .toLowerCase()
@@ -227,6 +282,9 @@ const SORT_SQL: Record<NonNullable<ProductFilters["sort"]>, string> = {
   // Latest Drop ordering. id breaks ties so paging is deterministic.
   newest: "p.published_at DESC NULLS LAST, p.created_at DESC, p.id DESC",
   recommended: "p.published_at DESC NULLS LAST, p.created_at DESC, p.id DESC",
+  // Only meaningful with a search term (then ranked by match quality, see
+  // listFilteredProducts); without one it falls back to the default order.
+  relevance: "p.published_at DESC NULLS LAST, p.created_at DESC, p.id DESC",
 };
 
 export const DEFAULT_SORT: NonNullable<ProductFilters["sort"]> = "recommended";
@@ -236,7 +294,12 @@ export async function listFilteredProducts(
   filters: ProductFilters
 ): Promise<{ items: FilterProductRow[]; total: number }> {
   const where = buildProductWhere(filters);
-  const orderBy = SORT_SQL[filters.sort ?? DEFAULT_SORT];
+  // With a search term, "Recommended" means "best match first".
+  const sort = filters.sort ?? DEFAULT_SORT;
+  const orderBy =
+    where.rank && (sort === "recommended" || sort === "relevance")
+      ? `${where.rank} DESC, ${SORT_SQL.recommended}`
+      : SORT_SQL[sort];
 
   const countRow = await queryOne<{ count: string }>(
     `SELECT count(*)::text AS count FROM products p WHERE ${where.clause}`,
@@ -402,4 +465,100 @@ export async function getProductFacets(filters: ProductFilters): Promise<Product
       p75: Number(priceRows?.p75 ?? "0"),
     },
   };
+}
+
+// ---------------------------------------------------------------------------
+// Live search (GET /api/v1/search) — small helpers on top of the same WHERE
+// builder, so the suggestion panel and the /shop?q= listing always agree.
+// ---------------------------------------------------------------------------
+
+export type SearchContextCounts = {
+  brands: { id: string; count: number }[];
+  categories: { id: string; count: number }[];
+  colors: { value: string; count: number }[];
+  audiences: { code: string; count: number }[];
+  keywords: { value: string; count: number }[];
+};
+
+/** What the matching (live) products have in common: brands, categories, colours, audiences, keywords. */
+export async function searchContextCounts(filters: ProductFilters): Promise<SearchContextCounts> {
+  const w = buildProductWhere(filters);
+  const [brands, categories, colors, audiences, keywords] = await Promise.all([
+    query<{ id: string; count: string }>(
+      `SELECT p.brand_id AS id, count(*)::text AS count FROM products p WHERE ${w.clause}
+       GROUP BY p.brand_id ORDER BY count(*) DESC LIMIT 8`, w.params),
+    query<{ id: string; count: string }>(
+      `SELECT p.category_id AS id, count(*)::text AS count FROM products p WHERE ${w.clause}
+       GROUP BY p.category_id ORDER BY count(*) DESC LIMIT 8`, w.params),
+    query<{ value: string; count: string }>(
+      `SELECT lower(pv.color) AS value, count(DISTINCT p.id)::text AS count
+         FROM products p JOIN product_variants pv ON pv.product_id = p.id AND pv.stock_qty > 0
+        WHERE ${w.clause} AND lower(pv.color) <> 'default'
+        GROUP BY lower(pv.color) ORDER BY count(DISTINCT p.id) DESC LIMIT 6`, w.params),
+    query<{ code: string; count: string }>(
+      `SELECT pga.gender_audience_id AS code, count(*)::text AS count
+         FROM products p JOIN product_gender_audiences pga ON pga.product_id = p.id
+        WHERE ${w.clause} GROUP BY pga.gender_audience_id ORDER BY count(*) DESC`, w.params),
+    query<{ value: string; count: string }>(
+      `SELECT k AS value, count(*)::text AS count FROM products p, unnest(p.keywords) AS k
+        WHERE ${w.clause} GROUP BY k ORDER BY count(*) DESC, k LIMIT 40`, w.params),
+  ]);
+  const n = <T extends { count: string }>(rows: T[]) => rows.map((r) => ({ ...r, count: Number(r.count) }));
+  return { brands: n(brands), categories: n(categories), colors: n(colors), audiences: n(audiences), keywords: n(keywords) };
+}
+
+/**
+ * "Similar" products for a multi-word search that matched nothing as a whole:
+ * live products matching ANY of the words, most words matched first. Never
+ * used to pad a search that did match.
+ */
+export async function listAnyWordProducts(words: string[], limit: number): Promise<FilterProductRow[]> {
+  if (words.length === 0) return [];
+  const params: unknown[] = [];
+  const perWord = words.map((wd) => {
+    params.push(`${wd}:*`);
+    const i = `$${params.length}`;
+    return `(to_tsquery('english', ${i}) || to_tsquery('simple', ${i}))`;
+  });
+  const anyQ = perWord.join(" || ");
+  const matched = perWord.map((q) => `(ps.document @@ ${q})::int`).join(" + ");
+  params.push(limit);
+  return query<FilterProductRow>(
+    `SELECT p.id, p.slug, p.name, p.brand_id, p.category_id, p.price_cents, p.active,
+            p.gender, p.compare_at_price_cents, p.tags,
+            p.sku, p.short_description, p.full_description, p.badge_text,
+            p.offer_label, p.offer_start_date, p.offer_end_date
+       FROM products p JOIN product_search ps ON ps.product_id = p.id
+      WHERE p.active = true AND ps.document @@ (${anyQ})
+      ORDER BY (${matched}) DESC, ts_rank_cd('{0.1,0.3,0.6,1.0}', ps.document, (${anyQ})) DESC, p.published_at DESC NULLS LAST
+      LIMIT $${params.length}`,
+    params
+  );
+}
+
+/**
+ * The words shoppers can usefully type — product names, keywords, brand and
+ * category names of live products — with how many products use each. Feeds
+ * the "did you mean" correction for typos.
+ */
+export async function searchVocabulary(): Promise<{ word: string; ndoc: number }[]> {
+  return query<{ word: string; ndoc: number }>(
+    `SELECT word, ndoc FROM ts_stat($q$
+       SELECT to_tsvector('simple', p.name || ' ' || array_to_string(p.keywords, ' ') || ' '
+                                    || coalesce(b.name, '') || ' ' || coalesce(c.name, ''))
+         FROM products p
+         LEFT JOIN brands b ON b.id = p.brand_id
+         LEFT JOIN categories c ON c.id = p.category_id
+        WHERE p.active = true
+     $q$)
+     WHERE length(word) >= 3`
+  );
+}
+
+/** Returns which of the listed product ids carry a published_at (for the "new" marker). */
+export async function publishedAtFor(ids: string[]): Promise<Map<string, Date | null>> {
+  if (ids.length === 0) return new Map();
+  const rows = await query<{ id: string; published_at: Date | null }>(
+    `SELECT id, published_at FROM products WHERE id = ANY($1)`, [ids]);
+  return new Map(rows.map((r) => [r.id, r.published_at]));
 }

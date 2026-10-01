@@ -47,6 +47,8 @@ export const POST = withRoute({ permission: "products.create", rateLimit: RateLi
     // `[]` (no tags typed in the form) is valid — rejecting it made every
     // untagged product fail with "Validation failed.".
     tags: optional(isStringArray),
+    // Search keywords (migration 0058). `[]` clears them.
+    keywords: optional(isStringArray),
     sku: nullable(isString),
     shortDescription: nullable(isString),
     fullDescription: nullable(isString),

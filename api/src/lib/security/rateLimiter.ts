@@ -158,6 +158,10 @@ export const RateLimitRules = {
   // be used to load the database disproportionately to how "just reading
   // a page" should cost.
   search: { key: "catalog.search", windowMs: 60_000, max: 60 } satisfies RateLimitRule,
+  // The live search panel asks once per typing pause (debounced) with a small,
+  // capped result set — cheaper than a full listing, but a fast typer on a
+  // shared mobile-carrier IP can make many of them, so it gets its own budget.
+  searchSuggest: { key: "catalog.search-suggest", windowMs: 60_000, max: 180 } satisfies RateLimitRule,
   // Uploads cost real disk/bandwidth/object-storage — much tighter than
   // adminGeneral's 240/min, which was never actually upload-specific
   // (every admin write shared one limit). 20/min comfortably covers

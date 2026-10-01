@@ -90,6 +90,9 @@ function serializeProductWithVariants(
           // membership; the storefront only needs the FILTER capability
           // (already served by product-filter.repo.ts), not the raw list.
           tags: product.tags ?? [],
+          // Search keywords (migration 0058) — admin-only, like tags: they
+          // shape what a product is found by, not what a shopper sees.
+          keywords: product.keywords ?? [],
         }),
     shortDescription: product.shortDescription ?? null,
     fullDescription: product.fullDescription ?? null,
@@ -796,6 +799,34 @@ async function assertUnderProductLimit(adminUserId: string): Promise<void> {
 }
 
 /** URL-safe slug: lowercase ASCII letters/digits separated by single dashes. */
+export const MAX_PRODUCT_KEYWORDS = 30;
+export const MAX_KEYWORD_LENGTH = 60;
+
+/**
+ * Search keywords as typed by an admin ("Black Sneakers,  running shoes, ...")
+ * -> trimmed, single-spaced, lowercased, de-duplicated. Rejects (rather than
+ * silently cutting) anything over the limits so nothing an admin typed is
+ * lost without them knowing.
+ */
+export function normalizeKeywords(raw: string[]): string[] {
+  const out: string[] = [];
+  for (const entry of raw) {
+    // A single array item may itself hold commas when it came from a plain text box.
+    for (const part of String(entry).split(",")) {
+      const k = part.replace(/\s+/g, " ").trim().toLowerCase();
+      if (!k) continue;
+      if (k.length > MAX_KEYWORD_LENGTH) {
+        throw new ValidationError("Validation failed.", { keywords: `"${k.slice(0, 30)}…" is too long — keep each keyword under ${MAX_KEYWORD_LENGTH} characters.` });
+      }
+      if (!out.includes(k)) out.push(k);
+    }
+  }
+  if (out.length > MAX_PRODUCT_KEYWORDS) {
+    throw new ValidationError("Validation failed.", { keywords: `Use at most ${MAX_PRODUCT_KEYWORDS} keywords per product.` });
+  }
+  return out;
+}
+
 export function slugifyProduct(value: string): string {
   return value
     .normalize("NFKD")
@@ -812,8 +843,9 @@ const SLUG_INSERT_ATTEMPTS = 5;
 
 export async function createProduct(
   actor: { id: string; role: Role },
-  input: { slug?: string; name: string; brandId: string; categoryId: string; priceCents: number; genderAudiences?: string[]; lifestyleIds?: string[]; tags?: string[] } & ProductOfferInput
+  input: { slug?: string; name: string; brandId: string; categoryId: string; priceCents: number; genderAudiences?: string[]; lifestyleIds?: string[]; tags?: string[]; keywords?: string[] } & ProductOfferInput
 ) {
+  if (input.keywords !== undefined) input = { ...input, keywords: normalizeKeywords(input.keywords) };
   // Product-posting limits — enforced here, server-side, never just a
   // disabled button on the frontend (a direct API call must be rejected
   // the same way). Super Admin is deliberately exempt: per this
@@ -878,10 +910,11 @@ export async function createProduct(
 export async function updateProduct(
   actor: { id: string; role: Role },
   productId: string,
-  patch: Partial<{ name: string; slug: string; brandId: string; categoryId: string; priceCents: number; active: boolean; genderAudiences?: string[]; lifestyleIds?: string[]; tags?: string[] } & ProductOfferInput>
+  patch: Partial<{ name: string; slug: string; brandId: string; categoryId: string; priceCents: number; active: boolean; genderAudiences?: string[]; lifestyleIds?: string[]; tags?: string[]; keywords?: string[] } & ProductOfferInput>
 ) {
   const before = await catalogRepo.findProductById(productId);
   if (!before) throw new NotFoundError("Product not found.");
+  if (patch.keywords !== undefined) patch = { ...patch, keywords: normalizeKeywords(patch.keywords) };
 
   if (patch.name !== undefined && patch.name.trim() === "") {
     throw new ValidationError("Product name cannot be blank.", { name: "Enter a product name." });

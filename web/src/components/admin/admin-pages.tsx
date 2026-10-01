@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState, useRef, useId, type ReactNode } from "react";
 import { Link } from "react-router-dom";
+import { KeywordInput } from "./keyword-input";
 import { Plus, Search, Filter, Download, X, Check, ShieldAlert, Image, ImagePlus, ImageMinus, ImageOff, Pencil, Eye, EyeOff, Trash2 } from "lucide-react";
 import * as api from "../../lib/api";
 import { formatTZS } from "../../lib/currency";
@@ -89,7 +90,7 @@ function handleAuthError(e: unknown, _setBanner: (m: string, tone?: BannerTone) 
 
 type AddForm = {
   open: boolean;
-  fields: { name: string; label: string; kind: "text" | "password" | "email" | "select" | "check" | "icon"; options?: string[] }[];
+  fields: { name: string; label: string; kind: "text" | "password" | "email" | "select" | "check" | "icon" | "keywords"; options?: string[] }[];
 };
 
 export function FunctionalManagementPage({ title, desc, withHeroOverride = false, withPaymentsOverride = false, withLifestylesOverride = false, withMfaOverride = false, superRole = true }: { title: string; desc: string; withHeroOverride?: boolean; withPaymentsOverride?: boolean; withLifestylesOverride?: boolean; withMfaOverride?: boolean; superRole?: boolean }) {
@@ -258,6 +259,7 @@ function GenericManagementPage({ title, desc, superRole }: { title: string; desc
             { name: "fullDescription", label: "Full description", kind: "text" },
             { name: "genderAudiences", label: "Gender / Audience", kind: "check", options: ["Women", "Men", "Unisex"] },
             { name: "tags", label: "Collection tags (comma-separated, e.g. premium, new) — drives homepage featured sections", kind: "text" },
+            { name: "keywords", label: "Keyword", kind: "keywords" },
           ] });
           break;
         }
@@ -393,6 +395,7 @@ function GenericManagementPage({ title, desc, superRole }: { title: string; desc
           return;
         }
         const tags = (formData.tags ?? "").split(",").map((s) => s.trim()).filter(Boolean);
+        const keywords = (formData.keywords ?? "").split(",").map((s) => s.trim()).filter(Boolean);
         let attrWarning = "";
         const created = await api.createAdminProduct({
           // Always send a clean URL-safe slug (the server also normalizes it
@@ -416,6 +419,7 @@ function GenericManagementPage({ title, desc, superRole }: { title: string; desc
           // Omit when empty rather than sending [] — older API builds reject
           // an empty tags array on create.
           tags: tags.length > 0 ? tags : undefined,
+          keywords: keywords.length > 0 ? keywords : undefined,
         });
         // The category's attributes were picked in the same dialog — persist the
         // selections onto the fresh product now (empty list = clear/none). A
@@ -1227,7 +1231,7 @@ function BrandLogoThumb({ brand }: { brand: api.Brand }) {
 }
 
 function AddModal({ fields, title, onClose, onSubmit, initial, logoSection, onDataChange, extra }: {
-  fields: { name: string; label: string; kind: "text" | "password" | "email" | "select" | "check" | "icon"; options?: string[] }[];
+  fields: { name: string; label: string; kind: "text" | "password" | "email" | "select" | "check" | "icon" | "keywords"; options?: string[] }[];
   title: string;
   onClose: () => void;
   onSubmit: (d: Record<string, string>) => void;
@@ -1289,7 +1293,7 @@ function AddModal({ fields, title, onClose, onSubmit, initial, logoSection, onDa
         <div style={{ display: 'grid', gap: 12, marginTop: logoSection ? 14 : 0 }}>
           {fields.map((f) => (
             <div key={f.name}>
-              <label htmlFor={f.kind === "check" || f.kind === "icon" ? undefined : fieldId(f.name)} style={{ display: 'block', fontSize: 11, fontWeight: 600, marginBottom: 4, color: '#555' }}>{f.label}</label>
+              {f.kind !== "keywords" && <label htmlFor={f.kind === "check" || f.kind === "icon" ? undefined : fieldId(f.name)} style={{ display: 'block', fontSize: 11, fontWeight: 600, marginBottom: 4, color: '#555' }}>{f.label}</label>}
               {f.kind === "select" ? (
                 <select id={fieldId(f.name)} style={{ width: '100%', border: '1px solid #ddd', padding: '9px 10px', fontSize: 12 }} value={data[f.name] ?? ''} onChange={(e) => patch(f.name, e.target.value)}>
                   <option value="">Select…</option>
@@ -1316,6 +1320,12 @@ function AddModal({ fields, title, onClose, onSubmit, initial, logoSection, onDa
                     );
                   })}
                 </div>
+              ) : f.kind === "keywords" ? (
+                <KeywordInput
+                  id={fieldId(f.name)}
+                  value={(data[f.name] ?? "").split(",").filter(Boolean)}
+                  onChange={(next) => patch(f.name, next.join(","))}
+                />
               ) : f.kind === "check" ? (
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
                   {(f.options ?? []).map((o) => {
@@ -1435,6 +1445,7 @@ export function ProductEditorModal({ product, onClose, onSaved }: {
   const [offerStart, setOfferStart] = useState(product.offerStartDate ?? "");
   const [offerEnd, setOfferEnd] = useState(product.offerEndDate ?? "");
   const [tags, setTags] = useState((product.tags ?? []).join(", "));
+  const [keywords, setKeywords] = useState<string[]>(product.keywords ?? []);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [uploadBusy, setUploadBusy] = useState(false);
@@ -1586,6 +1597,7 @@ export function ProductEditorModal({ product, onClose, onSaved }: {
         shortDescription: trimOrNull(shortDescription),
         fullDescription: trimOrNull(fullDescription),
         tags: tags.split(",").map((s) => s.trim()).filter(Boolean),
+        keywords,
       });
       if (attributeGroups.length > 0) {
         await api.setProductAttributeValues(product.id, selectedAttributeOptionIds);
@@ -1693,6 +1705,9 @@ export function ProductEditorModal({ product, onClose, onSaved }: {
           <div>
             <label style={{ display: 'block', fontSize: 11, fontWeight: 600, marginBottom: 4, color: '#555' }}>Collection tags (comma-separated)</label>
             <input style={{ width: '100%', border: '1px solid #ddd', padding: '9px 10px', fontSize: 12 }} value={tags} onChange={(e) => setTags(e.target.value)} placeholder="e.g. premium, new — drives homepage featured sections" />
+          </div>
+          <div style={{ gridColumn: '1 / -1' }}>
+            <KeywordInput value={keywords} onChange={setKeywords} />
           </div>
           <div style={{ display: 'flex', alignItems: 'flex-end', paddingBottom: 4 }}>
             {(() => {

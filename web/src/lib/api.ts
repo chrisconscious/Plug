@@ -374,6 +374,8 @@ export interface Product {
   offerStartDate?: string | null;
   offerEndDate?: string | null;
   tags?: string[];
+  /** Search keywords (admin only) — words that make the product easy to find. */
+  keywords?: string[];
   status?: AdminProductStatus;
   totalStock?: number;
   publishedAt?: string | null;
@@ -589,6 +591,8 @@ export function createAdminProduct(input: {
   genderAudiences?: string[];
   lifestyleIds?: string[];
   tags?: string[];
+  /** Search keywords (admin only) — words that make the product easy to find. */
+  keywords?: string[];
   sku?: string | null;
   shortDescription?: string | null;
   fullDescription?: string | null;
@@ -616,6 +620,8 @@ export function updateAdminProduct(
     genderAudiences?: string[];
     lifestyleIds?: string[];
     tags?: string[];
+    /** Search keywords (admin only) — words that make the product easy to find. */
+    keywords?: string[];
     sku: string | null;
     shortDescription: string | null;
     fullDescription: string | null;
@@ -1994,4 +2000,47 @@ export function reorderAdminPaymentMethods(orderedIds: string[]): Promise<{ meth
     method: "PUT",
     body: JSON.stringify({ orderedIds }),
   });
+}
+
+// ---- Live search (GET /api/v1/search) ----
+
+export type SearchProduct = {
+  id: string;
+  slug: string;
+  name: string;
+  url: string;
+  brand: { name: string; slug: string } | null;
+  category: { name: string; slug: string } | null;
+  priceCents: number;
+  compareAtPriceCents: number | null;
+  onSale: boolean;
+  discountPercent: number | null;
+  image: { url: string; alt: string | null } | null;
+  colors: string[];
+  soldOut: boolean;
+  isNew: boolean;
+  badgeText: string | null;
+};
+export type SearchLink = { name: string; slug: string; count?: number; imageUrl?: string | null };
+export type SearchResults = {
+  query: string;
+  exact: boolean;
+  correctedQuery: string | null;
+  total: number;
+  products: SearchProduct[];
+  suggestions: string[];
+  brands: SearchLink[];
+  categories: SearchLink[];
+};
+export type SearchStart = { popular: string[]; brands: SearchLink[]; categories: SearchLink[]; newArrivals: SearchProduct[] };
+
+/** Live search results for the header search panel. Pass a signal so a newer keystroke can cancel this request. */
+export function liveSearch(q: string, opts: { limit?: number; signal?: AbortSignal } = {}): Promise<SearchResults> {
+  const params = new URLSearchParams({ q, limit: String(opts.limit ?? 8) });
+  return request<SearchResults>(`/api/v1/search?${params.toString()}`, { signal: opts.signal, cache: "no-store" });
+}
+
+/** The search panel's starting state (popular searches, top brands/categories, new arrivals). */
+export function searchStart(opts: { signal?: AbortSignal } = {}): Promise<SearchStart> {
+  return request<SearchStart>("/api/v1/search", { signal: opts.signal, cache: "no-store" });
 }

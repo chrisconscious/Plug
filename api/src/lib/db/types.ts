@@ -218,6 +218,7 @@ export type Product = {
   genderAudiences?: GenderAudience[]; // authoritative audience set (from product_gender_audiences)
   lifestyles?: ProductLifestyleRef[]; // assigned lifestyles (from product_lifestyles, migration 0019)
   tags?: string[]; // collections: new | trending | campus | ...
+  keywords?: string[]; // admin search keywords (migration 0058) — search-only, not a collection
   sku?: string | null;
   shortDescription?: string | null;
   fullDescription?: string | null;

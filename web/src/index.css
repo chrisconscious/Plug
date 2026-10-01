@@ -1,4 +1,17 @@
-@import url("https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap");
+/* Manrope, self-hosted (SIL Open Font License) so headings never fall back to
+   another font when Google Fonts is slow or blocked. One variable file per
+   character set covers every weight (200-800); Latin + Latin-Extended cover
+   English and Swahili. */
+@font-face{
+  font-family:"Manrope"; font-style:normal; font-weight:200 800; font-display:swap;
+  src:url("/fonts/manrope-latin.woff2") format("woff2");
+  unicode-range:U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face{
+  font-family:"Manrope"; font-style:normal; font-weight:200 800; font-display:swap;
+  src:url("/fonts/manrope-latin-ext.woff2") format("woff2");
+  unicode-range:U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -1631,42 +1644,81 @@ body.install-prompt-visible .waFab{
   .notifBackdrop, .notifPanel{ animation:none; }
 }
 
-/* ---- Dedicated /notifications page ---- */
-.notifPage{ max-width:720px; margin:0 auto; padding:40px 20px 80px; }
-.notifPageHead{ display:flex; align-items:center; justify-content:space-between; margin-bottom:20px; }
-.notifPageHead h1{ font:800 22px Manrope; margin:0; }
-.notifTabs{ display:flex; gap:6px; overflow-x:auto; padding-bottom:14px; margin-bottom:14px; border-bottom:1px solid #ece9e2; }
-.notifTab{
-  flex:0 0 auto;
-  padding:8px 14px;
-  border:1px solid #e5e2da; border-radius:20px;
-  background:#fff; color:#666;
-  font:700 11px Manrope; letter-spacing:.03em;
-  cursor:pointer; white-space:nowrap;
-}
-.notifTab.active{ background:#141414; color:#fff; border-color:#141414; }
-.notifPageList{ display:flex; flex-direction:column; gap:8px; }
-.notifPageItem{
-  display:flex; align-items:flex-start; gap:12px;
-  width:100%; text-align:left;
-  padding:14px 16px;
-  border:1px solid #ece9e2; border-radius:10px;
-  background:#fff; cursor:pointer;
-}
-.notifPageItem.unread{ background:#fdfaf3; border-color:#f0e4c8; }
-.notifPageItem .notifItemTitle{ font-size:13.5px; }
-.notifPageItem .notifItemMsg{ font-size:12.5px; }
-.notifPageEmpty{
-  display:flex; flex-direction:column; align-items:center; gap:8px;
-  padding:70px 20px; color:#999; text-align:center;
-}
-.notifPageEmpty p{ font:700 14px Manrope; color:#333; margin:6px 0 0; }
-.notifPageEmpty span{ font-size:12.5px; }
+/* ---- Dedicated /notifications page ----
+   Same classic black & white language as the account page. Unread items
+   carry a solid black left edge + black dot (no beige fill / gold). */
+.notifPage{ max-width:860px; margin:0 auto; padding:32px clamp(16px,4vw,40px) 96px; color:#111; }
+.notifPageHead{ display:flex; align-items:flex-end; justify-content:space-between; gap:16px; flex-wrap:wrap;
+  background:#000; color:#fff; padding:clamp(22px,3vw,32px) clamp(20px,3vw,32px); margin-bottom:22px; }
+.notifPageTitle{ min-width:0; }
+.notifPageHead .accEyebrow{ color:#fff; }
+.notifPageHead h1{ margin:0; font:800 clamp(26px,2vw + 14px,34px) Manrope; color:#fff; line-height:1.1; }
+.notifPageSub{ margin:8px 0 0; font-size:14px; color:#fff; opacity:.88; }
+.notifMarkAllBtn{ display:inline-flex; align-items:center; gap:8px; min-height:44px; padding:0 16px;
+  background:#fff; color:#000; border:1px solid #fff; font:800 11.5px Manrope; letter-spacing:.1em; cursor:pointer; }
+.notifMarkAllBtn:hover{ background:#000; color:#fff; }
+.notifMarkAllBtn:focus-visible{ outline:2px solid #fff; outline-offset:2px; }
+.notifPageErr{ margin:-8px 0 16px; }
+.notifTabs{ display:flex; gap:8px; overflow-x:auto; padding:0 0 16px; margin-bottom:18px; border-bottom:1px solid #000;
+  scrollbar-width:none; -webkit-overflow-scrolling:touch; }
+.notifTabs::-webkit-scrollbar{ display:none; }
+.notifTab{ flex:0 0 auto; min-height:40px; padding:0 16px; border:1px solid #000; border-radius:0; background:#fff; color:#000;
+  font:700 12.5px Manrope; letter-spacing:.04em; cursor:pointer; white-space:nowrap; transition:background .15s ease, color .15s ease; }
+.notifTab:hover{ background:#f2f2f2; }
+.notifTab.active{ background:#000; color:#fff; border-color:#000; }
+.notifTab:focus-visible{ outline:2px solid #000; outline-offset:2px; }
+.notifPageList{ display:flex; flex-direction:column; gap:10px; }
+.notifPageItem{ position:relative; display:flex; align-items:flex-start; gap:14px; width:100%; text-align:left;
+  padding:16px 18px; border:1px solid #d6d6d6; border-radius:0; background:#fff; color:#111; cursor:pointer;
+  transition:border-color .15s ease, box-shadow .15s ease; }
+.notifPageItem:hover{ border-color:#000; box-shadow:inset 0 0 0 1px #000; }
+.notifPageItem:focus-visible{ outline:2px solid #000; outline-offset:2px; }
+.notifPageItem.unread{ background:#fff; border-color:#000; box-shadow:inset 4px 0 0 #000; }
+.notifPageItem .notifItemIcon{ width:42px; height:42px; border-radius:0; background:#000; color:#fff; }
+.notifPageItem:not(.unread) .notifItemIcon{ background:#fff; color:#000; border:1px solid #000; }
+.notifPageItem .notifItemTitle{ font:800 15px Manrope; color:#000; }
+.notifPageItem .notifItemMsg{ font-size:14px; color:#2b2b2b; line-height:1.5; }
+.notifPageItem .notifItemTime{ font-size:12px; color:#555; font-weight:500; margin-top:4px; }
+.notifPageItem .notifDot{ width:9px; height:9px; background:#000; margin-top:6px; }
+.notifPageEmpty{ display:flex; flex-direction:column; align-items:center; gap:6px; padding:56px 20px; text-align:center; border:1px dashed #9a9a9a; color:#111; }
+.notifPageEmptyIcon{ display:grid; place-items:center; width:56px; height:56px; border-radius:50%; background:#000; color:#fff; margin-bottom:8px; }
+.notifPageEmpty p{ font:800 16px Manrope; color:#000; margin:0; }
+.notifPageEmpty span{ font-size:14px; color:#333; }
+.notifLoadMore{ display:flex; align-items:center; justify-content:center; width:100%; min-height:52px; margin:20px 0 0;
+  background:#fff; border:1.5px solid #000; color:#000; font:800 12.5px Manrope; letter-spacing:.14em; cursor:pointer; }
+.notifLoadMore:hover{ background:#000; color:#fff; }
+.notifLoadMore:disabled{ opacity:.6; cursor:progress; }
+.notifSkel{ height:320px; }
 
-@media(max-width:480px){
-  .notifPage{ padding:24px 14px 60px; }
-  .notifPageHead h1{ font-size:19px; }
+@media(max-width:900px){
+  .notifPage{ padding-bottom:calc(56px + 110px + env(safe-area-inset-bottom, 0px)); }
 }
+@media(max-width:600px){
+  .notifPage{ padding-top:18px; }
+  .notifPageHead{ margin-left:calc(-1 * clamp(16px,4vw,40px)); margin-right:calc(-1 * clamp(16px,4vw,40px)); }
+  .notifMarkAllBtn{ width:100%; justify-content:center; }
+  .notifPageItem{ padding:14px; gap:12px; }
+}
+@media(prefers-reduced-motion:reduce){ .notifTab, .notifPageItem{ transition:none; } }
+
+/* Bell drop-down / drawer: same monochrome treatment */
+.notifPanel{ border-color:#000; border-radius:0; }
+.notifPanelHead{ border-bottom-color:#000; }
+.notifPanelHead b{ color:#000; }
+.notifMarkAll{ color:#000; }
+.notifItem{ border-bottom-color:#e6e6e6; }
+.notifItem:hover{ background:#f4f4f4; }
+.notifItem.unread{ background:#fff; box-shadow:inset 3px 0 0 #000; }
+.notifItemIcon{ border-radius:0; background:#000; color:#fff; }
+.notifItemTitle{ color:#000; }
+.notifItemMsg{ color:#333; }
+.notifItemTime{ color:#555; }
+.notifDot{ background:#000; }
+.notifViewAll{ background:#fff; color:#000; border-top-color:#000; text-decoration:underline; text-underline-offset:3px; }
+.notifViewAll:hover{ background:#000; color:#fff; }
+.notifEmpty, .notifLoading{ color:#333; }
+.notifEmpty p{ color:#000; }
+@media(max-width:900px){ .notifPanel{ border-radius:16px 16px 0 0; } }
 
 /* ---- Notification toasts ---- */
 .toastStack{

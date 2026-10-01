@@ -75,7 +75,7 @@ export const isPhoneNumber: FieldValidator<string> = (value, fieldName) => {
 
   const ok = /^0[67]\d{8}$/.test(digits);
   if (!ok) {
-    throw new ValidationError("Validation failed.", { [fieldName]: "Enter a valid mobile number, e.g. 0756825667." });
+    throw new ValidationError("Validation failed.", { [fieldName]: "Enter a valid mobile number, e.g. 0655000000." });
   }
   return digits;
 };

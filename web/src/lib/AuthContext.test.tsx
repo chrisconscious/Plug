@@ -1,12 +1,12 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { render, screen, waitFor, cleanup } from "@testing-library/react";
+import { render, screen, waitFor, cleanup, act } from "@testing-library/react";
 import { AuthProvider, useAuth } from "./AuthContext";
 import * as api from "./api";
 
 vi.mock("./api", async () => {
   const actual = await vi.importActual<typeof api>("./api");
-  return { ...actual, me: vi.fn(), login: vi.fn(), register: vi.fn(), logout: vi.fn() };
+  return { ...actual, me: vi.fn(), login: vi.fn(), register: vi.fn(), logout: vi.fn(), onSessionLost: vi.fn(() => () => undefined) };
 });
 vi.mock("./wishlist", () => ({ setWishlistAuthMode: vi.fn() }));
 vi.mock("./cartCount", () => ({ refreshCartCount: vi.fn(), clearCartCount: vi.fn() }));
@@ -132,5 +132,19 @@ describe("AuthProvider — logout", () => {
 
     screen.getByText("logout").click();
     await waitFor(() => expect(screen.getByTestId("status").textContent).toBe("unauthenticated"));
+  });
+});
+
+describe("AuthProvider — session lost while the page is open", () => {
+  it("switches to 'unauthenticated' when the API client reports the server ended the session", async () => {
+    mockedMe.mockResolvedValue({ user: fakeUser() });
+    renderProbe();
+    await waitFor(() => expect(screen.getByTestId("status").textContent).toBe("authenticated"));
+
+    const listener = vi.mocked(api.onSessionLost).mock.calls.at(-1)?.[0];
+    expect(listener).toBeTypeOf("function");
+    act(() => listener!());
+    await waitFor(() => expect(screen.getByTestId("status").textContent).toBe("unauthenticated"));
+    expect(screen.getByTestId("email").textContent).toBe("none");
   });
 });

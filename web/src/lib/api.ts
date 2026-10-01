@@ -64,25 +64,42 @@ export function hasSessionMarker(): boolean {
   return typeof document !== "undefined" && /(?:^|;\s*)vv_session=([^;]+)/.test(document.cookie);
 }
 
-// A failed refresh (401/403/network) means the refresh cookie is gone or
-// no longer valid — re-posted retries can only fail again, so once that
-// has happened once, skip further attempts for the rest of this page's
+// A refresh REJECTED by the server (401/403) means the refresh cookie is
+// gone or no longer valid — re-posted retries can only fail again, so once
+// that has happened, skip further attempts for the rest of this page's
 // life. Without this latch, every subsequent 401 (e.g. each /auth/me poll
 // on every page load while signed out) re-hits /auth/refresh and spams the
 // console with the same doomed error. Reset on login/register so a same-page
 // re-auth after an earlier sign-out can still refresh.
+//
+// A refresh that merely couldn't REACH the server (dropped connection while
+// the API restarts, offline, 5xx) proves nothing about the session, so it
+// does NOT latch: the next 401 tries again. Previously one network blip
+// mid-refresh disabled renewal for good and the page kept failing with 401s
+// until it was reloaded.
 let refreshPossible = hasSessionMarker();
+
+// Told when the server has definitively ended this browser's session (a
+// refresh answered 401/403) so AuthContext can switch the UI to signed-out
+// at once — instead of still showing the account, with the notification
+// bell and toaster polling (and 401-ing) every 30s until a reload.
+const sessionLostListeners = new Set<() => void>();
+export function onSessionLost(listener: () => void): () => void {
+  sessionLostListeners.add(listener);
+  return () => { sessionLostListeners.delete(listener); };
+}
 
 function performRefresh(): Promise<boolean> {
   return fetch(`${baseUrl}/api/v1/auth/refresh`, { method: "POST", credentials: "include" })
     .then((r) => {
-      if (!r.ok) refreshPossible = false;
-      return r.ok;
-    })
-    .catch(() => {
-      refreshPossible = false;
+      if (r.ok) return true;
+      if (r.status === 401 || r.status === 403) {
+        refreshPossible = false;
+        sessionLostListeners.forEach((listener) => listener());
+      }
       return false;
-    });
+    })
+    .catch(() => false);
 }
 
 function refreshSession(): Promise<boolean> {

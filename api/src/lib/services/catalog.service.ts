@@ -455,8 +455,33 @@ export async function getFacets(filters: ProductListQuery) {
   });
 }
 
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/**
+ * The keys a /products/:id request may refer to, in lookup order: the slug as
+ * given; its canonical form (so links built from pre-0059 malformed slugs such
+ * as "/Classic Tshirt" still open the product now stored as "classic-tshirt");
+ * and, for a UUID, the product id.
+ */
+export function productLookupKeys(raw: string): { slugs: string[]; id: string | null } {
+  const given = raw.trim();
+  const canonical = slugifyProduct(given);
+  const slugs = [given, canonical].filter((s, i, all) => s && all.indexOf(s) === i);
+  return { slugs, id: UUID_RE.test(given) ? given : null };
+}
+
 export async function getProductBySlug(slug: string) {
-  const product = await catalogRepo.findProductBySlug(slug);
+  const keys = productLookupKeys(slug);
+  let product: Product | null = null;
+  for (const key of keys.slugs) {
+    product = await catalogRepo.findProductBySlug(key);
+    if (product) break;
+  }
+  if (!product && keys.id) {
+    const byId = await catalogRepo.findProductById(keys.id);
+    // Same visibility rule as the slug lookup: inactive products are not public.
+    if (byId?.active) product = byId;
+  }
   if (!product) throw new NotFoundError("Product not found.");
   const [variants, brands, categories, imageMap, audienceList, lifestyleList] = await Promise.all([
     catalogRepo.listVariantsForProducts([product.id]),

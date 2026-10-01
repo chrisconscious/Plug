@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams, Link, Navigate } from 'react-router-dom';
-import { Eye, EyeOff } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Eye, EyeOff } from 'lucide-react';
 import * as api from '../lib/api';
 import { useAuth } from '../lib/AuthContext';
 import { usePlatformSettings } from '../lib/PlatformSettingsContext';
@@ -62,7 +62,7 @@ function Auth({ register = false }: { register?: boolean }) {
     const errs: Partial<Record<FieldKey, string>> = {};
     if (register && !name.trim()) errs.fullName = 'Enter your full name.';
     if (!phone.trim()) errs.phoneNumber = 'Enter your mobile number.';
-    else if (!isValidMobile(phone)) errs.phoneNumber = 'Enter a valid mobile number, e.g. 0756825667.';
+    else if (!isValidMobile(phone)) errs.phoneNumber = 'Enter a valid mobile number, e.g. 0655000000.';
     if (!password) errs.password = 'Enter your password.';
     else if (register && !isStrongPassword(password)) errs.password = 'Your password doesn\'t meet all the requirements below yet.';
     return errs;
@@ -110,37 +110,48 @@ function Auth({ register = false }: { register?: boolean }) {
     return <Navigate to={returnTo ?? (user.role === 'SUPER_ADMIN' ? '/super-admin' : user.role === 'ADMIN' ? '/admin' : '/shop')} replace />;
   }
   return (
-    <div className="auth">
+    <div className={register ? 'auth authPage authPage--register' : 'auth authPage'}>
       <div className="authVisual" style={authSettings?.backgroundImageUrl ? { backgroundImage: `url(${api.assetUrl(authSettings.backgroundImageUrl)})`, backgroundSize: 'cover', backgroundPosition: 'center' } : { background: register ? 'linear-gradient(155deg, #2b2118 0%, #0a0806 65%, #000 100%)' : 'linear-gradient(155deg, #14161c 0%, #06070a 65%, #000 100%)' }}>
         <Link to="/" className="authLogo"><BrandLogo maxHeight={26} /></Link>
-        <div><h1>{register ? authSettings?.registerHeadline ?? 'BECOME A MEMBER' : authSettings?.loginHeadline ?? 'FASHION THAT DEFINES YOU'}</h1><p>{register ? authSettings?.registerSubtitle ?? 'Discover premium styles curated for you.' : authSettings?.loginSubtitle ?? 'Discover premium styles curated for you.'}</p></div>
+        <div className="authVisualText"><h1>{register ? authSettings?.registerHeadline ?? 'BECOME A MEMBER' : authSettings?.loginHeadline ?? 'FASHION THAT DEFINES YOU'}</h1><p>{register ? authSettings?.registerSubtitle ?? 'Discover premium styles curated for you.' : authSettings?.loginSubtitle ?? 'Discover premium styles curated for you.'}</p></div>
       </div>
       <div className="authForm">
+        <div className="authPanel">
         {mfaToken ? (
           <>
-            <h1>TWO-FACTOR CODE</h1>
-            <p>Enter the 6-digit code from your authenticator app, or one of your recovery codes.</p>
-            <form className="formGrid" onSubmit={submitMfa}>
-              <input aria-label="6-digit code or recovery code" placeholder="6-digit code or recovery code" required value={mfaCode} onChange={(e) => setMfaCode(e.target.value)} autoFocus />
-              {error && <p role="alert" style={{ color: '#c00', fontSize: 13, margin: 0 }}>{error}</p>}
-              <button type="submit" className="blackButton" disabled={busy}>{busy ? 'Verifying...' : 'VERIFY'}</button>
+            <header className="authHead">
+              <h1>TWO-FACTOR CODE</h1>
+              <p className="authLead">Enter the 6-digit code from your authenticator app, or one of your recovery codes.</p>
+            </header>
+            <form className="authFields" onSubmit={submitMfa}>
+              <div className="authField">
+                <label htmlFor="auth-mfa" className="authLabel">Verification code</label>
+                <input id="auth-mfa" className="authInput" aria-label="6-digit code or recovery code" placeholder="6-digit code or recovery code" autoComplete="one-time-code" required value={mfaCode} onChange={(e) => setMfaCode(e.target.value)} autoFocus />
+              </div>
+              {error && <p role="alert" className="authNotice authNotice--error">{error}</p>}
+              <button type="submit" className="blackButton authSubmit" disabled={busy}>{busy ? 'Verifying...' : 'VERIFY'}</button>
             </form>
-            <p><button type="button" onClick={() => { setMfaToken(null); setMfaCode(''); setError(''); }} style={{ color: '#666', background: 'none', border: 'none', textDecoration: 'underline', cursor: 'pointer', padding: 0 }}>Back to sign in</button></p>
+            <div className="authSwitch">
+              <button type="button" className="authAltButton" onClick={() => { setMfaToken(null); setMfaCode(''); setError(''); }}>
+                <ArrowLeft size={16} aria-hidden="true" /> Back to sign in
+              </button>
+            </div>
           </>
         ) : (
           <>
-            <h1>{register ? 'CREATE ACCOUNT' : 'WELCOME BACK'}</h1>
-            <p>{register ? `Join ${platformName} today` : 'Sign in to your account'}</p>
-            {!register && sessionExpired && <p style={{ color: '#b45309', fontSize: 13, margin: 0 }}>Your session expired. Please sign in again to continue.</p>}
-            {toCheckout && <p role="status" data-role="checkout-return-note" style={{ fontSize: 13, margin: 0, color: '#333' }}>{register ? 'Create an account' : 'Sign in'} to continue to checkout — you'll go straight back to your order.</p>}
-            <form className="formGrid" onSubmit={submit} noValidate>
+            <header className="authHead">
+              <h1>{register ? 'CREATE ACCOUNT' : 'WELCOME BACK'}</h1>
+              <p className="authLead">{register ? `Join ${platformName} today` : 'Sign in to your account'}</p>
+            </header>
+            {!register && sessionExpired && <p className="authNotice authNotice--warn">Your session expired. Please sign in again to continue.</p>}
+            {toCheckout && <p role="status" data-role="checkout-return-note" className="authNotice">{register ? 'Create an account' : 'Sign in'} to continue to checkout — you'll go straight back to your order.</p>}
+            <form className="authFields" onSubmit={submit} noValidate>
               {register && (
-                <div>
-                  <label htmlFor="auth-name" style={{ display: 'block', fontSize: 12, fontWeight: 600, color: '#555', marginBottom: 5 }}>
-                    Full Name
-                  </label>
+                <div className="authField">
+                  <label htmlFor="auth-name" className="authLabel">Full name</label>
                   <input
                     id="auth-name"
+                    className="authInput"
                     placeholder="Your full name"
                     autoComplete="name"
                     maxLength={120}
@@ -148,42 +159,39 @@ function Auth({ register = false }: { register?: boolean }) {
                     aria-invalid={!!fieldErr.fullName}
                     aria-describedby={errId('fullName')}
                     onChange={(e) => { setName(e.target.value); setFieldErr((f) => ({ ...f, fullName: undefined })); }}
-                    style={{ fontSize: 16 }}
                   />
                   {fieldErr.fullName && <p id="auth-fullName-error" className="authFieldError">{fieldErr.fullName}</p>}
                 </div>
               )}
-              <div>
-                <label htmlFor="auth-phone" style={{ display: 'block', fontSize: 12, fontWeight: 600, color: '#555', marginBottom: 5 }}>
-                  Mobile Number
-                </label>
+              <div className="authField">
+                <label htmlFor="auth-phone" className="authLabel">Mobile number</label>
                 <input
                   id="auth-phone"
+                  className="authInput"
                   aria-label="Mobile number"
-                  placeholder="0756825667"
+                  placeholder="0655000000"
                   type="tel"
-                  inputMode="numeric"
+                  inputMode="tel"
                   autoComplete="tel"
                   required
                   value={phone}
                   aria-invalid={!!fieldErr.phoneNumber}
                   aria-describedby={errId('phoneNumber')}
                   onChange={(e) => { setPhone(e.target.value); setFieldErr((f) => ({ ...f, phoneNumber: undefined })); }}
-                  style={{ fontSize: 16 }}
                 />
-                {fieldErr.phoneNumber
-                  ? <p id="auth-phoneNumber-error" className="authFieldError">{fieldErr.phoneNumber}</p>
-                  : <span style={{ display: 'block', fontSize: 11, color: '#999', marginTop: 4 }}>e.g. 0756825667 or +255 756 825 667</span>}
+                {fieldErr.phoneNumber && <p id="auth-phoneNumber-error" className="authFieldError">{fieldErr.phoneNumber}</p>}
               </div>
-              <div>
-                <label htmlFor="auth-password" style={{ display: 'block', fontSize: 12, fontWeight: 600, color: '#555', marginBottom: 5 }}>
-                  Password
-                </label>
-                <div style={{ position: 'relative' }}>
+              <div className="authField">
+                <div className="authLabelRow">
+                  <label htmlFor="auth-password" className="authLabel">Password</label>
+                  {!register && <Link to="/forgot-password" className="authTextLink">Forgot password?</Link>}
+                </div>
+                <div className="authInputWrap">
                   <input
                     id="auth-password"
+                    className="authInput authInput--withIcon"
                     aria-label="Password"
-                    placeholder="Password"
+                    placeholder={register ? 'Create a password' : 'Enter your password'}
                     type={showPassword ? 'text' : 'password'}
                     autoComplete={register ? 'new-password' : 'current-password'}
                     required
@@ -191,14 +199,13 @@ function Auth({ register = false }: { register?: boolean }) {
                     aria-invalid={!!fieldErr.password}
                     aria-describedby={[errId('password'), register ? 'auth-password-rules' : undefined].filter(Boolean).join(' ') || undefined}
                     onChange={(e) => { setPassword(e.target.value); setFieldErr((f) => ({ ...f, password: undefined })); }}
-                    style={{ width: '100%', paddingRight: 44, fontSize: 16 }}
                   />
                   <button
                     type="button"
+                    className="authEye"
                     onClick={() => setShowPassword((v) => !v)}
                     aria-label={showPassword ? 'Hide password' : 'Show password'}
                     title={showPassword ? 'Hide password' : 'Show password'}
-                    style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: '#888', display: 'flex', padding: 6 }}
                   >
                     {showPassword ? <EyeOff size={19} /> : <Eye size={19} />}
                   </button>
@@ -207,19 +214,28 @@ function Auth({ register = false }: { register?: boolean }) {
                 {register && <PasswordChecklist id="auth-password-rules" password={password} />}
               </div>
               {registerConflict && (
-                <div role="alert" data-role="register-conflict" style={{ fontSize: 13, color: '#8a4b00', background: '#fff7e6', border: '1px solid #f5d99b', borderRadius: 6, padding: '10px 12px' }}>
+                <div role="alert" data-role="register-conflict" className="authNotice authNotice--warn">
                   We couldn't create an account with this mobile number. If you already have an account,{' '}
-                  <Link to={loginUrl(returnTo)}>sign in</Link> or <Link to="/forgot-password">reset your password</Link>.
+                  <Link to={loginUrl(returnTo)} className="authTextLink">sign in</Link> or <Link to="/forgot-password" className="authTextLink">reset your password</Link>.
                 </div>
               )}
-              {error && <p role="alert" style={{ color: '#c00', fontSize: 13, margin: 0 }}>{error}</p>}
-              <button type="submit" className="blackButton" disabled={busy} style={{ minHeight: 50, fontSize: 13 }}>{busy ? 'Please wait...' : (register ? 'CREATE ACCOUNT' : 'SIGN IN')}</button>
+              {error && <p role="alert" className="authNotice authNotice--error">{error}</p>}
+              <button type="submit" className="blackButton authSubmit" disabled={busy}>
+                {busy ? 'Please wait...' : (register ? 'CREATE ACCOUNT' : 'SIGN IN')}
+                {!busy && <ArrowRight size={17} aria-hidden="true" />}
+              </button>
             </form>
 
-            <p style={{ marginTop: 18 }}>{register ? 'Already have an account?' : 'New here?'} <Link to={loginUrl(returnTo, { page: register ? 'login' : 'register' })}>{register ? 'Sign in' : 'Create an account'}</Link></p>
-            <p><Link to="/forgot-password" style={{ color: '#666' }}>Forgot password?</Link></p>
+            <div className="authSwitch">
+              <p className="authDivider"><span>{register ? 'Already have an account?' : `New to ${platformName}?`}</span></p>
+              <Link to={loginUrl(returnTo, { page: register ? 'login' : 'register' })} className="authAltButton">
+                {register ? 'Sign in' : 'Create an account'} <ArrowRight size={16} aria-hidden="true" />
+              </Link>
+              {register && <Link to="/forgot-password" className="authTextLink authForgot">Forgot password?</Link>}
+            </div>
           </>
         )}
+        </div>
       </div>
     </div>
   );

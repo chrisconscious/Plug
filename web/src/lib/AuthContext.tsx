@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import * as api from './api';
 import { setWishlistAuthMode } from './wishlist';
 import { refreshCartCount, clearCartCount } from './cartCount';
@@ -82,6 +82,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     resolve();
   }, [resolve]);
+
+  // The server ended the session while this page was open (expired,
+  // revoked, signed out elsewhere): show signed-out right away rather than
+  // a stale account view whose every request now fails.
+  const statusRef = useRef(state.status);
+  statusRef.current = state.status;
+  useEffect(() => api.onSessionLost(() => {
+    if (statusRef.current !== 'authenticated') return;
+    setState({ status: 'unauthenticated', user: null });
+    setWishlistAuthMode(false);
+    clearCartCount();
+  }), []);
 
   const login = useCallback(async (phoneNumber: string, password: string) => {
     const result = await api.login(phoneNumber, password);

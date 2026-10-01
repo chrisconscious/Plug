@@ -884,12 +884,15 @@ html{scroll-behavior:smooth}.font-display{font-family:Manrope,sans-serif}button,
    risk sitting underneath a wide, centered bottom-sheet card. The two
    components have no shared React state, so this is coordinated purely via
    a body class the install card toggles on mount/unmount. */
+/* --install-card-clearance is the card's real top edge measured from the
+   viewport bottom (set by InstallPrompt.tsx); the fallbacks cover the first
+   frame before it is measured. */
 body.install-prompt-visible .waFab{
-  bottom:calc(env(safe-area-inset-bottom, 0px) + 18px + 92px);
+  bottom:calc(var(--install-card-clearance, calc(env(safe-area-inset-bottom, 0px) + 190px)) + 12px);
 }
 @media(min-width:900px){
   body.install-prompt-visible .waFab{
-    bottom:calc(24px + 132px);
+    bottom:calc(var(--install-card-clearance, 190px) + 12px);
   }
 }
 

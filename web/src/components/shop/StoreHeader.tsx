@@ -1,5 +1,5 @@
 import { Search, Users, Heart, ShoppingBag, X, Menu, LogOut, ChevronDown } from "lucide-react";
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../../lib/AuthContext";
 import { usePlatformSettings } from "../../lib/PlatformSettingsContext";
@@ -7,13 +7,13 @@ import { BrandLogo } from "../BrandLogo";
 import { NotificationBell } from "../NotificationBell";
 import * as api from "../../lib/api";
 import { loginUrl } from "../../lib/returnTo";
+import { SearchPanel } from "./SearchPanel";
 import {
   getCategoryUrl,
   getNewInUrl,
   getGenderCategoryUrl,
   getMenUrl,
   getSaleUrl,
-  getSearchUrl,
   getShopAllUrl,
   getWomenUrl,
 } from "../../lib/links";
@@ -39,7 +39,9 @@ export function StoreHeader() {
   const { status, logout } = useAuth();
   const { platformName } = usePlatformSettings();
   const [searchOpen, setSearchOpen] = useState(false);
-  const [query, setQuery] = useState("");
+  const [searchClosing, setSearchClosing] = useState(false);
+  const searchBtnRef = useRef<HTMLButtonElement>(null);
+  const headerRef = useRef<HTMLElement>(null);
   const [menuOpen, setMenuOpen] = useState(false);
   const [announcements, setAnnouncements] = useState<api.Announcement[]>([]);
 
@@ -59,16 +61,50 @@ export function StoreHeader() {
     return () => { alive = false; document.removeEventListener("visibilitychange", onVisible); };
   }, []);
 
+  // ---- Search panel: opens beneath the header, animates out on close ----
+  const closeSearch = useCallback((opts: { restoreFocus?: boolean } = {}) => {
+    const reduced = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+    if (reduced) {
+      setSearchOpen(false);
+    } else {
+      setSearchClosing(true);
+      window.setTimeout(() => { setSearchOpen(false); setSearchClosing(false); }, 170);
+    }
+    if (opts.restoreFocus) searchBtnRef.current?.focus({ preventScroll: true });
+  }, []);
+  const openSearch = () => {
+    setMenuOpen(false);
+    closeMega();
+    setSearchClosing(false);
+    setSearchOpen(true);
+  };
+
+  // While open: remember where the header ends (the panel and its backdrop
+  // start there), and mark <body> so floating widgets step aside and phones
+  // don't scroll the page behind the panel.
+  useEffect(() => {
+    if (!searchOpen) return;
+    const setTop = () => {
+      const bottom = headerRef.current?.getBoundingClientRect().bottom ?? 64;
+      document.documentElement.style.setProperty("--search-top", `${Math.max(0, Math.round(bottom))}px`);
+    };
+    setTop();
+    window.addEventListener("resize", setTop);
+    window.addEventListener("scroll", setTop, { passive: true });
+    document.body.classList.add("searchOpen");
+    return () => {
+      window.removeEventListener("resize", setTop);
+      window.removeEventListener("scroll", setTop);
+      document.body.classList.remove("searchOpen");
+    };
+  }, [searchOpen]);
+
+  // Navigating anywhere closes the panel.
+  useEffect(() => { setSearchOpen(false); setSearchClosing(false); }, [location.pathname, location.search]);
+
   const closeAll = () => {
     setMenuOpen(false);
     setSearchOpen(false);
-  };
-
-  const submitSearch = (e: React.FormEvent) => {
-    e.preventDefault();
-    const q = query.trim();
-    setSearchOpen(false);
-    nav(getSearchUrl(q));
   };
 
   // ---- Gender dropdowns (desktop mega-menu + mobile accordion) ----
@@ -187,7 +223,8 @@ export function StoreHeader() {
         </div>
       )}
       <header
-        className="storeHeader"
+        ref={headerRef}
+        className={`storeHeader${searchOpen ? " is-searching" : ""}`}
         onMouseLeave={(e) => {
           // Stay open while moving between the nav item and the panel
           // (both live inside the header); only close on a true exit.
@@ -211,8 +248,16 @@ export function StoreHeader() {
           <Link to="/brands">BRANDS</Link>
         </nav>
         <div className="headerIcons">
-          <button type="button" className="iconBtn" aria-label="Search" onClick={() => setSearchOpen(true)}>
-            <Search size={19} />
+          <button
+            ref={searchBtnRef}
+            type="button"
+            className={`iconBtn searchToggle${searchOpen && !searchClosing ? " is-open" : ""}`}
+            aria-label={searchOpen ? "Close search" : "Search"}
+            aria-expanded={searchOpen && !searchClosing}
+            onClick={() => (searchOpen ? closeSearch({ restoreFocus: true }) : openSearch())}
+          >
+            <Search size={19} className="searchToggleIcon searchToggleIcon--search" aria-hidden="true" />
+            <X size={19} className="searchToggleIcon searchToggleIcon--close" aria-hidden="true" />
           </button>
           <Link to={status === 'authenticated' ? '/profile' : loginUrl(location.pathname + location.search)} aria-label={status === 'authenticated' ? 'Account' : 'Sign in'} className="desktopOnlyIcon"><Users size={19} /></Link>
           {status === 'authenticated' && (
@@ -224,6 +269,14 @@ export function StoreHeader() {
           <Link to="/wishlist" aria-label="Wishlist" className="desktopOnlyIcon"><Heart size={19} /></Link>
           <Link to="/cart" aria-label="Cart" className="desktopOnlyIcon"><ShoppingBag size={19} /></Link>
         </div>
+
+        {/* Search panel — anchored to the bottom edge of this (sticky) header. */}
+        {searchOpen && (
+          <>
+            <div className={`spBackdrop${searchClosing ? " is-closing" : ""}`} aria-hidden="true" onClick={() => closeSearch()} />
+            <SearchPanel onClose={closeSearch} closing={searchClosing} />
+          </>
+        )}
 
         {/* Desktop category mega-menu (hover on WOMEN / MEN) */}
         {megaOpen && megaKind && mega && (
@@ -332,35 +385,6 @@ export function StoreHeader() {
         </div>
       )}
 
-      {/* Search overlay */}
-      {searchOpen && (
-        <div className="navOverlay" onClick={() => setSearchOpen(false)}>
-          <div className="searchModal" onClick={(e) => e.stopPropagation()}>
-            <form onSubmit={submitSearch}>
-              <Search size={18} />
-              <input
-                autoFocus
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                placeholder="Search products, brands and styles"
-                aria-label="Search products"
-              />
-              <button type="submit" className="searchGo">SEARCH</button>
-              <button type="button" className="iconBtn" aria-label="Close search" onClick={() => setSearchOpen(false)}>
-                <X size={18} />
-              </button>
-            </form>
-            {!query && (
-              <div className="searchHints">
-                <span>Popular</span>
-                {[["New In", getNewInUrl()], ["Sale", getSaleUrl()], ["Women", getWomenUrl()], ["Men", getMenUrl()]].map(([x, to]) => (
-                  <button key={x} type="button" onClick={() => { nav(to); closeAll(); }}>{x}</button>
-                ))}
-              </div>
-            )}
-          </div>
-        </div>
-      )}
     </>
   );
 }

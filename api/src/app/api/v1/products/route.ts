@@ -25,7 +25,7 @@ export const GET = withRoute({ auth: "none", rateLimit: RateLimitRules.search },
   const sortRaw = sp.get("sort");
   const saleRaw = sp.get("sale");
 
-  const sortAllowed = ["recommended", "newest", "price_asc", "price_desc"];
+  const sortAllowed = ["recommended", "relevance", "newest", "price_asc", "price_desc"];
   const availabilityRaw = sp.get("availability");
   const availability: "in_stock" | "out_of_stock" | undefined =
     availabilityRaw === "in_stock" || availabilityRaw === "out_of_stock" ? availabilityRaw : undefined;

@@ -247,15 +247,6 @@ html{scroll-behavior:smooth}.font-display{font-family:Manrope,sans-serif}button,
 .navOverlayHead b{font:800 22px Manrope;color:#171717;letter-spacing:-.04em}
 .navOverlayLink{display:block;padding:15px 0;border-bottom:1px solid #eee;font-size:15px;font-weight:700;color:#111;text-decoration:none}
 .navOverlayLink:hover{color:#555}
-.searchModal{background:#fff;color:#111;width:100%;max-width:560px;margin:auto 16px;border-radius:20px;box-shadow:0 20px 60px rgba(0,0,0,.3);overflow:hidden}
-.searchModal form{display:flex;align-items:center;gap:12px;padding:16px 18px;border-bottom:1px solid #eee}
-.searchModal form>svg{flex-shrink:0;color:#888}
-.searchModal input{flex:1;outline:none;border:0;font-size:16px;background:transparent;color:#111}
-.searchGo{background:#111;color:#fff;border:0;font:700 11px Manrope;letter-spacing:.1em;padding:10px 16px;cursor:pointer;white-space:nowrap}
-.searchHints{padding:14px 18px 20px;display:flex;flex-wrap:wrap;gap:8px;align-items:center}
-.searchHints span{font-size:10px;font-weight:800;letter-spacing:.15em;color:#999;margin-right:6px;text-transform:uppercase}
-.searchHints button{border:1px solid #ddd;background:#fff;color:#333;font-size:13px;font-weight:600;padding:8px 14px;cursor:pointer;border-radius:99px}
-.searchHints button:hover{border-color:#111;color:#111}
 
 /* ---- Category mega-menu (desktop hover: WOMEN / MEN) ---- */
 .storeHeader nav{position:relative}
@@ -1814,3 +1805,168 @@ body.install-prompt-visible .waFab{
 /* Hero slide editor: two-up fields stack on phones. */
 .heroGrid2{grid-template-columns:1fr 1fr}
 @media(max-width:600px){.heroGrid2{grid-template-columns:1fr}}
+
+/* Admin "Keyword" chip input (product create/edit). */
+.kwField{display:block}
+.kwLabel{display:block;font-size:11px;font-weight:600;margin-bottom:4px;color:#555}
+.kwBox{display:flex;flex-wrap:wrap;gap:6px;align-items:center;min-height:40px;border:1px solid #ddd;background:#fff;padding:6px 8px;cursor:text}
+.kwBox:focus-within{border-color:#111}
+.kwBox--error{border-color:#c00}
+.kwBox input{flex:1 1 160px;min-width:120px;border:0;outline:0;font-size:12px;padding:3px 2px;background:transparent}
+.kwChip{display:inline-flex;align-items:center;gap:4px;background:#f2f1ee;border:1px solid #e3e1db;color:#111;font-size:12px;padding:3px 4px 3px 9px;border-radius:999px;max-width:100%}
+.kwChip button{display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;border:0;border-radius:50%;background:transparent;color:#555;cursor:pointer;padding:0}
+.kwChip button:hover{background:#e3e1db;color:#111}
+.kwHelp{margin:5px 0 0;font-size:11px;color:#888;line-height:1.45}
+.kwError{margin:4px 0 0;font-size:11px;color:#c00}
+
+/* =========================================================================
+   Header search panel (components/shop/SearchPanel.tsx)
+   Anchored to the bottom edge of the sticky header (top:100%), so it always
+   opens directly beneath the header — never in the middle of the page.
+   ========================================================================= */
+.searchToggle{position:relative;width:27px;height:27px;display:inline-flex;align-items:center;justify-content:center}
+.searchToggleIcon{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);transition:opacity .18s ease,transform .22s cubic-bezier(.2,.8,.2,1)}
+.searchToggleIcon--close{opacity:0;transform:translate(-50%,-50%) rotate(-45deg)}
+.searchToggle.is-open .searchToggleIcon--search{opacity:0;transform:translate(-50%,-50%) rotate(45deg) scale(.8)}
+.searchToggle.is-open .searchToggleIcon--close{opacity:1;transform:translate(-50%,-50%)}
+
+.spBackdrop{position:fixed;left:0;right:0;bottom:0;top:var(--search-top,64px);background:rgba(17,17,17,.28);animation:spFade .22s ease both;cursor:pointer}
+.spBackdrop.is-closing{animation:spFadeOut .17s ease forwards}
+
+.spPanel{position:absolute;top:100%;left:0;right:0;z-index:35;background:#fff;color:#111;border-top:1px solid #ececec;box-shadow:0 22px 44px rgba(0,0,0,.12);
+  max-height:calc(100vh - var(--search-top,64px) - 24px);max-height:calc(100dvh - var(--search-top,64px) - 24px);display:flex;flex-direction:column;
+  font-family:Manrope,system-ui,sans-serif;transform-origin:top center;animation:spIn .26s cubic-bezier(.2,.8,.2,1) both}
+.spPanel.is-closing{animation:spOut .17s ease-in forwards;pointer-events:none}
+@keyframes spIn{from{opacity:0;clip-path:inset(0 0 100% 0);transform:translateY(-6px)}to{opacity:1;clip-path:inset(0 0 0 0);transform:none}}
+@keyframes spOut{from{opacity:1;clip-path:inset(0 0 0 0)}to{opacity:0;clip-path:inset(0 0 100% 0);transform:translateY(-4px)}}
+@keyframes spFade{from{opacity:0}to{opacity:1}}
+@keyframes spFadeOut{from{opacity:1}to{opacity:0}}
+
+.spInner{width:100%;max-width:1500px;margin:0 auto;padding:0 4%;display:flex;flex-direction:column;min-height:0;flex:1 1 auto}
+.spBar{display:flex;align-items:center;gap:10px;height:60px;border-bottom:1px solid #111;flex-shrink:0}
+.spBarIcon{color:#111;flex-shrink:0}
+.spBar input{flex:1;min-width:0;height:100%;border:0;outline:0;background:transparent;font:500 17px Manrope,system-ui,sans-serif;color:#111;letter-spacing:-.01em}
+.spBar input::placeholder{color:#9a9a9a}
+.spBar input::-webkit-search-cancel-button{display:none}
+.spSpin{color:#8a8a8a;animation:spSpin .8s linear infinite;flex-shrink:0}
+@keyframes spSpin{to{transform:rotate(360deg)}}
+.spIconBtn{display:inline-flex;align-items:center;justify-content:center;width:32px;height:32px;border:0;border-radius:50%;background:#f2f1ee;color:#111;cursor:pointer;flex-shrink:0}
+.spIconBtn:hover{background:#e6e4df}
+.spClose{border:0;border-left:1px solid #e5e5e5;background:none;color:#111;font:700 11px Manrope,system-ui,sans-serif;letter-spacing:.12em;text-transform:uppercase;padding:0 0 0 14px;height:28px;cursor:pointer;flex-shrink:0}
+.spClose:hover span{text-decoration:underline;text-underline-offset:3px}
+.spBar :focus-visible,.spBody :focus-visible{outline:2px solid #111;outline-offset:2px}
+
+.spBody{display:grid;grid-template-columns:230px minmax(0,1fr);gap:44px;padding:22px 0 26px;overflow-y:auto;overscroll-behavior:contain;min-height:0;flex:1 1 auto}
+.spBody:not(:has(.spAside)){grid-template-columns:minmax(0,1fr)}
+.spAside{display:flex;flex-direction:column;gap:22px;min-width:0}
+.spMain{min-width:0}
+.spGroup h3{margin:0 0 8px;font:700 10.5px Manrope,system-ui,sans-serif;letter-spacing:.14em;text-transform:uppercase;color:#8a8a8a}
+.spGroupHead{display:flex;align-items:baseline;justify-content:space-between}
+.spTextBtn{border:0;background:none;color:#8a8a8a;font-size:11px;cursor:pointer;padding:2px 0;text-decoration:underline;text-underline-offset:2px}
+.spTextBtn:hover{color:#111}
+.spGroup ul{list-style:none;margin:0;padding:0}
+.spQuery,.spLink{display:flex;align-items:center;gap:10px;width:100%;min-height:34px;border:0;background:none;color:#111;font:500 14px Manrope,system-ui,sans-serif;text-align:left;padding:6px 8px;margin:0 -8px;width:calc(100% + 16px);border-radius:4px;cursor:pointer}
+.spQuery svg{color:#9a9a9a;flex-shrink:0}
+.spQuery span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.spLink{justify-content:space-between}
+.spLink small{color:#9a9a9a;font-size:12px;font-variant-numeric:tabular-nums}
+li.is-active>.spQuery,li.is-active>.spLink,.spQuery:hover,.spLink:hover{background:#f4f3f0}
+
+.spResultsHead{display:flex;align-items:baseline;justify-content:space-between;gap:12px;margin-bottom:12px}
+.spResultsHead h3{margin:0}
+.spResultsHead em{font-style:normal;color:#111;letter-spacing:.04em}
+.spResultsHead>span{font-size:12px;color:#8a8a8a;white-space:nowrap}
+.spProducts{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:22px 18px}
+.spProduct{display:block;color:inherit;text-decoration:none;border-radius:4px}
+.spProductImg{position:relative;display:block;aspect-ratio:3/4;background:#f4f2ee;overflow:hidden;border-radius:4px}
+.spProductImg img{display:block;width:100%;height:100%;object-fit:cover;transition:transform .45s ease}
+.spProduct:hover .spProductImg img{transform:scale(1.03)}
+li.is-active>.spProduct{outline:2px solid #111;outline-offset:3px}
+.spBadge{position:absolute;top:8px;left:8px;background:#fff;color:#111;font:700 10px Manrope,system-ui,sans-serif;letter-spacing:.08em;text-transform:uppercase;padding:3px 7px;border-radius:2px}
+.spBadge--sale{background:#dc2626;color:#fff}
+.spProductInfo{display:flex;flex-direction:column;gap:3px;padding-top:10px;min-width:0}
+.spBrand{font-size:10px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:#737373}
+.spName{font-size:13.5px;font-weight:600;color:#111;line-height:1.35;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.spPrice{display:flex;align-items:baseline;gap:7px;font-size:13px}
+.spPrice b{font-weight:700}
+.spPrice b.is-sale{color:#dc2626}
+.spPrice s{color:#9a9a9a;font-size:12px}
+.spMeta{font-size:11.5px;color:#8a8a8a}
+.spAllWrap{margin-top:22px}
+.spAll{display:inline-flex;align-items:center;gap:8px;border:1px solid #111;background:#fff;color:#111;font:700 12px Manrope,system-ui,sans-serif;letter-spacing:.06em;padding:12px 18px;cursor:pointer;border-radius:2px;transition:background .15s ease,color .15s ease}
+.spAll:hover,.spAll.is-active{background:#111;color:#fff}
+.spEmpty{display:flex;flex-direction:column;gap:6px;padding:4px 0 18px}
+.spEmpty b{font-size:15px;color:#111}
+.spEmpty span{font-size:13px;color:#666}
+.spRetry{align-self:flex-start;margin-top:8px;border:1px solid #111;background:#111;color:#fff;font:700 12px Manrope,system-ui,sans-serif;letter-spacing:.06em;padding:10px 16px;cursor:pointer;border-radius:2px}
+.spNote{font-size:13px;color:#777;margin:0}
+.is-refreshing{opacity:.55;transition:opacity .15s ease}
+.spSkel .spProductImg,.spSkel i{background:linear-gradient(90deg,#f1efeb 25%,#e8e6e1 37%,#f1efeb 63%);background-size:400% 100%;animation:spShimmer 1.3s ease infinite}
+.spSkel i{display:block;height:10px;border-radius:2px;margin-top:6px}
+.spSkel i:nth-child(1){width:40%}.spSkel i:nth-child(2){width:85%}.spSkel i:nth-child(3){width:30%}
+@keyframes spShimmer{0%{background-position:100% 50%}100%{background-position:0 50%}}
+
+/* Floating widgets step aside while the panel is open. */
+body.searchOpen .waFab,body.searchOpen .installCard{opacity:0;pointer-events:none}
+
+/* Laptops: three products per row. */
+@media(max-width:1279px){.spProducts{grid-template-columns:repeat(3,minmax(0,1fr))}.spBody{grid-template-columns:210px minmax(0,1fr);gap:32px}}
+
+/* Tablets and phones: a full-width layer from the header to the bottom of the
+   screen; suggestions become wrap-around chips above the products; the page
+   behind doesn't scroll. */
+@media(max-width:1023px){
+  .spPanel{height:calc(100vh - var(--search-top,64px));height:calc(100dvh - var(--search-top,64px));max-height:none;box-shadow:none}
+  .spBackdrop{display:none}
+  .spBody{grid-template-columns:minmax(0,1fr);gap:20px;padding:16px 0 calc(28px + env(safe-area-inset-bottom))}
+  .spAside{flex-direction:row;flex-wrap:wrap;gap:16px 26px}
+  .spAside .spGroup{min-width:0;max-width:100%}
+  .spAside .spGroup ul{display:flex;flex-wrap:wrap;gap:8px}
+  .spAside .spQuery,.spAside .spLink{width:auto;margin:0;min-height:36px;padding:7px 13px;border:1px solid #e2e0db;border-radius:999px;font-size:13px;gap:7px}
+  .spAside .spLink{justify-content:flex-start}
+  li.is-active>.spQuery,li.is-active>.spLink{border-color:#111}
+  body.searchOpen{overflow:hidden}
+  body.searchOpen .mobileBottomNav{display:none}
+}
+@media(max-width:900px){.spInner{padding:0 16px}}
+
+/* Phones: compact product rows (image left, details right). */
+@media(max-width:599px){
+  .spBar{height:54px;gap:8px}
+  .spBar input{font-size:16px}
+  .spClose{padding-left:10px;letter-spacing:.08em}
+  .spProducts{grid-template-columns:minmax(0,1fr);gap:0}
+  .spProducts>li{border-bottom:1px solid #f0efec}
+  .spProducts>li:last-child{border-bottom:0}
+  .spProduct{display:grid;grid-template-columns:68px minmax(0,1fr);gap:14px;align-items:center;padding:10px 0}
+  .spProductImg{width:68px}
+  .spProductInfo{padding-top:0}
+  .spName{font-size:14px}
+  .spAll{width:100%;justify-content:center;min-height:46px}
+  .spAside{gap:14px}
+}
+
+@media(prefers-reduced-motion:reduce){
+  .spPanel,.spPanel.is-closing,.spBackdrop,.spBackdrop.is-closing{animation:none}
+  .searchToggleIcon,.spProductImg img{transition:none}
+  .spSkel .spProductImg,.spSkel i,.spSpin{animation:none}
+}
+
+/* Search results page: change the query in place. */
+.plpSearch{display:flex;align-items:center;gap:8px;margin-top:12px;max-width:520px;border:1px solid #d4d4d4;background:#fff;padding:0 4px 0 12px;height:44px}
+.plpSearch:focus-within{border-color:#111}
+.plpSearch svg{color:#8a8a8a;flex-shrink:0}
+.plpSearch input{flex:1;min-width:0;border:0;outline:0;background:transparent;font:500 15px Manrope,system-ui,sans-serif;color:#111}
+.plpSearch input::-webkit-search-cancel-button{display:none}
+.plpSearch button{border:0;background:#111;color:#fff;font:700 11px Manrope,system-ui,sans-serif;letter-spacing:.1em;text-transform:uppercase;padding:0 16px;height:36px;cursor:pointer}
+.plpSimilar{margin:28px auto 0;max-width:900px;text-align:left}
+.spBar input:focus,.spBar input:focus-visible{outline:none}
+.spBar:focus-within{border-bottom-width:2px}
+.spBody{align-content:start}
+.spAside{align-content:flex-start}
+.spCloseIcon{display:none}
+@media(max-width:599px){
+  .spClose{display:inline-flex;align-items:center;justify-content:center;width:40px;height:40px;padding:0;margin-right:-8px;border-left:0}
+  .spClose span{display:none}
+  .spCloseIcon{display:block}
+}

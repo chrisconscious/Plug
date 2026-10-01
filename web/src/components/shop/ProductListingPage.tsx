@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
-import { X, ChevronDown, ChevronLeft, ChevronRight, SlidersHorizontal, Frown } from "lucide-react";
+import { X, ChevronDown, ChevronLeft, ChevronRight, SlidersHorizontal, Frown, Search } from "lucide-react";
 import * as api from "../../lib/api";
 import { useAutoScrollCarousel } from "../../hooks/useAutoScrollCarousel";
 import { formatTZS } from "../../lib/currency";
@@ -11,7 +11,8 @@ import {
   SORT_OPTIONS,
   type ShopFilters,
 } from "../../lib/shop";
-import { getBrandCategoryUrl, getBrandUrl, getCategoryUrl, getGenderCategoryUrl, getLifestyleCategoryUrl, getLifestyleUrl, getLifestylesUrl, getShopAllUrl } from "../../lib/links";
+import { getBrandCategoryUrl, getBrandUrl, getCategoryUrl, getGenderCategoryUrl, getLifestyleCategoryUrl, getLifestyleUrl, getLifestylesUrl, getSearchUrl, getShopAllUrl } from "../../lib/links";
+import { resolveImage } from "../../lib/imagePlaceholder";
 import { BrandMark } from "./BrandMark";
 import { StoreHeader } from "./StoreHeader";
 import { ProductCard } from "./ProductCard";
@@ -436,6 +437,35 @@ export function ProductListingPage({ lifestyle: lifestyleSlug }: { lifestyle?: s
     setSearchParams(p);
   };
 
+  // With a search term the default order is "best match first" (the API ranks
+  // by relevance), so say so.
+  const sortLabel = (o: { value: string; label: string }) => (q && o.value === "recommended" ? "Best match" : o.label);
+
+  // Change the search without leaving the page; other filters are kept.
+  const [qDraft, setQDraft] = useState(q);
+  useEffect(() => setQDraft(q), [q]);
+  const submitQ = (e: React.FormEvent) => {
+    e.preventDefault();
+    const v = qDraft.replace(/\s+/g, " ").trim();
+    if (!v) return clearQ();
+    const p = new URLSearchParams(searchParams);
+    p.set("q", v);
+    p.delete("page");
+    setSearchParams(p);
+  };
+
+  // A search with no results: ask the live search for a spelling correction or
+  // similar products, so the page offers a way forward instead of a dead end.
+  const [noResultHelp, setNoResultHelp] = useState<api.SearchResults | null>(null);
+  const noResults = !!q && !!data && data.items.length === 0;
+  useEffect(() => {
+    setNoResultHelp(null);
+    if (!noResults) return;
+    const ctrl = new AbortController();
+    api.liveSearch(q, { limit: 4, signal: ctrl.signal }).then(setNoResultHelp).catch(() => { /* optional help only */ });
+    return () => ctrl.abort();
+  }, [noResults, q]);
+
   const totalLabel = total === 1 ? "1 Product" : `${total} Products`;
 
   const handleSortDraft = (s: string) => setSortDraft(s);
@@ -560,6 +590,21 @@ export function ProductListingPage({ lifestyle: lifestyleSlug }: { lifestyle?: s
               ) : null}
               <h1 className={`font-black text-2xl md:text-3xl tracking-tight break-words ${ctx.accent === "sale" ? "text-red-600" : ""}`}>{ctx.title}</h1>
               {ctx.description && <p className="mt-1 text-xs text-neutral-500">{ctx.description}</p>}
+              {q && (
+                <form role="search" onSubmit={submitQ} className="plpSearch">
+                  <Search size={16} aria-hidden="true" />
+                  <input
+                    type="search"
+                    value={qDraft}
+                    maxLength={100}
+                    onChange={(e) => setQDraft(e.target.value)}
+                    aria-label="Change your search"
+                    placeholder="Search products, brands, categories..."
+                    enterKeyHint="search"
+                  />
+                  <button type="submit">Search</button>
+                </form>
+              )}
             </div>
             <div className="hidden md:flex items-center gap-4">
               <span className="text-xs text-neutral-500">{loading ? "Loading…" : totalLabel}</span>
@@ -569,7 +614,7 @@ export function ProductListingPage({ lifestyle: lifestyleSlug }: { lifestyle?: s
                 className="border border-neutral-300 px-3 py-2 text-xs font-semibold focus:outline-none focus:border-neutral-900"
               >
                 {SORT_OPTIONS.map((o) => (
-                  <option key={o.value} value={o.value}>Sort: {o.label}</option>
+                  <option key={o.value} value={o.value}>Sort: {sortLabel(o)}</option>
                 ))}
               </select>
             </div>
@@ -737,8 +782,33 @@ export function ProductListingPage({ lifestyle: lifestyleSlug }: { lifestyle?: s
             ) : data && data.items.length === 0 ? (
               <div className="py-20 text-center">
                 <Frown className="mx-auto mb-4 text-neutral-300" size={40} />
-                <h2 className="text-lg font-bold">No products found</h2>
+                <h2 className="text-lg font-bold">{q ? `No exact matches found for “${q}”` : "No products found"}</h2>
                 <p className="mt-1 text-sm text-neutral-500">Try adjusting or clearing your filters.</p>
+                {noResultHelp?.correctedQuery && (
+                  <p className="mt-3 text-sm">
+                    Did you mean{" "}
+                    <Link to={getSearchUrl(noResultHelp.correctedQuery)} className="font-bold underline">{noResultHelp.correctedQuery}</Link>?
+                  </p>
+                )}
+                {noResultHelp && !noResultHelp.correctedQuery && noResultHelp.products.length > 0 && (
+                  <div className="plpSimilar">
+                    <p className="text-xs font-bold tracking-widest text-neutral-500 uppercase mb-3">Similar products</p>
+                    <ul className="spProducts">
+                      {noResultHelp.products.map((p) => (
+                        <li key={p.id}>
+                          <Link to={p.url} className="spProduct">
+                            <span className="spProductImg"><img src={resolveImage(p.image?.url)} alt={p.image?.alt || p.name} loading="lazy" /></span>
+                            <span className="spProductInfo">
+                              {p.brand && <span className="spBrand">{p.brand.name}</span>}
+                              <span className="spName">{p.name}</span>
+                              <span className="spPrice"><b className={p.onSale ? "is-sale" : undefined}>{formatTZS(p.priceCents)}</b></span>
+                            </span>
+                          </Link>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
                 <button
                   type="button"
                   onClick={clearAll}
@@ -841,7 +911,7 @@ export function ProductListingPage({ lifestyle: lifestyleSlug }: { lifestyle?: s
                     onClick={() => applySort(o.value)}
                     className={`w-full py-3 text-left text-sm font-medium border-b border-neutral-100 ${sort === o.value ? "text-neutral-900 font-bold" : "text-neutral-600"}`}
                   >
-                    {o.label}
+                    {sortLabel(o)}
                   </button>
                 </li>
               ))}

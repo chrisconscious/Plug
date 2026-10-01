@@ -34,7 +34,7 @@ type CategoryRow = { id: string; slug: string; name: string; parent_id: string |
 // detail, admin and insert/update paths always agree on what a Product carries.
 const PRODUCT_COLUMNS = `
   id, slug, name, brand_id, category_id, price_cents, active,
-  compare_at_price_cents, gender, tags,
+  compare_at_price_cents, gender, tags, keywords,
   sku, short_description, full_description, badge_text, offer_label,
   offer_start_date, offer_end_date,
   published_at, archived_at, created_at, updated_at`;
@@ -50,6 +50,7 @@ type ProductRow = {
   compare_at_price_cents: number | null;
   gender: string | null;
   tags: string[] | null;
+  keywords: string[] | null;
   sku: string | null;
   short_description: string | null;
   full_description: string | null;
@@ -199,6 +200,7 @@ const toProduct = (r: ProductRow): Product => ({
   compareAtPriceCents: r.compare_at_price_cents,
   gender: r.gender,
   tags: r.tags ?? [],
+  keywords: r.keywords ?? [],
   sku: r.sku,
   shortDescription: r.short_description,
   fullDescription: r.full_description,
@@ -809,6 +811,8 @@ export async function insertProduct(
     fullDescription?: string | null;
     /** Collection/campaign tags — drives homepage "featured products" sections and collection pages (see product-filter.repo.ts's `collection` filter, which matches via `tags @> ARRAY[value]`). */
     tags?: string[] | null;
+    /** Admin search keywords (migration 0058) — search-only, never a collection. */
+    keywords?: string[] | null;
   },
   genderAudienceCodes: string[] = [],
   createdBy?: string | null
@@ -828,8 +832,8 @@ export async function insertProduct(
       // exposes — this doesn't strand anything, it just requires the
       // deliberate step of actually finishing the product first.
       const result = await client.query<ProductRow>(
-        `INSERT INTO products (slug, name, brand_id, category_id, price_cents, sku, compare_at_price_cents, badge_text, offer_label, offer_start_date, offer_end_date, short_description, full_description, tags, active, created_by, updated_by)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, false, $15, $15)
+        `INSERT INTO products (slug, name, brand_id, category_id, price_cents, sku, compare_at_price_cents, badge_text, offer_label, offer_start_date, offer_end_date, short_description, full_description, tags, keywords, active, created_by, updated_by)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $16, false, $15, $15)
          RETURNING ${PRODUCT_COLUMNS}`,
         [
           input.slug,
@@ -847,6 +851,7 @@ export async function insertProduct(
           input.fullDescription ?? null,
           input.tags ?? [],
           createdBy ?? null,
+          input.keywords ?? [],
         ]
       );
       const first = result.rows[0];
@@ -899,6 +904,7 @@ export async function updateProductFields(
     offerStartDate: string | null;
     offerEndDate: string | null;
     tags: string[] | null;
+    keywords: string[] | null;
   }>
 ): Promise<Product | null> {
   const sets: string[] = [];
@@ -924,6 +930,7 @@ export async function updateProductFields(
   if (patch.offerStartDate !== undefined) { params.push(patch.offerStartDate ?? null); sets.push(`offer_start_date = $${params.length}`); }
   if (patch.offerEndDate !== undefined) { params.push(patch.offerEndDate ?? null); sets.push(`offer_end_date = $${params.length}`); }
   if (patch.tags !== undefined) { params.push(patch.tags ?? []); sets.push(`tags = $${params.length}`); }
+  if (patch.keywords !== undefined) { params.push(patch.keywords ?? []); sets.push(`keywords = $${params.length}`); }
   if (sets.length === 0) {
     const existing = await findProductById(id);
     return existing;

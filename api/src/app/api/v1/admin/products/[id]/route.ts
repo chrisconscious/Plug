@@ -30,6 +30,8 @@ export const PATCH = withRoute({ permission: "products.update", rateLimit: RateL
     // Same "[] is a legal clearing update" shape as lifestyleIds above —
     // collection/campaign tags (drives homepage featured-product sections).
     tags: optional(isStringArray),
+    // Search keywords (migration 0058). `[]` clears them.
+    keywords: optional(isStringArray),
     sku: nullable(isString),
     shortDescription: nullable(isString),
     fullDescription: nullable(isString),

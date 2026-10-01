@@ -42,8 +42,12 @@ export async function shutdownPool(): Promise<void> {
   await pool.end();
 }
 
-// Graceful shutdown: stop accepting new pool checkouts and let in-flight
-// queries finish before the process exits (e.g. on a container orchestrator
-// SIGTERM during a deploy).
-process.on("SIGTERM", () => void shutdownPool());
-process.on("SIGINT", () => void shutdownPool());
+// No SIGTERM/SIGINT handler here on purpose. On those signals `next start`
+// already shuts down gracefully: it stops accepting connections, finishes the
+// requests in flight, then exits — and the pool's sockets close with the
+// process. Ending the pool as soon as the signal arrived (as this file used to)
+// broke exactly those in-flight requests: during a `pm2 restart` under load
+// they failed with "Cannot use a pool after calling end on the pool" (500s),
+// and the slow exit that followed got the process force-killed, dropping open
+// connections (the browser's ERR_CONNECTION_CLOSED). shutdownPool() remains
+// for scripts and tests that own their own lifecycle.

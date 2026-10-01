@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Package, Heart, User as UserIcon, MapPin, ShieldCheck, MessageCircle, Phone, LogOut, Plus, X, Check } from 'lucide-react';
+import { Package, Heart, User as UserIcon, MapPin, ShieldCheck, MessageCircle, Phone, LogOut, Plus, X, Check, ChevronRight, ArrowRight } from 'lucide-react';
 import * as api from '../lib/api';
 import { StoreHeader } from '../components/shop/StoreHeader';
 import { useAuth } from '../lib/AuthContext';
@@ -36,6 +36,24 @@ function initials(name: string | null, phone: string | null): string {
   if (phone) return phone.replace(/\D/g, '').slice(-2);
   return '?';
 }
+
+function memberSince(iso: string): string {
+  const d = new Date(iso);
+  return Number.isNaN(d.getTime()) ? '' : d.toLocaleDateString(undefined, { month: 'long', year: 'numeric' });
+}
+
+/** Count for the header stats: a real number once loaded, a dash while loading or if it failed — never a made-up 0. */
+function countOf<T>(state: Loaded<T[]>): string {
+  return state.status === 'ready' ? String(state.data.length) : '—';
+}
+
+const SECTIONS = [
+  { href: '#acc-orders', label: 'My Orders', icon: Package },
+  { href: '#acc-wishlist', label: 'Wishlist', icon: Heart },
+  { href: '#acc-info', label: 'Personal Information', icon: UserIcon },
+  { href: '#acc-addresses', label: 'Addresses', icon: MapPin },
+  { href: '#acc-security', label: 'Security', icon: ShieldCheck },
+] as const;
 
 function Profile() {
   const { status, user, refresh, logout } = useAuth();
@@ -81,10 +99,12 @@ function Profile() {
         <StoreHeader />
         <main className="accountPage">
           <div className="accountSkeleton" aria-hidden="true">
-            <div className="accSkelBlock" style={{ width: 220, height: 30 }} />
-            <div className="accSkelBlock" style={{ width: 320, height: 16, marginTop: 10 }} />
-            <div className="accQuickGrid" style={{ marginTop: 28 }}>
-              {[0, 1, 2, 3].map((i) => <div key={i} className="accSkelBlock" style={{ height: 88 }} />)}
+            <div className="accSkelBlock accSkelHero" />
+            <div className="accLayout">
+              <div className="accSkelBlock accSkelSide" />
+              <div className="accMain">
+                {[0, 1, 2].map((i) => <div key={i} className="accSkelBlock accSkelCard" />)}
+              </div>
             </div>
           </div>
         </main>
@@ -97,8 +117,11 @@ function Profile() {
       <div>
         <StoreHeader />
         <main className="accountPage">
-          <p style={{ color: '#c00', marginBottom: 12 }}>Couldn't check your session right now.</p>
-          <button type="button" className="blackButton" onClick={() => refresh()}>RETRY</button>
+          <div className="accGate" role="alert">
+            <h1>We couldn't open your account</h1>
+            <p>Couldn't check your session right now.</p>
+            <button type="button" className="blackButton accGateBtn" onClick={() => refresh()}>RETRY</button>
+          </div>
         </main>
       </div>
     );
@@ -109,7 +132,11 @@ function Profile() {
       <div>
         <StoreHeader />
         <main className="accountPage">
-          <p>Please <Link to={loginUrl(currentLocation())}>sign in</Link> to view your account.</p>
+          <div className="accGate">
+            <div className="accGateIcon" aria-hidden="true"><UserIcon size={26} /></div>
+            <h1>Your account</h1>
+            <p>Please <Link to={loginUrl(currentLocation())} className="accTextLink">sign in</Link> to view your account.</p>
+          </div>
         </main>
       </div>
     );
@@ -119,14 +146,23 @@ function Profile() {
     <div>
       <StoreHeader />
       <main className="accountPage">
-        <div className="accHeader">
-          <div className="accAvatar">{initials(user.fullName, user.phoneNumber)}</div>
-          <div>
-            <p className="accEyebrow">ACCOUNT</p>
-            <h1>Welcome back{user.fullName ? `, ${user.fullName.split(' ')[0]}` : ''}</h1>
-            <p className="accSub">Manage your orders, profile and preferences.</p>
+        <header className="accHero">
+          <div className="accHeroMain">
+            <div className="accAvatar" aria-hidden="true">{initials(user.fullName, user.phoneNumber)}</div>
+            <div className="accHeroText">
+              <p className="accEyebrow">MY ACCOUNT</p>
+              <h1>Welcome back{user.fullName ? `, ${user.fullName.split(' ')[0]}` : ''}</h1>
+              <p className="accSub">
+                {user.phoneNumber || user.email}
+                {memberSince(user.createdAt) && <> · Member since {memberSince(user.createdAt)}</>}
+              </p>
+            </div>
           </div>
-        </div>
+          <dl className="accStats">
+            <div><dt>Orders</dt><dd>{countOf(orders)}</dd></div>
+            <div><dt>Saved items</dt><dd>{countOf(wishlist)}</dd></div>
+          </dl>
+        </header>
 
         {user.email && !user.emailVerified && (
           <div className="accNotice">
@@ -142,45 +178,59 @@ function Profile() {
           </div>
         )}
 
-        <nav className="accQuickGrid" aria-label="Account sections">
-          <a href="#acc-orders" className="accQuickCard"><Package size={18} /><span>My Orders</span><small>Track purchases and view history</small></a>
-          <a href="#acc-wishlist" className="accQuickCard"><Heart size={18} /><span>Wishlist</span><small>Products saved for later</small></a>
-          <a href="#acc-info" className="accQuickCard"><UserIcon size={18} /><span>Personal Information</span><small>Name, email and phone</small></a>
-          <a href="#acc-addresses" className="accQuickCard"><MapPin size={18} /><span>Addresses</span><small>Manage delivery addresses</small></a>
-        </nav>
-
-        <OrdersSection orders={orders} onRetry={loadOrders} />
-        <WishlistSection wishlist={wishlist} onRetry={loadWishlist} />
-        <PersonalInfoSection user={user} onSaved={refresh} />
-        <AddressesSection />
-
-        <section id="acc-security" className="accSection">
-          <h2><ShieldCheck size={16} /> Account Security</h2>
-          <SecurityForm />
-        </section>
-
-        {(whatsappHref || phoneHref) && (
-          <section className="accSection accHelp">
-            <h2>Need Help?</h2>
-            <p className="accHelpSub">We're here to help.</p>
-            <div className="accHelpActions">
-              {whatsappHref && (
-                <a href={whatsappHref} target="_blank" rel="noopener noreferrer" className="outlineButton accHelpBtn">
-                  <MessageCircle size={16} /> WhatsApp
+        <div className="accLayout">
+          <aside className="accSide">
+            <nav className="accNav" aria-label="Account sections">
+              {SECTIONS.map(({ href, label, icon: Icon }) => (
+                <a key={href} href={href} className="accNavLink">
+                  <Icon size={17} aria-hidden="true" />
+                  <span>{label}</span>
+                  <ChevronRight size={15} aria-hidden="true" className="accNavChevron" />
                 </a>
-              )}
-              {phoneHref && (
-                <a href={phoneHref} className="outlineButton accHelpBtn">
-                  <Phone size={16} /> Call Us
-                </a>
-              )}
-            </div>
-          </section>
-        )}
+              ))}
+            </nav>
+          </aside>
 
-        <button type="button" className="accLogout" disabled={signingOut} onClick={signOut}>
-          <LogOut size={15} /> {signingOut ? 'Signing out…' : 'Sign Out'}
-        </button>
+          <div className="accMain">
+            <OrdersSection orders={orders} onRetry={loadOrders} />
+            <WishlistSection wishlist={wishlist} onRetry={loadWishlist} />
+            <PersonalInfoSection user={user} onSaved={refresh} />
+            <AddressesSection />
+
+            <section id="acc-security" className="accSection">
+              <div className="accSectionHead">
+                <h2><ShieldCheck size={18} aria-hidden="true" /> Account Security</h2>
+              </div>
+              <p className="accSectionLead">Change your password. Other devices signed in to your account will be signed out.</p>
+              <SecurityForm />
+            </section>
+
+            {(whatsappHref || phoneHref) && (
+              <section className="accSection accHelp">
+                <div>
+                  <h2>Need Help?</h2>
+                  <p className="accHelpSub">We're here to help with orders, delivery and your account.</p>
+                </div>
+                <div className="accHelpActions">
+                  {whatsappHref && (
+                    <a href={whatsappHref} target="_blank" rel="noopener noreferrer" className="accHelpBtn">
+                      <MessageCircle size={17} aria-hidden="true" /> WhatsApp
+                    </a>
+                  )}
+                  {phoneHref && (
+                    <a href={phoneHref} className="accHelpBtn">
+                      <Phone size={17} aria-hidden="true" /> Call Us
+                    </a>
+                  )}
+                </div>
+              </section>
+            )}
+
+            <button type="button" className="accLogout" disabled={signingOut} onClick={signOut}>
+              <LogOut size={17} aria-hidden="true" /> {signingOut ? 'Signing out…' : 'Sign Out'}
+            </button>
+          </div>
+        </div>
       </main>
     </div>
   );
@@ -191,8 +241,8 @@ function OrdersSection({ orders: state, onRetry }: { orders: Loaded<api.Order[]>
   return (
     <section id="acc-orders" className="accSection">
       <div className="accSectionHead">
-        <h2><Package size={16} /> My Orders</h2>
-        {orders && orders.length > 0 && <Link to="/orders" className="accViewAll">VIEW ALL ORDERS</Link>}
+        <h2><Package size={18} aria-hidden="true" /> My Orders</h2>
+        {orders && orders.length > 0 && <Link to="/orders" className="accViewAll">View all orders <ArrowRight size={14} aria-hidden="true" /></Link>}
       </div>
       {state.status === 'error' ? (
         <SectionError what="orders" onRetry={onRetry} />
@@ -200,6 +250,7 @@ function OrdersSection({ orders: state, onRetry }: { orders: Loaded<api.Order[]>
         <div className="accSkelBlock" style={{ height: 70 }} />
       ) : orders.length === 0 ? (
         <div className="accEmpty">
+          <Package size={26} aria-hidden="true" className="accEmptyIcon" />
           <p>You haven't placed an order yet.</p>
           <Link to="/shop" className="blackButton">START SHOPPING</Link>
         </div>
@@ -207,8 +258,8 @@ function OrdersSection({ orders: state, onRetry }: { orders: Loaded<api.Order[]>
         <div className="accOrderList">
           {orders.slice(0, 3).map((o) => (
             <Link key={o.id} to={`/orders/${o.id}`} className="accOrderRow">
-              <div className="accOrderThumb" aria-hidden="true" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#8a8a8a' }}>
-                <Package size={22} />
+              <div className="accOrderThumb" aria-hidden="true">
+                <Package size={20} />
               </div>
               <div className="accOrderInfo">
                 <b>Order {orderRef(o.id)}</b>
@@ -216,6 +267,7 @@ function OrdersSection({ orders: state, onRetry }: { orders: Loaded<api.Order[]>
               </div>
               <span className={`accOrderStatus accOrderStatus--${o.status.toLowerCase()}`}>{orderStatusLabel(o.status)}</span>
               <b className="accOrderTotal">{formatTZS(o.totalTzs ?? o.totalCents)}</b>
+              <ChevronRight size={16} aria-hidden="true" className="accOrderChevron" />
             </Link>
           ))}
         </div>
@@ -229,8 +281,8 @@ function WishlistSection({ wishlist: state, onRetry }: { wishlist: Loaded<api.Wi
   return (
     <section id="acc-wishlist" className="accSection">
       <div className="accSectionHead">
-        <h2><Heart size={16} /> Wishlist</h2>
-        {wishlist && wishlist.length > 0 && <Link to="/wishlist" className="accViewAll">VIEW ALL</Link>}
+        <h2><Heart size={18} aria-hidden="true" /> Wishlist</h2>
+        {wishlist && wishlist.length > 0 && <Link to="/wishlist" className="accViewAll">View all <ArrowRight size={14} aria-hidden="true" /></Link>}
       </div>
       {state.status === 'error' ? (
         <SectionError what="wishlist" onRetry={onRetry} />
@@ -238,6 +290,7 @@ function WishlistSection({ wishlist: state, onRetry }: { wishlist: Loaded<api.Wi
         <div className="accSkelBlock" style={{ height: 70 }} />
       ) : wishlist.length === 0 ? (
         <div className="accEmpty">
+          <Heart size={26} aria-hidden="true" className="accEmptyIcon" />
           <p>Your wishlist is waiting for something special.</p>
           <Link to="/shop" className="blackButton">EXPLORE PRODUCTS</Link>
         </div>
@@ -297,14 +350,14 @@ function PersonalInfoSection({ user, onSaved }: { user: api.PublicUser; onSaved:
   return (
     <section id="acc-info" className="accSection">
       <div className="accSectionHead">
-        <h2><UserIcon size={16} /> Personal Information</h2>
+        <h2><UserIcon size={18} aria-hidden="true" /> Personal Information</h2>
         {!editing && <button type="button" className="accLinkBtn" onClick={startEdit}>EDIT</button>}
       </div>
-      {saved && <p className="accNoticeOk" style={{ marginBottom: 10 }}>Your information was updated.</p>}
+      {saved && <p className="accNoticeOk accNoticeOk--block" role="status"><Check size={14} aria-hidden="true" /> Your information was updated.</p>}
       {editing ? (
         <div className="accForm">
           <label>Full name<input value={fullName} onChange={(e) => setFullName(e.target.value)} maxLength={120} /></label>
-          <label>Phone number<input value={phoneNumber} onChange={(e) => setPhoneNumber(e.target.value)} placeholder="0756825667" /></label>
+          <label>Phone number<input value={phoneNumber} onChange={(e) => setPhoneNumber(e.target.value)} placeholder="0655000000" inputMode="tel" autoComplete="tel" /></label>
           {user.email && <label>Email<input value={user.email} disabled title="Email can't be changed here yet" /></label>}
           {error && <p className="accNoticeErr">{error}</p>}
           <div className="accFormActions">
@@ -313,12 +366,12 @@ function PersonalInfoSection({ user, onSaved }: { user: api.PublicUser; onSaved:
           </div>
         </div>
       ) : (
-        <div className="accInfoRows">
-          {user.fullName && <div><span>Name</span><b>{user.fullName}</b></div>}
-          {user.phoneNumber && <div><span>Phone Number</span><b>{user.phoneNumber}</b></div>}
-          {user.email && <div><span>Email</span><b>{user.email}</b></div>}
-          <div><span>Member since</span><b>{new Date(user.createdAt).toLocaleDateString()}</b></div>
-        </div>
+        <dl className="accInfoRows">
+          {user.fullName && <div><dt>Name</dt><dd>{user.fullName}</dd></div>}
+          {user.phoneNumber && <div><dt>Phone Number</dt><dd>{user.phoneNumber}</dd></div>}
+          {user.email && <div><dt>Email</dt><dd>{user.email}</dd></div>}
+          <div><dt>Member since</dt><dd>{new Date(user.createdAt).toLocaleDateString()}</dd></div>
+        </dl>
       )}
     </section>
   );
@@ -350,7 +403,7 @@ function AddressesSection() {
   return (
     <section id="acc-addresses" className="accSection">
       <div className="accSectionHead">
-        <h2><MapPin size={16} /> Delivery Addresses</h2>
+        <h2><MapPin size={18} aria-hidden="true" /> Delivery Addresses</h2>
         {!adding && <button type="button" className="accLinkBtn" onClick={() => setAdding(true)}><Plus size={13} /> ADD ADDRESS</button>}
       </div>
       {error && <p className="accNoticeErr">{error}</p>}
@@ -360,6 +413,7 @@ function AddressesSection() {
         <div className="accSkelBlock" style={{ height: 70 }} />
       ) : addresses.length === 0 && !adding ? (
         <div className="accEmpty">
+          <MapPin size={26} aria-hidden="true" className="accEmptyIcon" />
           <p>Add an address to make checkout faster.</p>
           <button type="button" className="blackButton" onClick={() => setAdding(true)}>ADD ADDRESS</button>
         </div>
@@ -426,11 +480,11 @@ function AddressForm({ initial, onDone, onCancel }: { initial?: api.Address; onD
     <div className="accAddressCard accAddressForm">
       <div className="accForm">
         <label>Label<input value={label} onChange={(e) => setLabel(e.target.value)} placeholder="Home, Office…" /></label>
-        <label>Address<input value={line1} onChange={(e) => setLine1(e.target.value)} placeholder="Street, house number" /></label>
+        <label className="accFormWide">Address<input value={line1} onChange={(e) => setLine1(e.target.value)} placeholder="Street, house number" /></label>
         <label>City<input value={city} onChange={(e) => setCity(e.target.value)} /></label>
         <label>Region<input value={region} onChange={(e) => setRegion(e.target.value)} placeholder="e.g. Dar es Salaam" autoComplete="address-level1" /></label>
         <label>Postal code / House number<input value={postalCode} onChange={(e) => setPostalCode(e.target.value)} autoComplete="postal-code" /></label>
-        <label>Phone<input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="0756825667" /></label>
+        <label>Phone<input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="0655000000" inputMode="tel" autoComplete="tel" /></label>
         {error && <p className="accNoticeErr">{error}</p>}
         <div className="accFormActions">
           <button type="button" className="blackButton" disabled={saving} onClick={save}>{saving ? 'Saving…' : 'SAVE'}</button>

@@ -1,4 +1,17 @@
-@import url("https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap");
+/* Manrope, self-hosted (SIL Open Font License) so headings never fall back to
+   another font when Google Fonts is slow or blocked. One variable file per
+   character set covers every weight (200-800); Latin + Latin-Extended cover
+   English and Swahili. */
+@font-face{
+  font-family:"Manrope"; font-style:normal; font-weight:200 800; font-display:swap;
+  src:url("/fonts/manrope-latin.woff2") format("woff2");
+  unicode-range:U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face{
+  font-family:"Manrope"; font-style:normal; font-weight:200 800; font-display:swap;
+  src:url("/fonts/manrope-latin-ext.woff2") format("woff2");
+  unicode-range:U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -1048,124 +1061,213 @@ body.install-prompt-visible .waFab{
   .shareMenu{ right:0; left:auto; min-width:170px; }
 }
 
-/* ---- Account page ---- */
-.accountPage{ max-width:900px; margin:0 auto; padding:40px 20px 80px; }
-.accHeader{ display:flex; align-items:center; gap:18px; margin-bottom:22px; }
-.accAvatar{
-  width:56px;height:56px;flex:0 0 auto;
-  border-radius:50%;
-  background:#141414;color:#fff;
-  display:flex;align-items:center;justify-content:center;
-  font:800 18px Manrope;
-}
-.accEyebrow{ font:700 10px Manrope; letter-spacing:.16em; color:#999; margin:0; }
-.accHeader h1{ font:800 24px Manrope; margin:4px 0 3px; }
-.accSub{ font-size:12.5px; color:#777; margin:0; }
+/* ---- Account page (pages/Profile.tsx) ----
+   Classic black & white. Black profile header with live counts; on laptops
+   and desktops a sticky section menu on the left and white cards on the
+   right; on tablets and phones the menu becomes a sticky, swipeable row of
+   buttons under the store header. accSkelBlock / accEmpty / accLinkBtn are
+   also used by the Orders detail and Notifications pages. */
+.accountPage{ --acc-ink:#000; --acc-text:#111; --acc-sub:#3a3a3a; --acc-line:#111; --acc-hair:#e2e2e2;
+  max-width:1200px; margin:0 auto; padding:32px clamp(16px,4vw,40px) 96px; color:var(--acc-text); }
 
-.accNotice{ background:#fff7e6; border:1px solid #f5d99b; border-radius:8px; padding:14px 16px; margin-bottom:22px; font-size:13px; }
-.accNotice p{ margin:0 0 8px; color:#8a5a00; }
-.accNoticeOk{ color:#38805b; display:flex; align-items:center; gap:6px; margin:0; font-size:12.5px; }
-.accNoticeErr{ color:#c00; display:flex; align-items:center; gap:6px; margin:6px 0 0; font-size:12.5px; }
+/* Header */
+.accHero{ display:flex; align-items:center; justify-content:space-between; gap:24px; flex-wrap:wrap;
+  background:var(--acc-ink); color:#fff; padding:clamp(22px,3vw,36px) clamp(20px,3vw,40px); margin-bottom:28px; }
+.accHeroMain{ display:flex; align-items:center; gap:clamp(14px,2vw,22px); min-width:0; }
+.accAvatar{ flex:0 0 auto; display:grid; place-items:center; width:clamp(56px,6vw,76px); height:clamp(56px,6vw,76px);
+  border-radius:50%; background:#fff; color:var(--acc-ink); font:800 clamp(19px,2vw,26px) Manrope; letter-spacing:.04em; }
+.accHeroText{ min-width:0; }
+.accEyebrow{ margin:0 0 6px; font:700 11px Manrope; letter-spacing:.2em; color:#fff; opacity:.85; }
+.accHero h1{ margin:0; font:800 clamp(24px,2vw + 12px,36px) Manrope; line-height:1.12; color:#fff; overflow-wrap:anywhere; }
+.accSub{ margin:8px 0 0; font-size:14px; font-weight:500; color:#fff; opacity:.9; overflow-wrap:anywhere; }
+.accStats{ display:flex; margin:0; border:1px solid rgba(255,255,255,.55); }
+.accStats > div{ min-width:112px; padding:14px 20px; text-align:center; }
+.accStats > div + div{ border-left:1px solid rgba(255,255,255,.55); }
+.accStats dt{ font:700 10.5px Manrope; letter-spacing:.16em; text-transform:uppercase; color:#fff; opacity:.85; }
+.accStats dd{ margin:4px 0 0; font:800 26px Manrope; color:#fff; line-height:1.1; }
 
-.accQuickGrid{ display:grid; grid-template-columns:repeat(4,1fr); gap:10px; margin:24px 0 34px; }
-.accQuickCard{
-  display:flex; flex-direction:column; gap:6px;
-  border:1px solid #ece9e2; border-radius:10px;
-  padding:16px 14px;
-  color:#141414; text-decoration:none;
-  transition:border-color .15s ease;
-}
-.accQuickCard:hover{ border-color:#c9a35a; }
-.accQuickCard span{ font:700 12.5px Manrope; }
-.accQuickCard small{ font-size:10.5px; color:#888; line-height:1.4; }
+/* Notices */
+.accNotice{ border:1.5px solid var(--acc-line); padding:16px 18px; margin:0 0 24px; font-size:14px; background:#fff; }
+.accNotice p{ margin:0 0 10px; color:var(--acc-text); font-weight:500; }
+.accNoticeOk{ display:flex; align-items:center; gap:7px; margin:0; font-size:13.5px; font-weight:600; color:var(--acc-text); }
+.accNoticeOk--block{ margin:0 0 14px; padding:11px 14px; border:1px solid var(--acc-line); }
+.accNoticeErr{ display:flex; align-items:center; gap:7px; margin:6px 0 0; font-size:13.5px; font-weight:500; color:#b00020; }
 
-.accSection{ border-top:1px solid #ece9e2; padding:28px 0; scroll-margin-top:80px; }
-.accSectionHead{ display:flex; align-items:center; justify-content:space-between; margin-bottom:16px; }
-.accSectionHead h2, .accHelp h2{ display:flex; align-items:center; gap:8px; font:800 15px Manrope; margin:0; }
-.accViewAll{ font:700 10.5px Manrope; letter-spacing:.06em; color:#666; text-decoration:underline; }
-.accLinkBtn{
-  display:inline-flex; align-items:center; gap:5px;
-  font:700 10.5px Manrope; letter-spacing:.05em;
-  color:#444; background:none; border:none; cursor:pointer; padding:0;
-}
-.accLinkBtn:hover{ color:#141414; }
-.accLinkBtnDanger{ color:#b91c1c; }
+/* Layout */
+.accLayout{ display:grid; grid-template-columns:250px minmax(0,1fr); gap:32px; align-items:start; }
+.accMain{ display:flex; flex-direction:column; gap:24px; min-width:0; }
+.accSide{ position:sticky; top:88px; }
+.accNav{ display:flex; flex-direction:column; border:1px solid var(--acc-line); background:#fff; }
+.accNavLink{ display:flex; align-items:center; gap:12px; min-height:54px; padding:0 16px;
+  font:700 13.5px Manrope; color:var(--acc-text); text-decoration:none; transition:background .15s ease, color .15s ease; }
+.accNavLink + .accNavLink{ border-top:1px solid var(--acc-hair); }
+.accNavLink span{ flex:1 1 auto; }
+.accNavLink:hover{ background:var(--acc-ink); color:#fff; }
+.accNavLink:focus-visible{ outline:2px solid var(--acc-ink); outline-offset:-4px; }
+.accNavChevron{ flex:0 0 auto; }
 
-.accEmpty{ text-align:center; padding:30px 10px; }
-.accEmpty p{ font-size:13px; color:#777; margin:0 0 14px; }
+/* Section cards */
+.accSection{ background:#fff; border:1px solid var(--acc-line); padding:clamp(18px,2.4vw,28px); scroll-margin-top:96px; }
+.accSectionHead{ display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap;
+  margin:0 0 18px; padding-bottom:14px; border-bottom:1px solid var(--acc-line); }
+.accSectionHead h2, .accHelp h2{ display:flex; align-items:center; gap:10px; margin:0; font:800 17px Manrope; color:var(--acc-ink); letter-spacing:.01em; }
+.accSectionLead{ margin:-4px 0 18px; font-size:14px; color:var(--acc-sub); line-height:1.5; }
+.accViewAll{ display:inline-flex; align-items:center; gap:6px; font:700 13px Manrope; color:var(--acc-ink);
+  text-decoration:underline; text-decoration-thickness:1.5px; text-underline-offset:4px; }
+.accViewAll:hover{ text-decoration-thickness:2.5px; }
+.accLinkBtn{ display:inline-flex; align-items:center; gap:6px; min-height:38px; padding:0 14px;
+  background:#fff; border:1px solid var(--acc-line); color:var(--acc-ink);
+  font:700 11.5px Manrope; letter-spacing:.1em; text-transform:uppercase; cursor:pointer; transition:background .15s ease, color .15s ease; }
+.accLinkBtn:hover{ background:var(--acc-ink); color:#fff; }
+.accLinkBtn:focus-visible{ outline:2px solid var(--acc-ink); outline-offset:2px; }
+.accLinkBtn:disabled{ opacity:.5; cursor:not-allowed; }
+.accLinkBtnDanger{ color:var(--acc-ink); }
+.accTextLink{ color:var(--acc-ink); font-weight:700; text-decoration:underline; text-underline-offset:3px; }
 
-.accOrderList{ display:flex; flex-direction:column; gap:8px; }
-.accOrderRow{
-  display:grid; grid-template-columns:44px 1fr auto auto; align-items:center; gap:12px;
-  border:1px solid #ece9e2; border-radius:8px; padding:12px 14px;
-  text-decoration:none; color:#141414;
-}
-.accOrderThumb{ width:44px; height:54px; background:#f4f2ee; border-radius:4px; }
-.accOrderInfo{ display:flex; flex-direction:column; gap:2px; min-width:0; }
-.accOrderInfo b{ font:700 12.5px Manrope; }
-.accOrderInfo span{ font-size:11px; color:#888; }
-.accOrderStatus{ font:700 10px Manrope; letter-spacing:.05em; padding:4px 9px; border-radius:20px; background:#f1efe9; color:#666; white-space:nowrap; }
-.accOrderStatus--delivered{ background:#eaf5ee; color:#2f7a45; }
-.accOrderStatus--shipped{ background:#eaf0fb; color:#3457a8; }
-.accOrderStatus--cancelled{ background:#fbeaea; color:#b91c1c; }
-.accOrderTotal{ font:700 12.5px Manrope; white-space:nowrap; }
+/* Empty / error states */
+.accEmpty{ display:flex; flex-direction:column; align-items:center; text-align:center; gap:4px; padding:30px 16px; border:1px dashed #9a9a9a; }
+.accEmpty p{ margin:6px 0 16px; font-size:14.5px; color:var(--acc-text); }
+.accEmptyIcon{ color:var(--acc-ink); }
+.accEmpty .blackButton, .accEmpty .outlineButton{ width:auto; min-width:200px; margin:0; }
 
-.accWishGrid{ display:grid; grid-template-columns:repeat(4,1fr); gap:14px; }
-.accWishCard{ text-decoration:none; color:#141414; }
-.accWishImg{ aspect-ratio:3/4; background:#f4f2ee; border-radius:6px; overflow:hidden; margin-bottom:8px; }
-.accWishImg img{ width:100%; height:100%; object-fit:cover; }
-.accWishName{ font:700 11.5px Manrope; margin:0 0 2px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-.accWishBrand{ font-size:10px; color:#999; margin:0 0 4px; }
-.accWishPrice{ font:700 12px Manrope; }
+/* Orders */
+.accOrderList{ display:flex; flex-direction:column; }
+.accOrderRow{ display:grid; grid-template-columns:48px minmax(0,1fr) auto auto 16px; align-items:center; gap:16px;
+  padding:14px 4px; color:var(--acc-text); text-decoration:none; border-top:1px solid var(--acc-hair); transition:background .15s ease; }
+.accOrderRow:first-child{ border-top:0; padding-top:4px; }
+.accOrderRow:hover{ background:#f6f6f6; }
+.accOrderRow:focus-visible{ outline:2px solid var(--acc-ink); outline-offset:2px; }
+.accOrderThumb{ display:grid; place-items:center; width:48px; height:48px; background:var(--acc-ink); color:#fff; }
+.accOrderInfo{ display:flex; flex-direction:column; gap:3px; min-width:0; }
+.accOrderInfo b{ font:800 14.5px Manrope; color:var(--acc-ink); }
+.accOrderInfo span{ font-size:13px; color:var(--acc-sub); }
+.accOrderStatus{ justify-self:start; padding:5px 11px; border:1px solid var(--acc-line); background:#fff; color:var(--acc-ink);
+  font:700 12px Manrope; letter-spacing:.04em; white-space:nowrap; }
+.accOrderStatus--delivered, .accOrderStatus--paid{ background:var(--acc-ink); color:#fff; }
+.accOrderStatus--pending, .accOrderStatus--pending_payment{ border-style:dashed; }
+.accOrderStatus--cancelled{ border-style:dashed; text-decoration:line-through; }
+.accOrderTotal{ font:800 15px Manrope; color:var(--acc-ink); white-space:nowrap; }
+.accOrderChevron{ color:var(--acc-ink); }
 
-.accForm{ display:flex; flex-direction:column; gap:12px; max-width:420px; }
-.accForm label{ display:flex; flex-direction:column; gap:5px; font:600 11px Manrope; color:#555; }
-.accForm input{ padding:11px 12px; border:1px solid #d8d5cd; border-radius:4px; font-size:13px; font-family:inherit; }
-.accForm input:disabled{ background:#f7f6f3; color:#999; }
-.accFormActions{ display:flex; align-items:center; gap:16px; margin-top:2px; }
+/* Wishlist */
+.accWishGrid{ display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:18px; }
+.accWishCard{ display:block; color:var(--acc-text); text-decoration:none; }
+.accWishImg{ aspect-ratio:3/4; background:#f2f2f2; overflow:hidden; margin-bottom:10px; }
+.accWishImg img{ width:100%; height:100%; object-fit:cover; transition:transform .35s ease; }
+.accWishCard:hover .accWishImg img{ transform:scale(1.04); }
+.accWishCard:focus-visible{ outline:2px solid var(--acc-ink); outline-offset:3px; }
+.accWishName{ margin:0 0 3px; font:700 13.5px Manrope; color:var(--acc-ink); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.accWishBrand{ margin:0 0 5px; font-size:12.5px; color:var(--acc-sub); }
+.accWishPrice{ font:800 14px Manrope; color:var(--acc-ink); }
 
-.accInfoRows div{ display:flex; justify-content:space-between; border-top:1px solid #f0efe9; padding:10px 0; font-size:12.5px; }
-.accInfoRows div:first-child{ border-top:none; }
-.accInfoRows span{ color:#888; }
+/* Personal information */
+.accInfoRows{ display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; margin:0; }
+.accInfoRows > div{ padding:14px 16px; border:1px solid var(--acc-hair); min-width:0; }
+.accInfoRows dt{ font:700 11px Manrope; letter-spacing:.12em; text-transform:uppercase; color:var(--acc-sub); }
+.accInfoRows dd{ margin:6px 0 0; font:700 15.5px Manrope; color:var(--acc-ink); overflow-wrap:anywhere; }
 
-.accAddressList{ display:flex; flex-direction:column; gap:10px; margin-bottom:14px; }
-.accAddressCard{ border:1px solid #ece9e2; border-radius:8px; padding:14px 16px; font-size:12.5px; }
-.accAddressCardHead{ display:flex; align-items:center; gap:8px; margin-bottom:6px; }
-.accAddressCardHead b{ font:700 11.5px Manrope; letter-spacing:.03em; }
-.accDefaultBadge{ font:700 9px Manrope; letter-spacing:.05em; background:#141414; color:#fff; padding:3px 8px; border-radius:20px; }
-.accAddressCard p{ margin:2px 0; color:#666; }
-.accAddressActions{ display:flex; gap:14px; margin-top:10px; }
-.accAddressForm{ background:#fdfcfa; }
+/* Forms */
+.accForm{ display:grid; grid-template-columns:minmax(0,1fr); gap:16px; max-width:560px; }
+.accForm label{ display:flex; flex-direction:column; gap:7px; font:700 12.5px Manrope; letter-spacing:.02em; color:var(--acc-ink); }
+.accForm input{ width:100%; height:50px; padding:0 14px; border:1.5px solid #c4c4c4; border-radius:0; background:#fff;
+  font:500 16px var(--font-sans); color:var(--acc-ink); transition:border-color .15s ease, box-shadow .15s ease; }
+.accForm input::placeholder{ color:#808080; font-weight:400; }
+.accForm input:hover{ border-color:#808080; }
+.accForm input:focus{ outline:none; border-color:var(--acc-ink); box-shadow:inset 0 0 0 1px var(--acc-ink); }
+.accForm input:disabled{ background:#f4f4f4; color:#555; border-color:#dcdcdc; }
+.accForm .pwRules{ margin-top:-6px; }
+.accForm .pwRule{ font-size:12.5px; color:#444; }
+.accFormActions{ display:flex; align-items:center; gap:12px; flex-wrap:wrap; margin-top:4px; }
+.accFormActions .blackButton{ min-height:48px; padding:0 26px; margin:0; }
+.accFormActions .accLinkBtn{ min-height:48px; padding:0 20px; }
 
-.accHelp{ background:#fdfcfa; border-radius:10px; border-top:none; padding:22px 20px; }
-.accHelpSub{ font-size:12.5px; color:#777; margin:0 0 14px; }
+/* Addresses */
+.accAddressList{ display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:14px; margin-bottom:14px; }
+.accAddressCard{ display:flex; flex-direction:column; padding:18px; border:1px solid var(--acc-line); font-size:14px; background:#fff; }
+.accAddressCardHead{ display:flex; align-items:center; justify-content:space-between; gap:8px; margin-bottom:10px; }
+.accAddressCardHead b{ font:800 13px Manrope; letter-spacing:.1em; color:var(--acc-ink); }
+.accDefaultBadge{ padding:4px 9px; background:var(--acc-ink); color:#fff; font:700 10px Manrope; letter-spacing:.12em; }
+.accAddressCard p{ margin:2px 0; color:var(--acc-text); line-height:1.5; }
+.accAddressActions{ display:flex; flex-wrap:wrap; gap:8px; margin-top:auto; padding-top:16px; }
+.accAddressForm{ grid-column:1 / -1; border-style:solid; }
+.accAddressForm .accForm{ grid-template-columns:repeat(2,minmax(0,1fr)); max-width:none; }
+.accAddressForm .accFormWide, .accAddressForm .accNoticeErr, .accAddressForm .accFormActions{ grid-column:1 / -1; }
+
+/* Help */
+.accHelp{ display:flex; align-items:center; justify-content:space-between; gap:20px; flex-wrap:wrap; background:var(--acc-ink); border-color:var(--acc-ink); }
+.accHelp h2{ color:#fff; }
+.accHelpSub{ margin:6px 0 0; font-size:14px; color:#fff; opacity:.88; }
 .accHelpActions{ display:flex; gap:10px; flex-wrap:wrap; }
-.accHelpBtn{ display:inline-flex; align-items:center; gap:8px; width:auto; padding:11px 18px; }
+.accHelpBtn{ display:inline-flex; align-items:center; justify-content:center; gap:8px; min-height:48px; padding:0 22px;
+  background:#fff; color:var(--acc-ink); border:1px solid #fff; font:800 12px Manrope; letter-spacing:.1em; text-transform:uppercase; text-decoration:none; }
+.accHelpBtn:hover{ background:var(--acc-ink); color:#fff; }
+.accHelpBtn:focus-visible{ outline:2px solid #fff; outline-offset:2px; }
 
-.accLogout{
-  display:flex; align-items:center; gap:8px;
-  margin:30px auto 0;
-  background:none; border:1px solid #e2ded4; border-radius:6px;
-  padding:11px 20px; font:700 11.5px Manrope; letter-spacing:.04em;
-  color:#666; cursor:pointer;
-}
-.accLogout:hover{ border-color:#b91c1c; color:#b91c1c; }
+/* Sign out */
+.accLogout{ display:flex; align-items:center; justify-content:center; gap:9px; width:100%; min-height:54px;
+  background:#fff; border:1.5px solid var(--acc-line); color:var(--acc-ink);
+  font:800 13px Manrope; letter-spacing:.14em; text-transform:uppercase; cursor:pointer; transition:background .15s ease, color .15s ease; }
+.accLogout:hover{ background:var(--acc-ink); color:#fff; }
+.accLogout:focus-visible{ outline:2px solid var(--acc-ink); outline-offset:3px; }
+.accLogout:disabled{ opacity:.6; cursor:progress; }
 
-.accSkelBlock{ background:#f1efe9; border-radius:6px; animation:accPulse 1.4s ease-in-out infinite; }
+/* Signed-out / error gate */
+.accGate{ max-width:460px; margin:40px auto; padding:36px 28px; border:1px solid var(--acc-line); text-align:center; }
+.accGate h1{ margin:0 0 10px; font:800 24px Manrope; color:var(--acc-ink); }
+.accGate p{ margin:0; font-size:15px; color:var(--acc-text); }
+.accGateIcon{ display:inline-grid; place-items:center; width:58px; height:58px; margin-bottom:16px; border-radius:50%; background:var(--acc-ink); color:#fff; }
+.accGateBtn{ display:inline-flex; margin:20px auto 0; min-width:180px; }
+
+/* Loading */
+.accSkelBlock{ background:#ececec; animation:accPulse 1.4s ease-in-out infinite; }
+.accSkelHero{ height:130px; margin-bottom:28px; }
+.accSkelSide{ height:280px; }
+.accSkelCard{ height:180px; }
 @keyframes accPulse{ 0%,100%{opacity:1;} 50%{opacity:.55;} }
 
-@media(max-width:768px){
-  .accQuickGrid{ grid-template-columns:repeat(2,1fr); }
-  .accWishGrid{ grid-template-columns:repeat(2,1fr); }
-  .accOrderRow{ grid-template-columns:38px 1fr auto; grid-template-areas:"thumb info total" "thumb status total"; }
-  .accOrderStatus{ grid-area:status; justify-self:start; }
+/* Tablets & phones: menu becomes a sticky, swipeable button row */
+@media(max-width:1023px){
+  .accLayout{ grid-template-columns:minmax(0,1fr); gap:20px; }
+  .accSide{ top:64px; z-index:15; margin:0 calc(-1 * clamp(16px,4vw,40px)); padding:10px clamp(16px,4vw,40px);
+    background:#fff; border-bottom:1px solid var(--acc-line); }
+  .accNav{ flex-direction:row; gap:8px; border:0; overflow-x:auto; scrollbar-width:none; -webkit-overflow-scrolling:touch; }
+  .accNav::-webkit-scrollbar{ display:none; }
+  .accNavLink{ flex:0 0 auto; min-height:42px; padding:0 14px; border:1px solid var(--acc-line); font-size:12.5px; white-space:nowrap; }
+  .accNavLink + .accNavLink{ border-top:1px solid var(--acc-line); }
+  .accNavChevron{ display:none; }
+  .accSection{ scroll-margin-top:136px; }
+  .accSkelSide{ height:62px; }
 }
-@media(max-width:480px){
-  .accountPage{ padding:28px 16px 60px; }
-  .accHeader h1{ font-size:20px; }
+@media(max-width:900px){
+  .accountPage{ padding-bottom:calc(56px + 110px + env(safe-area-inset-bottom, 0px)); }
+}
+@media(max-width:767px){
+  .accountPage{ padding-top:18px; }
+  .accHero{ margin-left:calc(-1 * clamp(16px,4vw,40px)); margin-right:calc(-1 * clamp(16px,4vw,40px)); margin-bottom:0; }
+  .accStats{ width:100%; }
+  .accStats > div{ flex:1 1 0; min-width:0; padding:12px 10px; }
+  .accStats dd{ font-size:22px; }
+  .accWishGrid{ grid-template-columns:repeat(2,minmax(0,1fr)); gap:14px; }
+  .accInfoRows, .accAddressList, .accAddressForm .accForm{ grid-template-columns:minmax(0,1fr); }
+  .accOrderRow{ grid-template-columns:44px minmax(0,1fr) auto; grid-template-areas:"thumb info total" "thumb status chev"; row-gap:8px; column-gap:12px; }
+  .accOrderThumb{ grid-area:thumb; width:44px; height:44px; align-self:start; }
+  .accOrderInfo{ grid-area:info; }
+  .accOrderStatus{ grid-area:status; }
+  .accOrderTotal{ grid-area:total; justify-self:end; }
+  .accOrderChevron{ grid-area:chev; justify-self:end; }
+  .accHelp{ display:grid; grid-template-columns:minmax(0,1fr); gap:18px; }
+  .accHelpActions{ display:grid; grid-template-columns:repeat(auto-fit,minmax(130px,1fr)); }
+  .accFormActions .blackButton, .accFormActions .accLinkBtn{ flex:1 1 140px; justify-content:center; }
+  .accEmpty .blackButton, .accEmpty .outlineButton{ width:100%; min-width:0; }
+}
+@media(max-width:380px){
+  .accHeroMain{ gap:12px; }
+  .accSectionHead h2{ font-size:16px; }
+  .accAddressActions .accLinkBtn{ flex:1 1 auto; justify-content:center; }
 }
 @media(prefers-reduced-motion:reduce){
   .accSkelBlock{ animation:none; }
+  .accNavLink, .accOrderRow, .accWishImg img, .accLinkBtn, .accLogout, .accForm input{ transition:none; }
 }
 
 
@@ -1542,42 +1644,81 @@ body.install-prompt-visible .waFab{
   .notifBackdrop, .notifPanel{ animation:none; }
 }
 
-/* ---- Dedicated /notifications page ---- */
-.notifPage{ max-width:720px; margin:0 auto; padding:40px 20px 80px; }
-.notifPageHead{ display:flex; align-items:center; justify-content:space-between; margin-bottom:20px; }
-.notifPageHead h1{ font:800 22px Manrope; margin:0; }
-.notifTabs{ display:flex; gap:6px; overflow-x:auto; padding-bottom:14px; margin-bottom:14px; border-bottom:1px solid #ece9e2; }
-.notifTab{
-  flex:0 0 auto;
-  padding:8px 14px;
-  border:1px solid #e5e2da; border-radius:20px;
-  background:#fff; color:#666;
-  font:700 11px Manrope; letter-spacing:.03em;
-  cursor:pointer; white-space:nowrap;
-}
-.notifTab.active{ background:#141414; color:#fff; border-color:#141414; }
-.notifPageList{ display:flex; flex-direction:column; gap:8px; }
-.notifPageItem{
-  display:flex; align-items:flex-start; gap:12px;
-  width:100%; text-align:left;
-  padding:14px 16px;
-  border:1px solid #ece9e2; border-radius:10px;
-  background:#fff; cursor:pointer;
-}
-.notifPageItem.unread{ background:#fdfaf3; border-color:#f0e4c8; }
-.notifPageItem .notifItemTitle{ font-size:13.5px; }
-.notifPageItem .notifItemMsg{ font-size:12.5px; }
-.notifPageEmpty{
-  display:flex; flex-direction:column; align-items:center; gap:8px;
-  padding:70px 20px; color:#999; text-align:center;
-}
-.notifPageEmpty p{ font:700 14px Manrope; color:#333; margin:6px 0 0; }
-.notifPageEmpty span{ font-size:12.5px; }
+/* ---- Dedicated /notifications page ----
+   Same classic black & white language as the account page. Unread items
+   carry a solid black left edge + black dot (no beige fill / gold). */
+.notifPage{ max-width:860px; margin:0 auto; padding:32px clamp(16px,4vw,40px) 96px; color:#111; }
+.notifPageHead{ display:flex; align-items:flex-end; justify-content:space-between; gap:16px; flex-wrap:wrap;
+  background:#000; color:#fff; padding:clamp(22px,3vw,32px) clamp(20px,3vw,32px); margin-bottom:22px; }
+.notifPageTitle{ min-width:0; }
+.notifPageHead .accEyebrow{ color:#fff; }
+.notifPageHead h1{ margin:0; font:800 clamp(26px,2vw + 14px,34px) Manrope; color:#fff; line-height:1.1; }
+.notifPageSub{ margin:8px 0 0; font-size:14px; color:#fff; opacity:.88; }
+.notifMarkAllBtn{ display:inline-flex; align-items:center; gap:8px; min-height:44px; padding:0 16px;
+  background:#fff; color:#000; border:1px solid #fff; font:800 11.5px Manrope; letter-spacing:.1em; cursor:pointer; }
+.notifMarkAllBtn:hover{ background:#000; color:#fff; }
+.notifMarkAllBtn:focus-visible{ outline:2px solid #fff; outline-offset:2px; }
+.notifPageErr{ margin:-8px 0 16px; }
+.notifTabs{ display:flex; gap:8px; overflow-x:auto; padding:0 0 16px; margin-bottom:18px; border-bottom:1px solid #000;
+  scrollbar-width:none; -webkit-overflow-scrolling:touch; }
+.notifTabs::-webkit-scrollbar{ display:none; }
+.notifTab{ flex:0 0 auto; min-height:40px; padding:0 16px; border:1px solid #000; border-radius:0; background:#fff; color:#000;
+  font:700 12.5px Manrope; letter-spacing:.04em; cursor:pointer; white-space:nowrap; transition:background .15s ease, color .15s ease; }
+.notifTab:hover{ background:#f2f2f2; }
+.notifTab.active{ background:#000; color:#fff; border-color:#000; }
+.notifTab:focus-visible{ outline:2px solid #000; outline-offset:2px; }
+.notifPageList{ display:flex; flex-direction:column; gap:10px; }
+.notifPageItem{ position:relative; display:flex; align-items:flex-start; gap:14px; width:100%; text-align:left;
+  padding:16px 18px; border:1px solid #d6d6d6; border-radius:0; background:#fff; color:#111; cursor:pointer;
+  transition:border-color .15s ease, box-shadow .15s ease; }
+.notifPageItem:hover{ border-color:#000; box-shadow:inset 0 0 0 1px #000; }
+.notifPageItem:focus-visible{ outline:2px solid #000; outline-offset:2px; }
+.notifPageItem.unread{ background:#fff; border-color:#000; box-shadow:inset 4px 0 0 #000; }
+.notifPageItem .notifItemIcon{ width:42px; height:42px; border-radius:0; background:#000; color:#fff; }
+.notifPageItem:not(.unread) .notifItemIcon{ background:#fff; color:#000; border:1px solid #000; }
+.notifPageItem .notifItemTitle{ font:800 15px Manrope; color:#000; }
+.notifPageItem .notifItemMsg{ font-size:14px; color:#2b2b2b; line-height:1.5; }
+.notifPageItem .notifItemTime{ font-size:12px; color:#555; font-weight:500; margin-top:4px; }
+.notifPageItem .notifDot{ width:9px; height:9px; background:#000; margin-top:6px; }
+.notifPageEmpty{ display:flex; flex-direction:column; align-items:center; gap:6px; padding:56px 20px; text-align:center; border:1px dashed #9a9a9a; color:#111; }
+.notifPageEmptyIcon{ display:grid; place-items:center; width:56px; height:56px; border-radius:50%; background:#000; color:#fff; margin-bottom:8px; }
+.notifPageEmpty p{ font:800 16px Manrope; color:#000; margin:0; }
+.notifPageEmpty span{ font-size:14px; color:#333; }
+.notifLoadMore{ display:flex; align-items:center; justify-content:center; width:100%; min-height:52px; margin:20px 0 0;
+  background:#fff; border:1.5px solid #000; color:#000; font:800 12.5px Manrope; letter-spacing:.14em; cursor:pointer; }
+.notifLoadMore:hover{ background:#000; color:#fff; }
+.notifLoadMore:disabled{ opacity:.6; cursor:progress; }
+.notifSkel{ height:320px; }
 
-@media(max-width:480px){
-  .notifPage{ padding:24px 14px 60px; }
-  .notifPageHead h1{ font-size:19px; }
+@media(max-width:900px){
+  .notifPage{ padding-bottom:calc(56px + 110px + env(safe-area-inset-bottom, 0px)); }
 }
+@media(max-width:600px){
+  .notifPage{ padding-top:18px; }
+  .notifPageHead{ margin-left:calc(-1 * clamp(16px,4vw,40px)); margin-right:calc(-1 * clamp(16px,4vw,40px)); }
+  .notifMarkAllBtn{ width:100%; justify-content:center; }
+  .notifPageItem{ padding:14px; gap:12px; }
+}
+@media(prefers-reduced-motion:reduce){ .notifTab, .notifPageItem{ transition:none; } }
+
+/* Bell drop-down / drawer: same monochrome treatment */
+.notifPanel{ border-color:#000; border-radius:0; }
+.notifPanelHead{ border-bottom-color:#000; }
+.notifPanelHead b{ color:#000; }
+.notifMarkAll{ color:#000; }
+.notifItem{ border-bottom-color:#e6e6e6; }
+.notifItem:hover{ background:#f4f4f4; }
+.notifItem.unread{ background:#fff; box-shadow:inset 3px 0 0 #000; }
+.notifItemIcon{ border-radius:0; background:#000; color:#fff; }
+.notifItemTitle{ color:#000; }
+.notifItemMsg{ color:#333; }
+.notifItemTime{ color:#555; }
+.notifDot{ background:#000; }
+.notifViewAll{ background:#fff; color:#000; border-top-color:#000; text-decoration:underline; text-underline-offset:3px; }
+.notifViewAll:hover{ background:#000; color:#fff; }
+.notifEmpty, .notifLoading{ color:#333; }
+.notifEmpty p{ color:#000; }
+@media(max-width:900px){ .notifPanel{ border-radius:16px 16px 0 0; } }
 
 /* ---- Notification toasts ---- */
 .toastStack{

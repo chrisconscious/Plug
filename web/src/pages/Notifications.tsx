@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { Package, CreditCard, Tag, Megaphone, Heart, Boxes, Users, ShieldAlert, Shield, Bell } from 'lucide-react';
+import { Package, CreditCard, Tag, Megaphone, Heart, Boxes, Users, ShieldAlert, Shield, Bell, CheckCheck } from 'lucide-react';
 import * as api from '../lib/api';
 import { StoreHeader } from '../components/shop/StoreHeader';
 import { useAuth } from '../lib/AuthContext';
@@ -104,7 +104,7 @@ function Notifications() {
     return (
       <div>
         <StoreHeader />
-        <main className="notifPage"><div className="accSkelBlock" style={{ height: 300 }} /></main>
+        <main className="notifPage"><div className="accSkelBlock notifSkel" /></main>
       </div>
     );
   }
@@ -114,7 +114,11 @@ function Notifications() {
       <div>
         <StoreHeader />
         <main className="notifPage">
-          <p>Please <Link to={loginUrl(currentLocation())}>sign in</Link> to view your notifications.</p>
+          <div className="accGate">
+            <div className="accGateIcon" aria-hidden="true"><Bell size={26} /></div>
+            <h1>Notifications</h1>
+            <p>Please <Link to={loginUrl(currentLocation())} className="accTextLink">sign in</Link> to view your notifications.</p>
+          </div>
         </main>
       </div>
     );
@@ -125,10 +129,14 @@ function Notifications() {
       <StoreHeader />
       <main className="notifPage">
         <div className="notifPageHead">
-          <h1>Notifications</h1>
-          {items.some((n) => !n.isRead) && <button type="button" className="accLinkBtn" onClick={markAllRead}>MARK ALL AS READ</button>}
-          {markError && <p role="alert" style={{ fontSize: 12, color: '#b91c1c', margin: '6px 0 0' }}>{markError}</p>}
+          <div className="notifPageTitle">
+            <p className="accEyebrow">MY ACCOUNT</p>
+            <h1>Notifications</h1>
+            <p className="notifPageSub">Order updates, offers and account alerts.</p>
+          </div>
+          {items.some((n) => !n.isRead) && <button type="button" className="notifMarkAllBtn" onClick={markAllRead}><CheckCheck size={16} aria-hidden="true" /> MARK ALL AS READ</button>}
         </div>
+        {markError && <p role="alert" className="accNoticeErr notifPageErr">{markError}</p>}
 
         <div className="notifTabs" role="tablist">
           {TABS.map((t, i) => (
@@ -139,7 +147,7 @@ function Notifications() {
         </div>
 
         {status === 'loading' && items.length === 0 ? (
-          <div className="accSkelBlock" style={{ height: 300 }} />
+          <div className="accSkelBlock notifSkel" />
         ) : status === 'error' && items.length === 0 ? (
           <div className="accEmpty">
             <p>Couldn't load your notifications right now.</p>
@@ -147,7 +155,7 @@ function Notifications() {
           </div>
         ) : filtered.length === 0 ? (
           <div className="notifPageEmpty">
-            <Bell size={28} strokeWidth={1.3} />
+            <span className="notifPageEmptyIcon" aria-hidden="true"><Bell size={26} /></span>
             <p>You're all caught up.</p>
             <span>No new notifications right now.</span>
           </div>
@@ -165,11 +173,12 @@ function Notifications() {
                     <span className="notifItemTime">{timeAgo(n.createdAt)}</span>
                   </span>
                   {!n.isRead && <span className="notifDot" aria-hidden="true" />}
+                  {!n.isRead && <span className="srOnly">Unread</span>}
                 </button>
               ))}
             </div>
             {items.length < total && (
-              <button type="button" className="outlineButton" style={{ margin: '20px auto 0', display: 'block' }} disabled={status === 'loading'} onClick={loadMore}>
+              <button type="button" className="notifLoadMore" disabled={status === 'loading'} onClick={loadMore}>
                 {status === 'loading' ? 'Loading…' : 'LOAD MORE'}
               </button>
             )}

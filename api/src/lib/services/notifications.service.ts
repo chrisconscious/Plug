@@ -102,7 +102,7 @@ export async function notifyCustomersNewProduct(product: { id: string; name: str
     message: product.brandName ? `${product.name} by ${product.brandName} is now available.` : `${product.name} is now available.`,
     entityType: "product",
     entityId: product.id,
-    actionUrl: `/product/${product.slug}`,
+    actionUrl: `/product/${encodeURIComponent(product.slug)}`,
     imageUrl: product.imageUrl ?? null,
   });
 }
@@ -137,7 +137,7 @@ export async function notifyWishlistersProductBackInStock(userIds: string[], pro
         message: `${productName}, saved to your wishlist, is back in stock.`,
         entityType: "product",
         entityId: productId,
-        actionUrl: `/product/${productSlug}`,
+        actionUrl: `/product/${encodeURIComponent(productSlug)}`,
       }).catch(() => undefined)
     )
   );

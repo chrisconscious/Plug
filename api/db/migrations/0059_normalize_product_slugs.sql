@@ -13,7 +13,8 @@
 -- This rewrites ONLY slugs that are not already in the canonical form, using
 -- the same rules as slugifyProduct. Nothing else on the row changes (the
 -- slug is a URL key only: carts, orders, wishlists and images reference the
--- product id). If the normalized slug is already taken by another product,
+-- product id). The one place that stores a slug is a notification's link,
+-- so those links are updated to the new URL too. If the normalized slug is already taken by another product,
 -- the first 8 characters of this product's id are appended so the unique
 -- index is never violated. Old links keep working: the product endpoint also
 -- resolves a requested slug through the same normalization
@@ -50,6 +51,14 @@ BEGIN
     END IF;
 
     UPDATE products SET slug = candidate WHERE id = r.id;
+
+    -- Notifications store their link text, built from the old slug without
+    -- URL-encoding (e.g. "/product//Classic Tshirt", which matches no route).
+    -- Point this product's notifications at the new URL.
+    UPDATE notifications
+       SET action_url = '/product/' || candidate
+     WHERE (entity_type = 'product' AND entity_id = r.id)
+        OR action_url = '/product/' || r.slug;
     RAISE NOTICE 'product % slug "%" -> "%"', r.id, r.slug, candidate;
   END LOOP;
 END $$;

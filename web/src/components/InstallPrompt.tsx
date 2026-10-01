@@ -1,4 +1,5 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { useLocation } from 'react-router-dom';
 import { X, Share, Download, Check } from 'lucide-react';
 import { usePlatformSettings } from '../lib/PlatformSettingsContext';
 import * as api from '../lib/api';
@@ -75,55 +76,71 @@ function isSuppressedPath(pathname: string): boolean {
  * shared context just for this. Cleans up on every change and on unmount,
  * so the class never gets stuck on if this card unmounts while visible.
  */
-function useBodyClassWhenShown(shown: boolean): void {
+function useBodyClassWhenShown(shown: boolean, cardRef: React.RefObject<HTMLDivElement>): void {
   useEffect(() => {
     if (!shown) return;
-    document.body.classList.add('install-prompt-visible');
-    return () => document.body.classList.remove('install-prompt-visible');
-  }, [shown]);
+    const body = document.body;
+    body.classList.add('install-prompt-visible');
+    // How far the card's top edge sits above the bottom of the viewport, so
+    // the WhatsApp button can park just above it whatever the card's real
+    // height (title length, safe-area insets, screen size) instead of a
+    // fixed guess that left it covering the card's close button.
+    const measure = () => {
+      const card = cardRef.current;
+      if (card) body.style.setProperty('--install-card-clearance', `${Math.ceil(window.innerHeight - card.getBoundingClientRect().top)}px`);
+    };
+    measure();
+    const ro = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(measure) : null;
+    const card = cardRef.current;
+    if (ro && card) ro.observe(card);
+    // The card slides up into place as it appears; measure its final position too.
+    card?.addEventListener('animationend', measure);
+    window.addEventListener('resize', measure);
+    return () => {
+      ro?.disconnect();
+      card?.removeEventListener('animationend', measure);
+      window.removeEventListener('resize', measure);
+      body.classList.remove('install-prompt-visible');
+      body.style.removeProperty('--install-card-clearance');
+    };
+  }, [shown, cardRef]);
 }
 
 export function InstallPrompt() {
   const { pwaIconUrl, pwaInstallPromptEnabled, platformName } = usePlatformSettings();
+  const { pathname } = useLocation();
+  // The browser's install event, held until the customer presses Install.
+  // It can be used for exactly one prompt(), so it is cleared after use.
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
-  const [visible, setVisible] = useState(false);
+  const [dismissed, setDismissed] = useState(recentlyDismissed);
   const [installing, setInstalling] = useState(false);
   const [justInstalled, setJustInstalled] = useState(false);
-  // Separate from the Chromium deferredPrompt path below — iOS has no
-  // event to listen for, so eligibility here is just "is this iOS
-  // Safari, not already installed, not dismissed, not on a suppressed
-  // page" checked once on mount.
-  const [showIosGuide, setShowIosGuide] = useState(false);
-  // Separate from visible/showIosGuide: this only controls whether the
-  // exit animation class is applied, so dismissal can play a smooth
-  // slide-down-and-fade before the component actually unmounts, rather
-  // than vanishing instantly the moment visible becomes false.
+  // iOS has no install event to listen for, so eligibility there is just
+  // "iOS Safari and not already on the home screen", checked once.
+  const [iosEligible] = useState(() => isIosSafari() && !isStandalone());
+  // Only controls the exit-animation class, so dismissal can play a smooth
+  // slide-down-and-fade before the card actually unmounts.
   const [closing, setClosing] = useState(false);
 
   useEffect(() => {
-    if (!pwaInstallPromptEnabled) return;
-    if (isStandalone() || recentlyDismissed() || isSuppressedPath(window.location.pathname)) return;
-    if (isIosSafari()) setShowIosGuide(true);
-  }, [pwaInstallPromptEnabled]);
-
-  useEffect(() => {
-    // Only Chromium-based browsers fire this — Safari/Firefox never do,
-    // so this component simply never becomes eligible there, which is
-    // exactly the "don't show a broken install button" requirement
-    // rather than something needing separate browser-detection logic.
+    // Only Chromium-based browsers fire this — Safari/Firefox never do, so
+    // the Install button simply never appears there (no broken button).
     const onBeforeInstallPrompt = (event: Event) => {
+      // Take over from the browser's own install offer ONLY when this card is
+      // going to offer installation instead. Calling preventDefault() and then
+      // never calling prompt() leaves the visitor with no install offer at
+      // all, and is what makes Chrome log "Banner not shown:
+      // beforeinstallpromptevent.preventDefault() called".
+      if (!pwaInstallPromptEnabled || isStandalone() || recentlyDismissed()) return;
       event.preventDefault();
-      if (!pwaInstallPromptEnabled) return;
-      if (isStandalone() || recentlyDismissed() || isSuppressedPath(window.location.pathname)) return;
+      // Kept even while on a page where the card is hidden (checkout,
+      // sign-in…): the card appears as soon as the customer moves on to a
+      // regular page, instead of the one event of this page load being lost.
       setDeferredPrompt(event as BeforeInstallPromptEvent);
-      setVisible(true);
     };
     // If installation completes through any path (this card, or the
     // browser's own address-bar install icon), stop offering it again.
-    const onInstalled = () => {
-      setVisible(false);
-      setDeferredPrompt(null);
-    };
+    const onInstalled = () => setDeferredPrompt(null);
     window.addEventListener('beforeinstallprompt', onBeforeInstallPrompt);
     window.addEventListener('appinstalled', onInstalled);
     return () => {
@@ -132,49 +149,51 @@ export function InstallPrompt() {
     };
   }, [pwaInstallPromptEnabled]);
 
-  // Must stay above the early return below — a hook called after a
-  // conditional return is exactly the Rules-of-Hooks violation found
-  // and fixed elsewhere this session (ProductDetail.tsx).
-  useBodyClassWhenShown(showIosGuide || visible);
+  const allowedHere = pwaInstallPromptEnabled && !dismissed && !isSuppressedPath(pathname);
+  const showInstall = allowedHere && (!!deferredPrompt || justInstalled);
+  const showIosGuide = allowedHere && !showInstall && iosEligible;
 
-  if (!closing && !showIosGuide && (!visible || !deferredPrompt)) return null;
+  // Must stay above the early return below (Rules of Hooks).
+  const cardRef = useRef<HTMLDivElement>(null);
+  useBodyClassWhenShown(showIosGuide || showInstall, cardRef);
+
+  if (!closing && !showIosGuide && !showInstall) return null;
 
   const dismiss = () => {
     sessionStorage.setItem(DISMISS_KEY, '1');
     setClosing(true);
     setTimeout(() => {
-      setVisible(false);
-      setShowIosGuide(false);
+      setDismissed(true);
       setClosing(false);
-    }, 220); // matches the CSS exit-animation duration below
+    }, 220); // matches the CSS exit-animation duration
   };
 
   const install = async () => {
+    const event = deferredPrompt;
+    if (!event) return;
     setInstalling(true);
     try {
-      await deferredPrompt.prompt();
-      // The real browser outcome — never assumed, never faked. Only a
-      // genuine "accepted" gets the brief "Installed" success state;
-      // a real dismissal in the native dialog just closes the card the
-      // same way it always did, since nothing was actually installed.
-      const choice = await deferredPrompt.userChoice;
-      setInstalling(false);
-      setDeferredPrompt(null);
+      await event.prompt();
+      // The real browser outcome — never assumed. Only a genuine "accepted"
+      // gets the brief "Installed" state; a dismissal in the native dialog
+      // just closes the card, since nothing was installed.
+      const choice = await event.userChoice;
       if (choice.outcome === 'accepted') {
         setJustInstalled(true);
-        setTimeout(() => setVisible(false), 1500);
-      } else {
-        setVisible(false);
+        setTimeout(() => setJustInstalled(false), 1500);
       }
     } catch {
+      /* the browser refused to show the dialog; nothing was installed */
+    } finally {
+      // prompt() can only be called once per event: never offer it again.
       setInstalling(false);
-      setVisible(false);
       setDeferredPrompt(null);
     }
   };
 
   return (
     <div
+      ref={cardRef}
       role="dialog"
       aria-modal="false"
       aria-labelledby="install-prompt-title"

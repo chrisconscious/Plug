@@ -151,14 +151,19 @@ const REFRESH_COOKIE = "vv_refresh";
 // can exist either, so the guest fast-path is sound.
 const SESSION_MARKER_COOKIE = "vv_session";
 
-export function setAuthCookies(res: NextResponse, accessToken: string, refreshToken: string) {
-  const base = {
+/** Attributes shared by every auth cookie. Setting AND clearing must use the same ones (see clearAuthCookies). */
+function authCookieBase() {
+  return {
     httpOnly: true,
     secure: config.cookies.secure,
     sameSite: "lax" as const,
     path: "/",
     domain: config.cookies.domain === "localhost" ? undefined : config.cookies.domain,
   };
+}
+
+export function setAuthCookies(res: NextResponse, accessToken: string, refreshToken: string) {
+  const base = authCookieBase();
   res.cookies.set(ACCESS_COOKIE, accessToken, { ...base, maxAge: config.auth.accessTokenTtlSeconds });
   res.cookies.set(REFRESH_COOKIE, refreshToken, {
     ...base,
@@ -172,10 +177,21 @@ export function setAuthCookies(res: NextResponse, accessToken: string, refreshTo
   });
 }
 
+/**
+ * Deletes the auth cookies. A browser only deletes a cookie when the
+ * Set-Cookie names the same Domain and Path it was created with, so these
+ * must mirror setAuthCookies exactly: in production COOKIE_DOMAIN is set and
+ * the cookies are Domain=<COOKIE_DOMAIN>; an expiry sent without that Domain
+ * targets a different (host-only) cookie and leaves the real ones in place.
+ * That is what kept signed-out browsers sending a still-valid access token
+ * (signed back in on reload) and, once it expired, repeating
+ * /auth/me 401 + /auth/refresh 401 on every page load.
+ */
 export function clearAuthCookies(res: NextResponse) {
-  res.cookies.set(ACCESS_COOKIE, "", { maxAge: 0, path: "/" });
-  res.cookies.set(REFRESH_COOKIE, "", { maxAge: 0, path: "/api/v1/auth" });
-  res.cookies.set(SESSION_MARKER_COOKIE, "", { maxAge: 0, path: "/" });
+  const base = { ...authCookieBase(), maxAge: 0 };
+  res.cookies.set(ACCESS_COOKIE, "", base);
+  res.cookies.set(REFRESH_COOKIE, "", { ...base, path: "/api/v1/auth" });
+  res.cookies.set(SESSION_MARKER_COOKIE, "", { ...base, httpOnly: false });
 }
 
 export function getRefreshTokenFromRequest(req: NextRequest): string | null {

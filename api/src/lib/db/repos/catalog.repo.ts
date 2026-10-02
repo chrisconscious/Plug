@@ -978,6 +978,27 @@ export async function restoreProduct(id: string): Promise<Product | null> {
 }
 
 /**
+ * Hard DELETE of an ARCHIVED product (migration 0061). Only an archived row
+ * matches, so a live or draft product can never be removed by this path.
+ * Returns the storage keys of its images (captured in the same transaction,
+ * before the cascade removes the rows) so the caller can delete the files.
+ */
+export async function deleteArchivedProduct(id: string): Promise<{ deleted: boolean; imageStorageKeys: string[] }> {
+  return withTransaction(async (client) => {
+    const imgs = await client.query<{ storage_key: string | null }>(
+      `SELECT storage_key FROM product_images WHERE product_id = $1`,
+      [id]
+    );
+    const del = await client.query(`DELETE FROM products WHERE id = $1 AND archived_at IS NOT NULL`, [id]);
+    const deleted = (del.rowCount ?? 0) > 0;
+    return {
+      deleted,
+      imageStorageKeys: deleted ? imgs.rows.map((r) => r.storage_key).filter((k): k is string => !!k) : [],
+    };
+  });
+}
+
+/**
  * Sets absolute stock for a batch of one product's variants in a single
  * transaction — the dedicated inventory path (no need to resubmit the whole
  * product). Each row is locked like checkout locks it, so a concurrent order

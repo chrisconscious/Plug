@@ -677,6 +677,11 @@ export function getAdminProduct(id: string): Promise<{ product: Product }> {
 }
 
 /** Un-archives a deleted product back to draft. */
+/** Permanently deletes an ARCHIVED product (Super Admin only). Past orders keep their details. */
+export function permanentlyDeleteAdminProduct(id: string): Promise<{ success: boolean }> {
+  return request<{ success: boolean }>(`/api/v1/admin/products/${encodeURIComponent(id)}/permanent`, { method: "DELETE" });
+}
+
 export function restoreAdminProduct(id: string): Promise<{ product: Product }> {
   return request<{ product: Product }>(`/api/v1/admin/products/${encodeURIComponent(id)}/restore`, { method: "POST" });
 }

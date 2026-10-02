@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Plus, Search, Pencil, Archive, RotateCcw, Eye, EyeOff } from "lucide-react";
+import { Plus, Search, Pencil, Archive, RotateCcw, Eye, EyeOff, Trash2 } from "lucide-react";
 import * as api from "../../lib/api";
 import { formatTZS } from "../../lib/currency";
 import { resolveImage } from "../../lib/imagePlaceholder";
 import { userMessage } from "../../lib/errors";
+import { useAuth } from "../../lib/AuthContext";
 
 const PAGE_SIZE = 24;
 
@@ -82,6 +83,8 @@ export function ProductManagementTable({
   // rbac.ts / migration 0055). Hidden otherwise; the server enforces it.
   const [canArchive, setCanArchive] = useState(false);
   const reqSeq = useRef(0);
+  // Permanent delete is Super Admin only (enforced again by the server).
+  const isSuperAdmin = useAuth().user?.role === "SUPER_ADMIN";
 
   useEffect(() => {
     let alive = true;
@@ -136,6 +139,14 @@ export function ProductManagementTable({
     );
     if (!confirmed) return;
     void run(p, () => api.deleteAdminProduct(p.id), `"${p.name}" archived.`);
+  };
+
+  const deleteForever = (p: api.Product) => {
+    const confirmed = window.confirm(
+      `Permanently delete "${p.name}"?\n\nThis can't be undone. The product, its images and its stock are removed for good, and it disappears from carts and wishlists. Past orders keep their details.`
+    );
+    if (!confirmed) return;
+    void run(p, () => api.permanentlyDeleteAdminProduct(p.id), `"${p.name}" deleted permanently.`);
   };
 
   const pages = Math.max(1, Math.ceil(total / PAGE_SIZE));
@@ -231,7 +242,11 @@ export function ProductManagementTable({
                           <button type="button" style={iconBtn} title="Edit" aria-label={`Edit ${p.name}`} disabled={busyId === p.id} onClick={() => onEdit(p)}><Pencil size={13} /> Edit</button>
                           {archived ? (
                             canArchive ? <button type="button" style={iconBtn} title="Restore as draft" aria-label={`Restore ${p.name}`} disabled={busyId === p.id} onClick={() => void run(p, () => api.restoreAdminProduct(p.id), `"${p.name}" restored as a draft.`)}><RotateCcw size={13} /> Restore</button> : null
-                          ) : (
+                          ) : null}
+                          {archived && isSuperAdmin ? (
+                            <button type="button" style={{ ...iconBtn, color: "#b00" }} title="Delete permanently" aria-label={`Delete ${p.name} permanently`} disabled={busyId === p.id} onClick={() => deleteForever(p)}><Trash2 size={13} /> Delete permanently</button>
+                          ) : null}
+                          {archived ? null : (
                             <>
                               {p.active ? (
                                 <button type="button" style={iconBtn} title="Unpublish" aria-label={`Unpublish ${p.name}`} disabled={busyId === p.id} onClick={() => void run(p, () => api.updateAdminProduct(p.id, { active: false }), `"${p.name}" unpublished — now a draft.`)}><EyeOff size={13} /></button>

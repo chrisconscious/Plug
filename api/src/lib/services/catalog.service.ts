@@ -6,7 +6,7 @@ import * as wishlistRepo from "../db/repos/wishlist.repo";
 import * as adminProductLimitsRepo from "../db/repos/admin-product-limits.repo";
 import { toDateOnly } from "../db/repos/catalog.repo";
 import * as productFilterRepo from "../db/repos/product-filter.repo";
-import { ConflictError, NotFoundError, ValidationError } from "../errors";
+import { AuthorizationError, ConflictError, NotFoundError, ValidationError } from "../errors";
 import { recordAuditEvent } from "../audit";
 import { notifyCustomersNewProduct, notifyWishlistersProductBackInStock } from "./notifications.service";
 import type { Brand, Product, ProductVariant, Category } from "../db/types";
@@ -1162,6 +1162,57 @@ export async function deleteProduct(actor: { id: string; role: Role }, productId
   });
 }
 
+/**
+ * Permanently deletes an ARCHIVED product — Super Admin only. Past orders are
+ * unaffected (order_items keep their name/brand/price snapshot; the product
+ * link is set to NULL); its variants, images, cart/wishlist rows and search
+ * entry are removed by the FK cascades, and its image files are deleted.
+ * This is what frees a brand/category that only archived products still use.
+ */
+export async function permanentlyDeleteProduct(actor: { id: string; role: Role }, productId: string) {
+  if (actor.role !== "SUPER_ADMIN") throw new AuthorizationError("Only a Super Admin can permanently delete a product.");
+  const product = await catalogRepo.findProductById(productId);
+  if (!product) throw new NotFoundError("Product not found.");
+  if (!product.archivedAt) {
+    throw new ConflictError(`"${product.name}" isn't archived. Archive it first; only archived products can be deleted permanently.`);
+  }
+
+  const { deleted, imageStorageKeys } = await catalogRepo.deleteArchivedProduct(productId);
+  if (!deleted) throw new NotFoundError("Product not found.");
+
+  for (const key of imageStorageKeys) {
+    await productImageStorage.delete(key).catch((err) => {
+      logger.error("product.image.delete_failed", { productId, storageKey: key, error: err instanceof Error ? err.message : String(err) });
+    });
+    await mediaRepo.deleteMediaByStorageKey(productImageStorage.name, key).catch(() => undefined);
+  }
+
+  await recordAuditEvent({
+    actorId: actor.id,
+    actorRole: actor.role,
+    action: "product.deleted",
+    targetType: "product",
+    targetId: productId,
+    metadata: { name: product.name, slug: product.slug, images: imageStorageKeys.length },
+  });
+}
+
+/** "N products" usage text for the brand/category delete refusals, naming archived ones (which can be deleted permanently). */
+async function productUsage(column: "brand_id" | "category_id", id: string): Promise<{ n: number; text: string }> {
+  const rows = await query<{ n: number; archived: number }>(
+    `SELECT COUNT(*)::int AS n, COUNT(*) FILTER (WHERE archived_at IS NOT NULL)::int AS archived FROM products WHERE ${column} = $1`,
+    [id]
+  );
+  const n = rows[0]?.n ?? 0;
+  const archived = rows[0]?.archived ?? 0;
+  const noun = `${n} product${n === 1 ? "" : "s"}`;
+  const detail =
+    archived === n ? ` (archived — find ${n === 1 ? "it" : "them"} in Products → Archived and choose Delete permanently)`
+    : archived > 0 ? ` (${archived} archived — in Products → Archived you can delete those permanently)`
+    : "";
+  return { n, text: noun + detail };
+}
+
 /** Un-archives a product back to DRAFT; the admin publishes it again explicitly. */
 export async function restoreProduct(actor: { id: string; role: Role }, productId: string) {
   const product = await catalogRepo.findProductById(productId);
@@ -1747,10 +1798,9 @@ export async function reorderProductImages(
 export async function deleteBrand(actor: { id: string; role: Role }, brandId: string) {
   const brand = await catalogRepo.findBrandById(brandId);
   if (!brand) throw new NotFoundError("Brand not found.");
-  const used = await query<{ n: number }>("SELECT COUNT(*)::int AS n FROM products WHERE brand_id = $1", [brandId]);
-  const n = used[0]?.n ?? 0;
-  if (n > 0) {
-    throw new ConflictError(`"${brand.name}" is used by ${n} product${n === 1 ? "" : "s"}, so it can't be deleted. Deactivate it to hide it from the store, or move those products to another brand first.`);
+  const used = await productUsage("brand_id", brandId);
+  if (used.n > 0) {
+    throw new ConflictError(`"${brand.name}" is used by ${used.text}, so it can't be deleted. Deactivate it to hide it from the store, or move those products to another brand first.`);
   }
   if (await catalogRepo.findLogoByBrandId(brandId)) await removeBrandLogo(actor, brandId);
   if (await catalogRepo.findCampaignImageByBrandId(brandId)) await removeBrandCampaignImage(actor, brandId);
@@ -1767,7 +1817,8 @@ export async function deleteCategory(actor: { id: string; role: Role }, category
   const cat = rows[0];
   if (!cat) throw new NotFoundError("Category not found.");
   if (cat.n > 0) {
-    throw new ConflictError(`"${cat.name}" has ${cat.n} product${cat.n === 1 ? "" : "s"}, so it can't be deleted. Deactivate it to hide it from the store, or move those products to another category first.`);
+    const used = await productUsage("category_id", categoryId);
+    throw new ConflictError(`"${cat.name}" has ${used.text}, so it can't be deleted. Deactivate it to hide it from the store, or move those products to another category first.`);
   }
   const oldKey = await catalogRepo.getCategoryImageStorageKey(categoryId);
   await query("DELETE FROM categories WHERE id = $1", [categoryId]);

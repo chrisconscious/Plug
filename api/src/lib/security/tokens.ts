@@ -15,7 +15,7 @@
  *    reasonable candidate for a short-TTL Redis cache later if it ever
  *    shows up as a hot path in profiling (see docs/DATABASE.md caching
  *    notes) — not optimized preemptively without measurement.
- *  - REFRESH token: long-lived (default 14 days), persisted server-side
+ *  - REFRESH token: long-lived (default 60 days, sliding), persisted server-side
  *    (`sessions` table, migration 0002) by ID so it CAN be revoked
  *    (logout, "logout everywhere", admin disabling a user, role changes).
  *    Only ever sent to /api/v1/auth/refresh and /logout.
@@ -88,7 +88,23 @@ export async function verifyRefreshToken(token: string): Promise<TokenPayload | 
   const session = await sessionsRepo.findSessionById(payload.jti);
   if (!session || session.revoked) return null;
   if (new Date(session.expiresAt).getTime() < Date.now()) return null;
+  // Already renewed: still accepted for a short grace window (migration 0062).
+  if (session.rotatedAt && Date.now() - new Date(session.rotatedAt).getTime() > REFRESH_ROTATION_GRACE_SECONDS * 1000) return null;
   return payload;
+}
+
+/**
+ * How long a renewed refresh token keeps working. Two tabs (or the installed
+ * app and a browser tab) renewing at the same moment, or a dropped connection
+ * that loses the renewal response, otherwise present the just-renewed token
+ * and the customer is signed out. Short enough that the token stays
+ * effectively single-use.
+ */
+export const REFRESH_ROTATION_GRACE_SECONDS = 120;
+
+/** Marks a refresh session renewed (see REFRESH_ROTATION_GRACE_SECONDS). */
+export async function markSessionRotated(sessionId: string): Promise<void> {
+  await sessionsRepo.markSessionRotated(sessionId);
 }
 
 export async function revokeSession(sessionId: string): Promise<void> {

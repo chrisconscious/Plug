@@ -315,6 +315,8 @@ export type Session = {
   id: string;
   userId: string;
   revoked: boolean;
+  /** When this refresh session was renewed (migration 0062); null if never. */
+  rotatedAt: string | null;
   createdAt: string;
   expiresAt: string;
 };

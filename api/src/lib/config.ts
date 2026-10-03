@@ -49,7 +49,9 @@ export const config = {
     accessTokenSecret: required("ACCESS_TOKEN_SECRET"),
     refreshTokenSecret: required("REFRESH_TOKEN_SECRET"),
     accessTokenTtlSeconds: int("ACCESS_TOKEN_TTL_SECONDS", 900),
-    refreshTokenTtlSeconds: int("REFRESH_TOKEN_TTL_SECONDS", 1209600),
+    // Sliding: every renewal starts a fresh period, so a customer who visits
+    // at least once in 60 days stays signed in.
+    refreshTokenTtlSeconds: int("REFRESH_TOKEN_TTL_SECONDS", 5184000),
   },
 
   cookies: {

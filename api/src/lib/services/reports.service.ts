@@ -169,7 +169,7 @@ export async function getDashboardStats() {
     ),
     query<{ id: string; name: string | null; createdAt: string }>(
       `SELECT id, COALESCE(full_name, phone_number, email) AS name, created_at AS "createdAt"
-         FROM users WHERE role = 'CUSTOMER' ORDER BY created_at DESC LIMIT 5`
+         FROM users WHERE role = 'CUSTOMER' AND deleted_at IS NULL ORDER BY created_at DESC LIMIT 5`
     ),
     getLowStock(8),
     listAuditEvents(6),

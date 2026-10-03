@@ -21,11 +21,13 @@ function toSafeAdmin(user: User) {
  * this is the same "prove you're still you" bar already applied to
  * disabling MFA (see auth.service.ts's disableMfa).
  */
-async function reauthenticate(actorId: string, actorPassword: string): Promise<void> {
+export async function reauthenticate(actorId: string, actorPassword: string): Promise<void> {
   const actor = await usersRepo.findUserById(actorId);
   if (!actor) throw new AuthenticationError();
   const ok = await verifyPassword(actorPassword, actor.passwordHash);
-  if (!ok) throw new AuthenticationError("Incorrect password. Please re-enter your password to confirm this action.");
+  // 400, not 401: the admin's session is fine, only the confirmation was
+  // wrong. A 401 makes the client treat the session as expired and sign out.
+  if (!ok) throw new ValidationError("Incorrect password. Please re-enter your password to confirm this action.", { actorPassword: "Incorrect password." });
 }
 
 /** Only SUPER_ADMIN may call these (enforced via `permission: "admins.manage"` in the route). */

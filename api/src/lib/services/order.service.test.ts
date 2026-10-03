@@ -102,9 +102,10 @@ describe("createOrderFromCart — validation", () => {
     expect(ordersRepo.createOrderTransactional).not.toHaveBeenCalled();
   });
 
-  it("rejects an unverified account before ever reaching the idempotency/order logic", async () => {
+  it("lets a signed-in customer order without verifying their email", async () => {
     vi.mocked(usersRepo.findUserById).mockResolvedValue(fakeUser({ emailVerified: false }));
-    await expect(createOrderFromCart("user-1", fakeAddress(), "key-1", "pm-1", null, "dar_es_salaam")).rejects.toThrow(/verify/i);
-    expect(ordersRepo.createOrderTransactional).not.toHaveBeenCalled();
+    vi.mocked(ordersRepo.createOrderTransactional).mockResolvedValue({ id: "order-1" } as any);
+    await expect(createOrderFromCart("user-1", fakeAddress(), "key-1", "pm-1", null, "dar_es_salaam")).resolves.toMatchObject({ id: "order-1" });
+    expect(ordersRepo.createOrderTransactional).toHaveBeenCalled();
   });
 });

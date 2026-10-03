@@ -10,7 +10,7 @@ import * as ordersRepo from "../db/repos/orders.repo";
 import * as usersRepo from "../db/repos/users.repo";
 import * as catalogRepo from "../db/repos/catalog.repo";
 import { notifyOrderStatusChanged, notifyAdminsNewOrder, notifyAdminsLowStock } from "./notifications.service";
-import { ValidationError, NotFoundError, EmailNotVerifiedError, AuthenticationError } from "../errors";
+import { ValidationError, NotFoundError, AuthenticationError } from "../errors";
 import type { Order, Address } from "../db/types";
 import type { Role } from "../rbac";
 import { createHash } from "crypto";
@@ -80,19 +80,10 @@ export async function createOrderFromCart(
   directItems?: ReadonlyArray<{ variantId: string; quantity: number }> | null,
   couponCode?: string | null
 ): Promise<Order> {
-  // Verified checked here (not only at registration) so it's always the
-  // account's CURRENT status — e.g. right after they click the email link,
-  // the very next order attempt succeeds with no need to log out/in again.
-  // Only enforced for accounts that actually HAVE an email to verify —
-  // a phone-registered account (migration 0037) has no email at all, so
-  // gating on emailVerified unconditionally would have permanently
-  // blocked every phone-only customer from ever placing an order, since
-  // there would be no way for them to ever satisfy the check.
+  // Being signed in is enough to order: email verification is not required
+  // (an unverified address still gets its reminder on the account page).
   const user = await usersRepo.findUserById(userId);
   if (!user) throw new AuthenticationError();
-  if (user.email && !user.emailVerified) {
-    throw new EmailNotVerifiedError("Please verify your email address before placing an order.");
-  }
 
   if (!idempotencyKey) {
     throw new ValidationError("Validation failed.", {

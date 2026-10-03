@@ -5,12 +5,13 @@ type SessionRow = {
   id: string;
   user_id: string;
   revoked: boolean;
+  rotated_at: string | null;
   created_at: string;
   expires_at: string;
 };
 
 function toSession(row: SessionRow): Session {
-  return { id: row.id, userId: row.user_id, revoked: row.revoked, createdAt: row.created_at, expiresAt: row.expires_at };
+  return { id: row.id, userId: row.user_id, revoked: row.revoked, rotatedAt: row.rotated_at ?? null, createdAt: row.created_at, expiresAt: row.expires_at };
 }
 
 export async function insertSession(input: { id: string; userId: string; expiresAt: Date }): Promise<Session> {
@@ -28,6 +29,11 @@ export async function findSessionById(id: string): Promise<Session | null> {
 
 export async function revokeSessionById(id: string): Promise<void> {
   await query("UPDATE sessions SET revoked = true WHERE id = $1", [id]);
+}
+
+/** Marks a refresh session as renewed (keeps the first time if renewed again within the grace window). */
+export async function markSessionRotated(id: string): Promise<void> {
+  await query("UPDATE sessions SET rotated_at = COALESCE(rotated_at, now()) WHERE id = $1", [id]);
 }
 
 export async function revokeAllSessionsForUser(userId: string): Promise<void> {

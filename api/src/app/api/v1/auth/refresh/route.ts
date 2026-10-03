@@ -3,6 +3,7 @@ import { RateLimitRules } from "@/lib/security/rateLimiter";
 import { rotateRefreshToken } from "@/lib/services/auth.service";
 import { getRefreshTokenFromRequest, setAuthCookies, clearAuthCookies } from "@/lib/security/tokens";
 import { config } from "@/lib/config";
+import { AuthenticationError } from "@/lib/errors";
 
 export const POST = withRoute({ auth: "none", rateLimit: RateLimitRules.refresh }, async ({ req }) => {
   const refreshToken = getRefreshTokenFromRequest(req);
@@ -22,6 +23,10 @@ export const POST = withRoute({ auth: "none", rateLimit: RateLimitRules.refresh 
     setAuthCookies(res, accessToken, newRefreshToken);
     return res;
   } catch (err) {
+    // Only a rejected token ends the session. A database or other server
+    // error is not the customer's fault: rethrow it (a generic 500) and keep
+    // their cookies, so the next attempt can still renew the session.
+    if (!(err instanceof AuthenticationError)) throw err;
     const res = json({ error: "AUTHENTICATION_ERROR", message: "Session expired. Please sign in again." }, { status: 401 });
     clearAuthCookies(res);
     return res;

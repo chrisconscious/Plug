@@ -10,6 +10,7 @@ import {
   createMfaPendingToken,
   verifyMfaPendingToken,
   revokeSession,
+  markSessionRotated,
   revokeAllSessionsForUser,
   verifyRefreshToken,
   type SessionUser,
@@ -206,9 +207,11 @@ export async function rotateRefreshToken(refreshToken: string) {
   const user = await usersRepo.findUserById(payload.sub);
   if (!user || user.disabled) throw new AuthenticationError("Session expired. Please sign in again.");
 
-  // Rotate: revoke the old refresh session, issue a fresh pair. This limits
-  // the blast radius if a refresh token is ever stolen (it's single-use).
-  if (payload.jti) await revokeSession(payload.jti);
+  // Rotate: retire the old refresh session and issue a fresh pair. This
+  // limits the blast radius if a refresh token is ever stolen: the old one
+  // only works for a short grace window (REFRESH_ROTATION_GRACE_SECONDS) so
+  // concurrent tabs and dropped connections don't sign the customer out.
+  if (payload.jti) await markSessionRotated(payload.jti);
 
   const sessionUser: SessionUser = { id: user.id, email: user.email, role: user.role };
   const accessToken = createAccessToken(sessionUser);

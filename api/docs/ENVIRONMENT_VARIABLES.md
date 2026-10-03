@@ -29,7 +29,7 @@ this.
 | `ACCESS_TOKEN_SECRET` | **Yes** | **Yes** | ephemeral random (dev only, logged as a loud warning) | **Yes** — throws if missing in production. |
 | `REFRESH_TOKEN_SECRET` | **Yes** | **Yes** | ephemeral random (dev only) | **Yes** — same. |
 | `ACCESS_TOKEN_TTL_SECONDS` | No | No | `900` (15 min) | No — has a safe default. |
-| `REFRESH_TOKEN_TTL_SECONDS` | No | No | `1209600` (14 days) | No — has a safe default. |
+| `REFRESH_TOKEN_TTL_SECONDS` | No | No | `5184000` (60 days, renewed on every visit) | No — has a safe default. |
 | `COOKIE_DOMAIN` | **Yes** | No | `localhost` | **Yes** — refuses to start if left at `localhost` in production. |
 | `COOKIE_SECURE` | **Yes** (must be `true`) | No | `false` | **Yes** — throws if not `true` in production (cookies must be HTTPS-only). |
 | `TRUST_PROXY_HOPS` | No (defaults to the safe value) | No | `0` | No — `0` (trust nothing) is itself the safe default; see `security/csrf.ts`'s module comment and `.env.example` for why raising this incorrectly is a real vulnerability, not just a config nicety. |

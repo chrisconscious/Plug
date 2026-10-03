@@ -10,7 +10,7 @@ import { AuthorizationError, ConflictError, NotFoundError, ValidationError } fro
 import { recordAuditEvent } from "../audit";
 import { notifyCustomersNewProduct, notifyWishlistersProductBackInStock } from "./notifications.service";
 import type { Brand, Product, ProductVariant, Category } from "../db/types";
-import type { Role } from "../rbac";
+import { hasPermissionForUser, type Role } from "../rbac";
 import { brandLogoStorage, brandCampaignImageStorage, productImageStorage } from "../storage/storage";
 import { randomUUID } from "crypto";
 import * as mediaService from "./media.service";
@@ -1163,14 +1163,17 @@ export async function deleteProduct(actor: { id: string; role: Role }, productId
 }
 
 /**
- * Permanently deletes an ARCHIVED product — Super Admin only. Past orders are
+ * Permanently deletes an ARCHIVED product — needs "products.purge" (Super
+ * Admins, or an Admin it was granted to). Past orders are
  * unaffected (order_items keep their name/brand/price snapshot; the product
  * link is set to NULL); its variants, images, cart/wishlist rows and search
  * entry are removed by the FK cascades, and its image files are deleted.
  * This is what frees a brand/category that only archived products still use.
  */
 export async function permanentlyDeleteProduct(actor: { id: string; role: Role }, productId: string) {
-  if (actor.role !== "SUPER_ADMIN") throw new AuthorizationError("Only a Super Admin can permanently delete a product.");
+  if (!(await hasPermissionForUser(actor.id, actor.role, "products.purge"))) {
+    throw new AuthorizationError("You don't have permission to permanently delete products.");
+  }
   const product = await catalogRepo.findProductById(productId);
   if (!product) throw new NotFoundError("Product not found.");
   if (!product.archivedAt) {

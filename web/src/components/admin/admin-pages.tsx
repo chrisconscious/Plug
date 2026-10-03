@@ -14,6 +14,8 @@ import { LifestyleManagementPage } from "./lifestyle-content";
 import { MfaSettingsPage } from "./mfa-settings";
 import { AdminPermissionsEditor } from "./admin-permissions-editor";
 import { ProductManagementTable } from "./product-management";
+import { UserDetailsModal } from "./user-details";
+import { confirmAndDeleteUser } from "./user-delete";
 import { BrandMark } from "../shop/BrandMark";
 import { redirectToLoginExpired } from "../../lib/returnTo";
 import { userMessage } from "../../lib/errors";
@@ -173,6 +175,16 @@ function GenericManagementPage({ title, desc, superRole }: { title: string; desc
   const [editingCategory, setEditingCategory] = useState<api.Category | null>(null);
   const [editingProduct, setEditingProduct] = useState<api.Product | null>(null);
   const [permsAdmin, setPermsAdmin] = useState<api.AdminUser | null>(null);
+  // Users page: the account whose details are open, and whether this admin
+  // may delete customer accounts (users.manage — enforced again server-side).
+  const [viewUserId, setViewUserId] = useState<string | null>(null);
+  const [canManageUsers, setCanManageUsers] = useState(false);
+  useEffect(() => {
+    if (kind !== "users") return;
+    let alive = true;
+    api.getMyPermissions().then((p) => { if (alive) setCanManageUsers(p.includes("users.manage")); }).catch(() => undefined);
+    return () => { alive = false; };
+  }, [kind]);
 
   // Live brand/category data for the Add Product form: kept in a ref (not
   // localStorage) so it can never go stale across tabs/sessions, and
@@ -549,6 +561,19 @@ function GenericManagementPage({ title, desc, superRole }: { title: string; desc
     }
   };
 
+  const handleDeleteUser = async (r: AdminRow) => {
+    const u = r.raw as api.AdminUser;
+    try {
+      const outcome = await confirmAndDeleteUser({ id: u.id, name: r.primary, orderCount: u.orderCount ?? 0 });
+      if (!outcome) return;
+      setBanner(outcome === "deleted" ? `${r.primary}'s account was deleted.` : `${r.primary}'s account was deleted. Their orders were kept.`);
+      await load();
+    } catch (e) {
+      if (handleAuthError(e, setBanner)) return;
+      setBanner(userMessage(e, "Could not delete this account"), "error");
+    }
+  };
+
   const handleAdminToggle = async (r: AdminRow, action: "disable" | "role") => {
     const a = r.raw as api.AdminUser;
     const actionLabel = action === "disable" ? (a.disabled ? "re-activate" : "suspend") : "change the role of";
@@ -805,7 +830,7 @@ function GenericManagementPage({ title, desc, superRole }: { title: string; desc
           handleAdd={() => { setCreateAttrGroups([]); setCreateAttrSelected([]); lastCreateCategory.current = ""; setAdd({ ...add, open: true }); }}
           canAdd={canAdd}
           viewHref={kind === "orders" ? (r) => `/admin/orders/${r.id}` : undefined}
-          extra={kind === "orders" ? (r) => <OrderStatusActions r={r} onChange={handleOrderStatus} /> : kind === "admins" ? (r) => <AdminToggleActions r={r} onToggle={handleAdminToggle} onPermissions={(row) => setPermsAdmin(row.raw as api.AdminUser)} /> : undefined}
+          extra={kind === "orders" ? (r) => <OrderStatusActions r={r} onChange={handleOrderStatus} /> : kind === "users" ? (r) => <UserRowActions r={r} canDelete={canManageUsers} onView={(row) => setViewUserId(row.id)} onDelete={handleDeleteUser} /> : kind === "admins" ? (r) => <AdminToggleActions r={r} onToggle={handleAdminToggle} onPermissions={(row) => setPermsAdmin(row.raw as api.AdminUser)} /> : undefined}
         />
       )}
 
@@ -881,6 +906,15 @@ function GenericManagementPage({ title, desc, superRole }: { title: string; desc
           product={editingProduct}
           onClose={() => setEditingProduct(null)}
           onSaved={async () => { setProductReload((n) => n + 1); }}
+        />
+      )}
+
+      {viewUserId && (
+        <UserDetailsModal
+          userId={viewUserId}
+          canDelete={canManageUsers}
+          onClose={() => setViewUserId(null)}
+          onDeleted={async (message) => { setViewUserId(null); setBanner(message); await load(); }}
         />
       )}
 
@@ -1010,6 +1044,18 @@ function BrandCarouselSpeedSetting() {
       {state === "saved" && <span style={{ color: "#166534" }}>Saved</span>}
       {state === "error" && <span role="alert" style={{ color: "#b91c1c" }}>{message || "Couldn't load the current speed."}</span>}
     </div>
+  );
+}
+
+function UserRowActions({ r, canDelete, onView, onDelete }: { r: AdminRow; canDelete: boolean; onView: (r: AdminRow) => void; onDelete: (r: AdminRow) => void }) {
+  const u = r.raw as api.AdminUser;
+  return (
+    <>
+      <button type="button" title="View account details" aria-label={`View ${r.primary}`} onClick={() => onView(r)}><Eye size={14} /></button>
+      {canDelete && u.role === "CUSTOMER" && (
+        <button type="button" title="Delete account" aria-label={`Delete ${r.primary}`} style={{ color: "#b00" }} onClick={() => onDelete(r)}><Trash2 size={14} /></button>
+      )}
+    </>
   );
 }
 

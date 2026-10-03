@@ -12,12 +12,14 @@ vi.mock("../db/repos/catalog.repo", () => ({
 }));
 vi.mock("../db/repos/media.repo", () => ({ deleteMediaByStorageKey: vi.fn(async () => true) }));
 vi.mock("../audit", () => ({ recordAuditEvent: vi.fn() }));
+vi.mock("@/lib/db/repos/admin-permissions.repo", () => ({ getGrantedPermissions: vi.fn(async () => new Set<string>()) }));
 
 import * as catalogRepo from "../db/repos/catalog.repo";
 import * as mediaRepo from "../db/repos/media.repo";
 import { productImageStorage } from "../storage/storage";
 import { recordAuditEvent } from "../audit";
 import { permanentlyDeleteProduct } from "./catalog.service";
+import { getGrantedPermissions } from "@/lib/db/repos/admin-permissions.repo";
 
 const superAdmin = { id: "s1", role: "SUPER_ADMIN" as const };
 const archived = { id: "p1", slug: "belt", name: "Belt", archivedAt: "2026-10-01T00:00:00.000Z" };
@@ -37,9 +39,15 @@ describe("permanentlyDeleteProduct", () => {
     expect(recordAuditEvent).toHaveBeenCalledWith(expect.objectContaining({ action: "product.deleted", targetId: "p1" }));
   });
 
-  it("is Super Admin only", async () => {
-    await expect(permanentlyDeleteProduct({ id: "a1", role: "ADMIN" }, "p1")).rejects.toThrow(/Super Admin/);
+  it("refuses an Admin who wasn't granted products.purge", async () => {
+    await expect(permanentlyDeleteProduct({ id: "a1", role: "ADMIN" }, "p1")).rejects.toThrow(/permission/);
     expect(catalogRepo.deleteArchivedProduct).not.toHaveBeenCalled();
+  });
+
+  it("allows an Admin the Super Admin granted products.purge to", async () => {
+    vi.mocked(getGrantedPermissions).mockResolvedValueOnce(new Set(["products.purge"]));
+    await permanentlyDeleteProduct({ id: "a1", role: "ADMIN" }, "p1");
+    expect(catalogRepo.deleteArchivedProduct).toHaveBeenCalledWith("p1");
   });
 
   it("refuses a product that isn't archived", async () => {

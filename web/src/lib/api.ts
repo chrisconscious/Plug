@@ -1552,6 +1552,43 @@ export interface AdminUser {
   totalSpentCents?: number;
 }
 
+/** One account as an admin sees it (GET /admin/users/:id). */
+export interface AdminUserDetails {
+  user: {
+    id: string;
+    fullName: string | null;
+    email: string | null;
+    phoneNumber: string | null;
+    role: "CUSTOMER" | "ADMIN" | "SUPER_ADMIN";
+    disabled: boolean;
+    emailVerified: boolean;
+    mfaEnabled: boolean;
+    createdAt: string;
+    lastLoginAt: string | null;
+    deletedAt: string | null;
+  };
+  stats: { orderCount: number; totalSpentTzs: number };
+  addresses: Address[];
+  orders: { id: string; status: AdminOrder["status"]; totalTzs: number; itemCount: number; createdAt: string }[];
+}
+
+/** An account's profile, saved addresses and order history (users.read). */
+export function getAdminUserDetails(id: string): Promise<AdminUserDetails> {
+  return request<AdminUserDetails>(`/api/v1/admin/users/${encodeURIComponent(id)}`);
+}
+
+/**
+ * Deletes a customer account (users.manage; the acting admin's password
+ * confirms it). An account with order history is closed and its personal
+ * data erased instead, so sales records stay complete.
+ */
+export function deleteAdminUser(id: string, actorPassword: string): Promise<{ success: boolean; outcome: "deleted" | "anonymized" }> {
+  return request<{ success: boolean; outcome: "deleted" | "anonymized" }>(`/api/v1/admin/users/${encodeURIComponent(id)}`, {
+    method: "DELETE",
+    body: JSON.stringify({ actorPassword }),
+  });
+}
+
 /**
  * Every customer/user account, fetched page by page (the endpoint caps a page
  * at 100). The admin table searches and exports client-side, so it needs the

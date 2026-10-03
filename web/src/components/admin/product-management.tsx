@@ -4,7 +4,6 @@ import * as api from "../../lib/api";
 import { formatTZS } from "../../lib/currency";
 import { resolveImage } from "../../lib/imagePlaceholder";
 import { userMessage } from "../../lib/errors";
-import { useAuth } from "../../lib/AuthContext";
 
 const PAGE_SIZE = 24;
 
@@ -83,12 +82,12 @@ export function ProductManagementTable({
   // rbac.ts / migration 0055). Hidden otherwise; the server enforces it.
   const [canArchive, setCanArchive] = useState(false);
   const reqSeq = useRef(0);
-  // Permanent delete is Super Admin only (enforced again by the server).
-  const isSuperAdmin = useAuth().user?.role === "SUPER_ADMIN";
+  // Permanent delete needs products.purge (Super Admins, or Admins granted it).
+  const [canPurge, setCanPurge] = useState(false);
 
   useEffect(() => {
     let alive = true;
-    api.getMyPermissions().then((perms) => { if (alive) setCanArchive(perms.includes("products.delete")); }).catch(() => undefined);
+    api.getMyPermissions().then((perms) => { if (alive) { setCanArchive(perms.includes("products.delete")); setCanPurge(perms.includes("products.purge")); } }).catch(() => undefined);
     return () => { alive = false; };
   }, []);
 
@@ -243,7 +242,7 @@ export function ProductManagementTable({
                           {archived ? (
                             canArchive ? <button type="button" style={iconBtn} title="Restore as draft" aria-label={`Restore ${p.name}`} disabled={busyId === p.id} onClick={() => void run(p, () => api.restoreAdminProduct(p.id), `"${p.name}" restored as a draft.`)}><RotateCcw size={13} /> Restore</button> : null
                           ) : null}
-                          {archived && isSuperAdmin ? (
+                          {archived && canPurge ? (
                             <button type="button" style={{ ...iconBtn, color: "#b00" }} title="Delete permanently" aria-label={`Delete ${p.name} permanently`} disabled={busyId === p.id} onClick={() => deleteForever(p)}><Trash2 size={13} /> Delete permanently</button>
                           ) : null}
                           {archived ? null : (

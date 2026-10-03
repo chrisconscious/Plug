@@ -1,4 +1,4 @@
-import { query, queryOne, isPgErrorCode, PG_ERROR_CODES } from "../client";
+import { query, queryOne, withTransaction, isPgErrorCode, PG_ERROR_CODES } from "../client";
 import { ConflictError } from "../../errors";
 import type { User } from "../types";
 
@@ -116,6 +116,9 @@ export async function listAllUsersWithStats(opts: { page?: number; pageSize?: nu
      FROM users u
      -- Cancelled orders are neither purchases nor spend.
      LEFT JOIN orders o ON o.user_id = u.id AND o.status <> 'CANCELLED'
+     -- Accounts deleted by a Super Admin whose order history had to be kept
+     -- (migration 0064) are no longer users.
+     WHERE u.deleted_at IS NULL
      GROUP BY u.id
      ORDER BY u.created_at DESC
      LIMIT $1 OFFSET $2`,
@@ -191,4 +194,52 @@ export async function clearMfa(id: string): Promise<void> {
 /** Stamps a successful sign-in (migration 0054) — same user row every time, never a new record. */
 export async function touchLastLogin(id: string): Promise<void> {
   await query("UPDATE users SET last_login_at = now() WHERE id = $1", [id]);
+}
+
+/** Admin detail view of one account: last sign-in and deletion time (not part of User). */
+export async function findUserAccountMeta(id: string): Promise<{ lastLoginAt: string | null; deletedAt: string | null } | null> {
+  const row = await queryOne<{ last_login_at: string | null; deleted_at: string | null }>(
+    "SELECT last_login_at, deleted_at FROM users WHERE id = $1",
+    [id]
+  );
+  return row ? { lastLoginAt: row.last_login_at, deletedAt: row.deleted_at } : null;
+}
+
+/**
+ * Deletes a CUSTOMER account (migration 0064). An account with no order,
+ * coupon or activity history is DELETEd outright (addresses, cart, wishlist,
+ * sessions and notifications cascade). If history references it (those
+ * foreign keys are ON DELETE RESTRICT so sales records can never be lost),
+ * the account is instead closed and its personal data erased — name, email,
+ * phone, password, MFA, addresses, cart and wishlist — and deleted_at is set.
+ * Orders keep their own address/item snapshots.
+ */
+export async function deleteOrAnonymizeCustomer(id: string): Promise<"deleted" | "anonymized" | null> {
+  return withTransaction(async (client) => {
+    const target = await client.query<{ role: string }>("SELECT role FROM users WHERE id = $1 FOR UPDATE", [id]);
+    if (target.rows[0]?.role !== "CUSTOMER") return null;
+    await client.query("SAVEPOINT delete_user");
+    try {
+      await client.query("DELETE FROM users WHERE id = $1", [id]);
+      return "deleted";
+    } catch (err) {
+      if (!isPgErrorCode(err, PG_ERROR_CODES.FOREIGN_KEY_VIOLATION)) throw err;
+      await client.query("ROLLBACK TO SAVEPOINT delete_user");
+    }
+    // A random hash nobody can match: the account can never sign in again.
+    const unusable = `!deleted:${crypto.randomUUID()}${crypto.randomUUID()}`;
+    await client.query(
+      `UPDATE users
+          SET email = NULL, phone_number = NULL, full_name = NULL, password_hash = $2,
+              email_verified = false, totp_secret = NULL, mfa_enabled = false,
+              disabled = true, deleted_at = now()
+        WHERE id = $1`,
+      [id, unusable]
+    );
+    await client.query("DELETE FROM addresses WHERE user_id = $1", [id]);
+    await client.query("DELETE FROM cart_items WHERE user_id = $1", [id]);
+    await client.query("DELETE FROM wishlist_items WHERE user_id = $1", [id]);
+    await client.query("UPDATE sessions SET revoked = true WHERE user_id = $1 AND revoked = false", [id]);
+    return "anonymized";
+  });
 }

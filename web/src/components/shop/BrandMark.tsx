@@ -12,8 +12,11 @@ import * as api from "../../lib/api";
  *   light surfaces so it never disappears. The stored file is untouched; this
  *   is a presentation-only CSS treatment. Dark/unknown logos are never
  *   altered on light surfaces.
- * - `surface="photo"`: every logo is rendered white over a campaign photo
- *   (the existing Shop by Brand card treatment).
+ * - `surface="photo"` (Shop by Brand card with a campaign photo): a light
+ *   logo (white on transparency) is shown as-is with a soft shadow; any other
+ *   logo sits on a small white label. Recolouring every logo white turned a
+ *   logo with a solid background (JPG, or a PNG with a white box) into a
+ *   blank white rectangle.
  * - No logo, or the image fails to load → the brand name as a wordmark, and
  *   the failing URL is reported to the console so a broken path is visible
  *   instead of silently hidden.
@@ -43,9 +46,10 @@ export function BrandMark({
     return <span className={`brandWordmark ${wordmarkClassName}`.trim()}>{fallback ?? brand.name}</span>;
   }
   const tone = brand.logo?.tone ?? null;
+  const onPlate = surface === "photo" && tone !== "light";
   const treatment =
-    surface === "photo" ? "brandMarkImg--onPhoto" : tone === "light" ? "brandMarkImg--lightOnLight" : "";
-  return (
+    surface === "photo" ? (onPlate ? "" : "brandMarkImg--onPhoto") : tone === "light" ? "brandMarkImg--lightOnLight" : "";
+  const img = (
     <img
       src={url}
       alt={alt ?? `${brand.name} logo`}
@@ -60,4 +64,5 @@ export function BrandMark({
       }}
     />
   );
+  return onPlate ? <span className="brandMarkPlate">{img}</span> : img;
 }

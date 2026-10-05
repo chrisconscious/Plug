@@ -7,6 +7,7 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
 import { listLifestyles, assetUrl, type Lifestyle } from "../../lib/api";
 import { getLifestyleUrl, getLifestylesUrl } from "../../lib/links";
 import { ExploreAllLink, ExploreMoreRow } from "../explore-more";
+import { SectionHeading } from "../SectionHeading";
 
 // "SHOP BY LIFESTYLE" — the storefront lifestyle showcase (migration 0019).
 //
@@ -385,26 +386,18 @@ export function ShopByLifestyle() {
   }, [load]);
 
   const heading = (
-    <div className="flex items-end justify-between mb-8 md:mb-10">
-      <div className="flex flex-col">
-        <p className="text-[10px] font-bold tracking-[.25em] text-black/45 mb-3">GET YOUR STYLE</p>
-        <h2 className="text-4xl md:text-6xl font-black tracking-[-.06em] uppercase">Shop by lifestyle</h2>
-      </div>
-      {moreLifestyles ? (
-        <ExploreAllLink
-          to={getLifestylesUrl()}
-          label="EXPLORE ALL"
-          className="hidden shrink-0 md:inline-flex"
-        />
-      ) : null}
-    </div>
+    <SectionHeading
+      eyebrow="Get your style"
+      title="Shop by lifestyle"
+      actions={moreLifestyles ? <ExploreAllLink to={getLifestylesUrl()} label="EXPLORE ALL" /> : undefined}
+    />
   );
 
   // No active lifestyles (or fetch failed) -> section absent, zero errors.
   if (!loading && items.length === 0) return null;
 
   return (
-    <section ref={sectionRef} className="w-full py-16 md:py-24 bg-white overflow-hidden">
+    <section ref={sectionRef} className="w-full py-9 md:py-12 bg-white overflow-hidden">
       <div ref={innerRef} className="max-w-[1440px] mx-auto px-4 md:px-8">
         {heading}
         {loading ? (

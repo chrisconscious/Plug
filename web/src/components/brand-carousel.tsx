@@ -15,6 +15,7 @@ import { useAutoScrollCarousel } from "../hooks/useAutoScrollCarousel";
 import { getBrandUrl, getBrandsUrl } from "../lib/links";
 import { ExploreAllLink, ExploreMoreRow } from "./explore-more";
 import { BrandMark } from "./shop/BrandMark";
+import { SectionHeading } from "./SectionHeading";
 
 /**
  * "SHOP BY BRAND" — a single horizontal, editorial carousel row of large
@@ -151,35 +152,35 @@ export function ShopByBrands() {
   if (loaded && brandItems.length === 0) return null;
 
   return (
-    <section ref={sectionRef} className="w-full overflow-hidden bg-white py-16 md:py-24">
+    <section ref={sectionRef} className="w-full overflow-hidden bg-white py-9 md:py-12">
       <div className="mx-auto max-w-[1440px] px-4 md:px-8">
-        <div className="mb-8 flex items-end justify-between gap-6 md:mb-10">
-          <div>
-            <p className="mb-3 text-[10px] font-bold uppercase tracking-[.25em] text-black/45">Explore by label</p>
-            <h2 className="text-4xl font-black uppercase leading-none tracking-[-.02em] md:text-5xl">Shop by brand</h2>
-          </div>
-          <div className="hidden shrink-0 items-center gap-3 md:flex">
-            {moreBrands ? <ExploreAllLink to={getBrandsUrl()} /> : null}
-            <div className="ml-4 flex items-center gap-2">
-              <button
-                type="button"
-                aria-label="Previous brands"
-                onClick={() => scrollByCards(-1)}
-                className="flex h-10 w-10 items-center justify-center rounded-full border border-black/10 text-black/70 transition-colors hover:border-black/30 hover:text-black"
-              >
-                <ChevronLeft size={18} />
-              </button>
-              <button
-                type="button"
-                aria-label="Next brands"
-                onClick={() => scrollByCards(1)}
-                className="flex h-10 w-10 items-center justify-center rounded-full border border-black/10 text-black/70 transition-colors hover:border-black/30 hover:text-black"
-              >
-                <ChevronRight size={18} />
-              </button>
-            </div>
-          </div>
-        </div>
+        <SectionHeading
+          eyebrow="Explore by label"
+          title="Shop by brand"
+          actions={
+            <>
+              {moreBrands ? <ExploreAllLink to={getBrandsUrl()} /> : null}
+              <div className="ml-4 flex items-center gap-2">
+                <button
+                  type="button"
+                  aria-label="Previous brands"
+                  onClick={() => scrollByCards(-1)}
+                  className="flex h-10 w-10 items-center justify-center rounded-full border border-black/10 text-black/70 transition-colors hover:border-black/30 hover:text-black"
+                >
+                  <ChevronLeft size={18} />
+                </button>
+                <button
+                  type="button"
+                  aria-label="Next brands"
+                  onClick={() => scrollByCards(1)}
+                  className="flex h-10 w-10 items-center justify-center rounded-full border border-black/10 text-black/70 transition-colors hover:border-black/30 hover:text-black"
+                >
+                  <ChevronRight size={18} />
+                </button>
+              </div>
+            </>
+          }
+        />
 
         <ul
           ref={trackRef}

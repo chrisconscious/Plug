@@ -597,12 +597,26 @@ html{scroll-behavior:smooth}.font-display{font-family:Manrope,sans-serif}button,
    with the real category image or icon fallback, then the name below
    (13px desktop / 11px phone). 150px fixed on desktop; fluid
    `calc(25% - …)` on phones so ~4 cards fit the visible row. */
-.categorySection{ padding:56px 0; background:#fff; }
-.categorySectionInner{ max-width:1350px; margin:0 auto; padding:0 20px; }
-.categorySectionHead{ text-align:center; margin-bottom:36px; }
-.categoryAccentLine{ display:inline-block; width:56px; height:2px; background:#c9a35a; margin-bottom:16px; }
-.categorySectionHead h2{ font-size:clamp(24px,3vw,34px); font-weight:800; letter-spacing:-0.01em; margin:0 0 8px; color:#141414; }
-.categorySectionHead p{ font-size:14px; color:#7a7a7a; margin:0; }
+/* Homepage section headings (components/SectionHeading.tsx). Archivo,
+   self-hosted (SIL Open Font License), only for these titles. */
+@font-face{
+  font-family:"Archivo"; font-style:normal; font-weight:100 900; font-stretch:62% 125%; font-display:swap;
+  src:url("/fonts/archivo-latin.woff2") format("woff2");
+}
+.sectionHeading{ display:flex; align-items:flex-end; justify-content:space-between; gap:24px; margin-bottom:28px; }
+.sectionHeading__text{ min-width:0; }
+.sectionHeading__eyebrow{ display:flex; align-items:center; gap:10px; margin:0 0 12px; font:700 11px/1 Manrope,sans-serif; letter-spacing:.22em; text-transform:uppercase; color:#6b6b6b; }
+.sectionHeading__eyebrow::before{ content:""; width:24px; height:1.5px; background:#111; flex:none; }
+.sectionHeading__title{ margin:0; font-family:"Archivo",Manrope,sans-serif; font-weight:800; font-stretch:110%; font-size:clamp(28px,2.2vw + 19px,50px); line-height:1; letter-spacing:-.01em; text-transform:uppercase; color:#111; text-wrap:balance; }
+.sectionHeading__actions{ display:none; }
+@media (min-width:768px){
+  .sectionHeading{ margin-bottom:40px; }
+  .sectionHeading__actions{ display:flex; align-items:center; gap:16px; flex-shrink:0; }
+}
+
+.categorySection{ padding:64px 0; background:#fff; }
+.categorySectionInner{ max-width:1440px; margin:0 auto; padding:0 16px; }
+@media (min-width:768px){ .categorySection{ padding:96px 0; } .categorySectionInner{ padding:0 32px; } }
 
 .categoryCarouselWrap{ position:relative; display:flex; align-items:center; gap:10px; }
 
@@ -686,7 +700,6 @@ html{scroll-behavior:smooth}.font-display{font-family:Manrope,sans-serif}button,
      width minus a share of the 3×10px gaps. This formula is
      container-relative — it works for the homepage rail AND the
      Women/Men/brand/lifestyle rails regardless of each page's padding. */
-  .categorySectionInner{ padding:0 20px; }
   .catRow{ gap:10px; }
   .catCard{ flex:0 0 calc(25% - 7.5px); width:calc(25% - 7.5px); }
   .catCardName{ font-size:11px; }

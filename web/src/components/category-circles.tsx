@@ -7,6 +7,7 @@ import * as api from "../lib/api";
 import { getCategoryUrl } from "../lib/links";
 import { useAutoScrollCarousel } from "../hooks/useAutoScrollCarousel";
 import { CategoryCard } from "./shop/CategoryCard";
+import { SectionHeading } from "./SectionHeading";
 
 /**
  * Homepage "Shop by Category" — genuinely dynamic, not a hardcoded list.
@@ -79,11 +80,7 @@ export function CategoryCircles() {
   return (
     <section ref={sectionRef as React.Ref<HTMLElement>} className="categorySection">
       <div className="categorySectionInner">
-        <div className="categorySectionHead">
-          <span className="categoryAccentLine" aria-hidden="true" />
-          <h2>Shop by Category</h2>
-          <p>Find your style, explore our top categories</p>
-        </div>
+        <SectionHeading eyebrow="Find your style" title="Shop by category" />
 
         {status === "error" ? (
           <div style={{ padding: "24px 4px" }}>

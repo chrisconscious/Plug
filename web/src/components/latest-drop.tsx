@@ -4,6 +4,7 @@ import * as api from "../lib/api";
 import { getNewInUrl } from "../lib/links";
 import { ProductCard } from "./shop/ProductCard";
 import { ExploreAllLink, ExploreMoreRow } from "./explore-more";
+import { SectionHeading } from "./SectionHeading";
 
 type Status = "loading" | "success" | "empty" | "error";
 
@@ -60,17 +61,13 @@ export function LatestDrop() {
   }, [inView, load]);
 
   return (
-    <section ref={ref} className="py-20 md:py-28 bg-white">
+    <section ref={ref} className="py-16 md:py-24 bg-white">
       <div className="max-w-[1440px] mx-auto px-4 md:px-8">
-        <div className="flex items-end justify-between mb-10">
-          <div>
-            <p className="text-[10px] font-bold tracking-[.25em] text-black/45 mb-3">DISCOVER NOW</p>
-            <h2 className="text-4xl md:text-6xl font-black tracking-[-.06em] uppercase">The latest drop</h2>
-          </div>
-          {showViewAll ? (
-            <ExploreAllLink to={getNewInUrl()} label="VIEW ALL" className="hidden sm:inline-flex" />
-          ) : null}
-        </div>
+        <SectionHeading
+          eyebrow="Discover now"
+          title="The latest drop"
+          actions={showViewAll ? <ExploreAllLink to={getNewInUrl()} label="VIEW ALL" /> : undefined}
+        />
         {status === "error" ? (
           <div className="py-12 text-center">
             <p className="text-sm text-black/60 mb-4">Couldn't load the latest drop right now.</p>

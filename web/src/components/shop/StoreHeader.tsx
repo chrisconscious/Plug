@@ -1,4 +1,4 @@
-import { Search, Users, Heart, ShoppingBag, X, Menu, LogOut, ChevronDown } from "lucide-react";
+import { Search, Users, Heart, ShoppingBag, X, LogOut, ChevronDown } from "lucide-react";
 import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../../lib/AuthContext";
@@ -8,8 +8,8 @@ import { NotificationBell } from "../NotificationBell";
 import * as api from "../../lib/api";
 import { loginUrl } from "../../lib/returnTo";
 import { SearchPanel } from "./SearchPanel";
+import { MobileMenu } from "./MobileMenu";
 import {
-  getCategoryUrl,
   getNewInUrl,
   getGenderCategoryUrl,
   getMenUrl,
@@ -42,7 +42,39 @@ export function StoreHeader() {
   const [searchClosing, setSearchClosing] = useState(false);
   const searchBtnRef = useRef<HTMLButtonElement>(null);
   const headerRef = useRef<HTMLElement>(null);
-  const [menuOpen, setMenuOpen] = useState(false);
+  // The phone menu lives in history: opening it pushes an entry for the same
+  // page, so the phone's Back button closes it instead of leaving the page,
+  // and links inside it replace that entry (Back from where they lead returns
+  // to the page the customer was on). Only opened here — never restored from
+  // a reload or a stale entry.
+  const menuOpen = Boolean((location.state as { plugMenu?: boolean } | null)?.plugMenu);
+  const openedMenuHere = useRef(false);
+  const openMenu = () => {
+    openedMenuHere.current = true;
+    nav(location.pathname + location.search + location.hash, { state: { ...(location.state as object | null ?? {}), plugMenu: true } });
+  };
+  const closeMenu = useCallback(() => {
+    if (!menuOpen) return;
+    if (openedMenuHere.current) {
+      openedMenuHere.current = false;
+      nav(-1);
+    } else {
+      const { plugMenu: _drop, ...rest } = (location.state as Record<string, unknown> | null) ?? {};
+      nav(location.pathname + location.search + location.hash, { replace: true, state: rest });
+    }
+  }, [menuOpen, nav, location]);
+  // A reload (or a Back into an old menu entry) must not reopen it by itself.
+  useEffect(() => {
+    if (menuOpen && !openedMenuHere.current) closeMenu();
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  // The desktop bar takes over from 901px: never leave the phone menu open there.
+  useEffect(() => {
+    if (!menuOpen) return;
+    const mq = window.matchMedia("(min-width: 901px)");
+    const onChange = () => { if (mq.matches) closeMenu(); };
+    mq.addEventListener("change", onChange);
+    return () => mq.removeEventListener("change", onChange);
+  }, [menuOpen, closeMenu]);
   const [announcements, setAnnouncements] = useState<api.Announcement[]>([]);
 
   useEffect(() => {
@@ -73,7 +105,7 @@ export function StoreHeader() {
     if (opts.restoreFocus) searchBtnRef.current?.focus({ preventScroll: true });
   }, []);
   const openSearch = () => {
-    setMenuOpen(false);
+    closeMenu();
     closeMega();
     setSearchClosing(false);
     setSearchOpen(true);
@@ -102,10 +134,6 @@ export function StoreHeader() {
   // Navigating anywhere closes the panel.
   useEffect(() => { setSearchOpen(false); setSearchClosing(false); }, [location.pathname, location.search]);
 
-  const closeAll = () => {
-    setMenuOpen(false);
-    setSearchOpen(false);
-  };
 
   // ---- Gender dropdowns (desktop mega-menu + mobile accordion) ----
   // Categories are fetched once per gender and cached for the session, so
@@ -114,7 +142,6 @@ export function StoreHeader() {
   const [megaData, setMegaData] = useState<Partial<Record<MenuKind, api.GenderCategory[]>>>({});
   const [megaOpen, setMegaOpen] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
-  const [mobileKind, setMobileKind] = useState<MenuKind | null>(null);
 
   const closeMega = () => {
     setMegaOpen(false);
@@ -152,20 +179,7 @@ export function StoreHeader() {
     };
   }, [megaOpen]);
 
-  const toggleMobileGender = (kind: MenuKind) => {
-    if (mobileKind === kind) {
-      setMobileKind(null);
-    } else {
-      setMobileKind(kind);
-      if (!megaData[kind]) {
-        setLoadError(null);
-        api
-          .listCategoriesByGender(kind)
-          .then((r) => setMegaData((prev) => ({ ...prev, [kind]: r.categories })))
-          .catch(() => setLoadError("Could not load categories right now."));
-      }
-    }
-  };
+
 
   /**
    * Group the real category rows into root parents + their children so the
@@ -200,15 +214,6 @@ export function StoreHeader() {
   const genderUrl = (kind: MenuKind) => (kind === "women" ? getWomenUrl() : getMenUrl());
   const genderApiUrl = (kind: MenuKind, slug: string) => getGenderCategoryUrl(kind, slug);
 
-  const quickNav: [string, string][] = [
-    ["NEW IN", getNewInUrl()],
-    ["COLLECTIONS", getShopAllUrl()],
-    ["SALE", getSaleUrl()],
-    ["BRANDS", "/brands"],
-    ["CLOTHING", getCategoryUrl("clothing")],
-    ["SHOES", getCategoryUrl("shoes")],
-    ["ACCESSORIES", getCategoryUrl("accessories")],
-  ];
 
   return (
     <>
@@ -232,8 +237,8 @@ export function StoreHeader() {
           closeMega();
         }}
       >
-        <button type="button" className="menuToggle" aria-label="Open menu" onClick={() => setMenuOpen(true)}>
-          <Menu size={20} />
+        <button type="button" className="menuToggle" aria-label="Open menu" aria-expanded={menuOpen} onClick={openMenu}>
+          <span className="burger" aria-hidden="true"><i /><i /><i /></span>
         </button>
         <Link to="/" className="logo" aria-label={`${platformName} home`}><BrandLogo variant="header" /></Link>
         <nav>
@@ -319,72 +324,7 @@ export function StoreHeader() {
         )}
       </header>
 
-      {/* Mobile navigation */}
-      {menuOpen && (
-        <div className="navOverlay" onClick={() => setMenuOpen(false)}>
-          <aside className="navDrawer" onClick={(e) => e.stopPropagation()}>
-            <div className="navOverlayHead">
-              <b><BrandLogo maxHeight={20} /></b>
-              <button type="button" className="iconBtn" aria-label="Close menu" onClick={() => setMenuOpen(false)}>
-                <X size={20} />
-              </button>
-            </div>
-
-            {/* WOMEN / MEN expandable category accordions */}
-            {(["women", "men"] as MenuKind[]).map((kind) => (
-              <div key={kind} className="mobGroup">
-                <button
-                  type="button"
-                  className={`mobGroupHead ${mobileKind === kind ? "open" : ""}`}
-                  onClick={() => toggleMobileGender(kind)}
-                >
-                  <span>{MENU_LABEL[kind]}</span>
-                  <ChevronDown size={14} />
-                </button>
-                {mobileKind === kind && (
-                  <div className="mobGroupBody">
-                    {loadError ? (
-                      <p className="megaEmpty">{loadError}</p>
-                    ) : megaData[kind] && groupsFor(kind).roots.length === 0 ? (
-                      <p className="megaEmpty">Loading categories…</p>
-                    ) : groupsFor(kind).roots.map((root) => (
-                      <div key={root.id} className="mobCol">
-                        <Link
-                          to={genderApiUrl(kind, root.slug)}
-                          className="mobColTitle"
-                          onClick={() => setMenuOpen(false)}
-                        >
-                          {root.name} <span>{root.count}</span>
-                        </Link>
-                        {(groupsFor(kind).childrenOf.get(root.id) ?? []).map((child) => (
-                          <Link
-                            key={child.id}
-                            to={genderApiUrl(kind, child.slug)}
-                            className="mobColLink"
-                            onClick={() => setMenuOpen(false)}
-                          >
-                            {child.name} <span>{child.count}</span>
-                          </Link>
-                        ))}
-                      </div>
-                    ))}
-                    <Link to={genderUrl(kind)} className="mobShopAll" onClick={() => setMenuOpen(false)}>
-                      Shop all {MENU_LABEL[kind].toLowerCase()} →
-                    </Link>
-                  </div>
-                )}
-              </div>
-            ))}
-
-            {quickNav.map(([x, to]) => (
-              <Link key={x} to={to} className="navOverlayLink" onClick={() => setMenuOpen(false)}>
-                {x}
-              </Link>
-            ))}
-          </aside>
-        </div>
-      )}
-
+      <MobileMenu open={menuOpen} onClose={closeMenu} onSearch={openSearch} />
     </>
   );
 }

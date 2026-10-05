@@ -223,7 +223,7 @@ export function ShopByBrands() {
                         <div className="absolute inset-0 border border-black/[0.05]" />
                       )}
                       <span className={`brandCardMark ${photo ? "brandCardMark--photo" : "brandCardMark--plain"}`}>
-                        <BrandMark brand={b} surface={photo ? "photo" : "light"} alt="" wordmarkClassName="brandWord" />
+                        <BrandMark brand={b} alt="" wordmarkClassName="brandWord" />
                       </span>
                     </Link>
                   </li>

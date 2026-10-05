@@ -729,20 +729,9 @@ html{scroll-behavior:smooth}.font-display{font-family:Manrope,sans-serif}button,
   max-height:42%; max-width:100%; width:auto; height:auto;
   object-fit:contain; -webkit-user-drag:none;
 }
-/* Shared brand-logo treatments (components/shop/BrandMark.tsx). The stored
-   logo file is never altered — these are presentation-only filters:
-   - onPhoto: a light (white) logo keeps its colour over a campaign photo;
-     every other logo is knocked out to a white mark with no background;
-   - lightOnLight: a logo the API classified as light (white on transparency)
-     becomes a dark silhouette so it stays visible on light surfaces.
-   Dark / unanalyzed logos are rendered exactly as uploaded. */
+/* Brand logos (components/shop/BrandMark.tsx) are shown exactly as uploaded:
+   no filters, recolouring or blending — only scaled to fit. */
 .brandMarkImg{ object-fit:contain; -webkit-user-drag:none; }
-.brandMarkImg--onPhoto{ filter:drop-shadow(0 2px 14px rgba(0,0,0,.35)); }
-/* Knock-out: background -> black, mark -> white, then screen-blend so black
-   vanishes into the photo. Needs no stacking context between the img and the
-   photo (see .brandCardMark: no z-index). */
-.brandMarkImg--knockout{ filter:grayscale(1) invert(1) contrast(4); mix-blend-mode:screen; }
-.brandMarkImg--lightOnLight{ filter:brightness(0); }
 .adminBrandThumbImg{ width:100%; height:100%; }
 /* /lifestyles — "Shop by Lifestyle → EXPLORE ALL" grid (same card grammar as the homepage rail). */
 .lifestylesPage{max-width:1440px;margin:0 auto;padding:28px 4% 70px}

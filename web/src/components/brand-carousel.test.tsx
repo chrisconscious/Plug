@@ -133,7 +133,7 @@ describe("ShopByBrands — content is entirely API-driven", () => {
     expect(screen.queryByText(/Gucci|Nike|Zara|H&M|adidas/i)).not.toBeInTheDocument();
   });
 
-  it("uses the API-provided campaign image URL and renders the white-silhouette photo mark", async () => {
+  it("uses the API-provided campaign image URL behind the logo", async () => {
     mockedListBrands.mockResolvedValue({
       brands: [makeBrand({ name: "Photo House", campaignImage: CAMPAIGN })],
     });
@@ -146,21 +146,21 @@ describe("ShopByBrands — content is entirely API-driven", () => {
     expect(card.querySelector(".brandCardMark--photo")).toBeInTheDocument();
   });
 
-  it("renders a LIGHT (white) logo as a dark silhouette on the plain tile, and leaves dark logos untouched", async () => {
+  it("shows every uploaded logo exactly as uploaded — no recolouring, on plain tiles or over a campaign photo", async () => {
     mockedListBrands.mockResolvedValue({
       brands: [
         makeBrand({ id: "w", name: "White Mark", logo: { ...LOGO, tone: "light" } }),
         makeBrand({ id: "d", name: "Dark Mark", logo: { ...LOGO, tone: "dark" } }),
-        makeBrand({ id: "p", name: "Photo White", logo: { ...LOGO, tone: "light" }, campaignImage: CAMPAIGN }),
+        makeBrand({ id: "p", name: "Photo Dark", logo: { ...LOGO, tone: "dark" }, campaignImage: CAMPAIGN }),
       ],
     });
     renderBrands();
-    const white = (await screen.findByRole("link", { name: "Shop White Mark" })).querySelector(".brandCardMark img")!;
-    const dark = screen.getByRole("link", { name: "Shop Dark Mark" }).querySelector(".brandCardMark img")!;
-    const onPhoto = screen.getByRole("link", { name: "Shop Photo White" }).querySelector(".brandCardMark img")!;
-    expect(white.className).toContain("brandMarkImg--lightOnLight");
-    expect(dark.className).not.toContain("brandMarkImg--lightOnLight");
-    expect(onPhoto.className).toContain("brandMarkImg--onPhoto");
+    await screen.findByRole("link", { name: "Shop White Mark" });
+    for (const name of ["Shop White Mark", "Shop Dark Mark", "Shop Photo Dark"]) {
+      const img = screen.getByRole("link", { name }).querySelector<HTMLImageElement>(".brandCardMark img")!;
+      expect(img.className).toBe("brandMarkImg");
+      expect(img.getAttribute("style")).toBeNull();
+    }
   });
 
   it("falls back to the brand name when the logo image fails to load (broken URL is not hidden silently)", async () => {

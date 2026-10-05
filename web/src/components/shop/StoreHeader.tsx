@@ -1,4 +1,4 @@
-import { Search, Users, Heart, ShoppingBag, X, Menu, LogOut, ChevronDown } from "lucide-react";
+import { Search, Users, Heart, ShoppingBag, X, Menu, LogOut, ChevronDown, ChevronRight } from "lucide-react";
 import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../../lib/AuthContext";
@@ -8,6 +8,7 @@ import { NotificationBell } from "../NotificationBell";
 import * as api from "../../lib/api";
 import { loginUrl } from "../../lib/returnTo";
 import { SearchPanel } from "./SearchPanel";
+import { categoryIcon } from "../../lib/category-icons";
 import {
   getCategoryUrl,
   getNewInUrl,
@@ -44,6 +45,22 @@ export function StoreHeader() {
   const headerRef = useRef<HTMLElement>(null);
   const [menuOpen, setMenuOpen] = useState(false);
   const [announcements, setAnnouncements] = useState<api.Announcement[]>([]);
+  // Phone menu "Shop by category": the admin's active top-level categories,
+  // loaded the first time the menu opens (never a hard-coded list).
+  const [menuCats, setMenuCats] = useState<api.Category[] | null>(null);
+  useEffect(() => {
+    if (!menuOpen || menuCats) return;
+    let alive = true;
+    api.listCategories()
+      .then((r) => {
+        if (!alive) return;
+        const roots = r.categories.filter((c) => c.active && !c.parentId);
+        roots.sort((a, b) => (a.displayOrder ?? 0) - (b.displayOrder ?? 0) || a.name.localeCompare(b.name));
+        setMenuCats(roots);
+      })
+      .catch(() => { if (alive) setMenuCats([]); });
+    return () => { alive = false; };
+  }, [menuOpen, menuCats]);
 
   useEffect(() => {
     let alive = true;
@@ -200,14 +217,12 @@ export function StoreHeader() {
   const genderUrl = (kind: MenuKind) => (kind === "women" ? getWomenUrl() : getMenUrl());
   const genderApiUrl = (kind: MenuKind, slug: string) => getGenderCategoryUrl(kind, slug);
 
+  // Same order and wording as the desktop bar; categories come from the admin.
   const quickNav: [string, string][] = [
     ["NEW IN", getNewInUrl()],
     ["COLLECTIONS", getShopAllUrl()],
     ["SALE", getSaleUrl()],
     ["BRANDS", "/brands"],
-    ["CLOTHING", getCategoryUrl("clothing")],
-    ["SHOES", getCategoryUrl("shoes")],
-    ["ACCESSORIES", getCategoryUrl("accessories")],
   ];
 
   return (
@@ -319,10 +334,10 @@ export function StoreHeader() {
         )}
       </header>
 
-      {/* Mobile navigation */}
+      {/* Mobile navigation — a side drawer (not full screen) */}
       {menuOpen && (
         <div className="navOverlay" onClick={() => setMenuOpen(false)}>
-          <aside className="navDrawer" onClick={(e) => e.stopPropagation()}>
+          <aside className="navDrawer" aria-label="Menu" onClick={(e) => e.stopPropagation()}>
             <div className="navOverlayHead">
               <b><BrandLogo maxHeight={20} /></b>
               <button type="button" className="iconBtn" aria-label="Close menu" onClick={() => setMenuOpen(false)}>
@@ -330,22 +345,30 @@ export function StoreHeader() {
               </button>
             </div>
 
+            <button type="button" className="navSearch" onClick={openSearch}>
+              <Search size={16} aria-hidden="true" />
+              <span>Search products, brands…</span>
+            </button>
+
             {/* WOMEN / MEN expandable category accordions */}
             {(["women", "men"] as MenuKind[]).map((kind) => (
               <div key={kind} className="mobGroup">
                 <button
                   type="button"
                   className={`mobGroupHead ${mobileKind === kind ? "open" : ""}`}
+                  aria-expanded={mobileKind === kind}
                   onClick={() => toggleMobileGender(kind)}
                 >
                   <span>{MENU_LABEL[kind]}</span>
-                  <ChevronDown size={14} />
+                  <ChevronDown size={16} />
                 </button>
                 {mobileKind === kind && (
                   <div className="mobGroupBody">
                     {loadError ? (
                       <p className="megaEmpty">{loadError}</p>
                     ) : megaData[kind] && groupsFor(kind).roots.length === 0 ? (
+                      <p className="megaEmpty">No categories yet.</p>
+                    ) : !megaData[kind] ? (
                       <p className="megaEmpty">Loading categories…</p>
                     ) : groupsFor(kind).roots.map((root) => (
                       <div key={root.id} className="mobCol">
@@ -378,9 +401,37 @@ export function StoreHeader() {
 
             {quickNav.map(([x, to]) => (
               <Link key={x} to={to} className="navOverlayLink" onClick={() => setMenuOpen(false)}>
-                {x}
+                <span>{x}</span>
+                <ChevronRight size={16} aria-hidden="true" />
               </Link>
             ))}
+
+            {menuCats && menuCats.length > 0 && (
+              <section className="navCats" aria-label="Shop by category">
+                <p className="navCatsTitle">Shop by category</p>
+                <div className="navCatsGrid">
+                  {menuCats.map((c) => {
+                    const Icon = categoryIcon(c.icon);
+                    return (
+                      <Link key={c.id} to={getCategoryUrl(c.slug)} className="navCat" onClick={() => setMenuOpen(false)}>
+                        <span className="navCatThumb">
+                          {c.imageUrl ? <img src={api.assetUrl(c.imageUrl)} alt="" loading="lazy" decoding="async" /> : <Icon size={18} aria-hidden="true" />}
+                        </span>
+                        <span className="navCatName">{c.name}</span>
+                      </Link>
+                    );
+                  })}
+                </div>
+              </section>
+            )}
+
+            <div className="navAccount">
+              <Link to={status === 'authenticated' ? '/profile' : loginUrl(location.pathname + location.search)} onClick={() => setMenuOpen(false)}>
+                <Users size={17} aria-hidden="true" /> {status === 'authenticated' ? 'My account' : 'Sign in / Register'}
+              </Link>
+              <Link to="/wishlist" onClick={() => setMenuOpen(false)}><Heart size={17} aria-hidden="true" /> Wishlist</Link>
+              <Link to="/cart" onClick={() => setMenuOpen(false)}><ShoppingBag size={17} aria-hidden="true" /> Bag</Link>
+            </div>
           </aside>
         </div>
       )}

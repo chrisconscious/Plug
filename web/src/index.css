@@ -254,11 +254,18 @@ html{scroll-behavior:smooth}.font-display{font-family:Manrope,sans-serif}button,
 .storeHeader .iconBtn{background:none;border:0;color:inherit;padding:4px;cursor:pointer;line-height:0}
 .headerIcons .iconBtn{display:inline-flex;align-items:center}
 .storeHeader a{text-decoration:none}
-.navOverlay{position:fixed;inset:0;z-index:80;background:rgba(0,0,0,.5);display:flex}
-.navDrawer{background:#fff;color:#111;width:86%;max-width:340px;height:100%;padding:20px;overflow-y:auto;display:flex;flex-direction:column}
-.navOverlayHead{display:flex;justify-content:space-between;align-items:center;margin-bottom:18px}
+.navOverlay{position:fixed;inset:0;z-index:80;background:rgba(0,0,0,.45);display:flex;animation:navFade .2s ease}
+.navDrawer{background:#fff;color:#111;width:86%;max-width:340px;height:100%;padding:18px 20px 28px;overflow-y:auto;overscroll-behavior:contain;display:flex;flex-direction:column;animation:navSlide .26s cubic-bezier(.2,.8,.2,1);box-shadow:8px 0 40px rgba(0,0,0,.18)}
+.navDrawer > *{flex-shrink:0}
+@keyframes navSlide{from{transform:translateX(-100%)}to{transform:none}}
+@keyframes navFade{from{opacity:0}to{opacity:1}}
+@media (prefers-reduced-motion:reduce){.navOverlay,.navDrawer{animation:none}}
+.navOverlayHead{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px}
+.navSearch{display:flex;align-items:center;gap:10px;width:100%;height:44px;padding:0 14px;margin-bottom:6px;border:1px solid #e3e3e3;border-radius:22px;background:#f7f7f6;color:#777;font:500 13px Manrope,sans-serif;text-align:left;cursor:pointer}
+.navSearch:focus-visible{outline:2px solid #111;outline-offset:2px}
 .navOverlayHead b{font:800 22px Manrope;color:#171717;letter-spacing:-.04em}
-.navOverlayLink{display:block;padding:15px 0;border-bottom:1px solid #eee;font-size:15px;font-weight:700;color:#111;text-decoration:none}
+.navOverlayLink{display:flex;align-items:center;justify-content:space-between;padding:15px 0;border-bottom:1px solid #eee;font:800 13px Manrope,sans-serif;letter-spacing:.1em;color:#111;text-decoration:none}
+.navOverlayLink svg{color:#aaa}
 .navOverlayLink:hover{color:#555}
 
 /* ---- Category mega-menu (desktop hover: WOMEN / MEN) ---- */
@@ -288,7 +295,7 @@ html{scroll-behavior:smooth}.font-display{font-family:Manrope,sans-serif}button,
 
 /* ---- Mobile drawer: WOMEN / MEN category accordions ---- */
 .mobGroup{border-bottom:1px solid #eee}
-.mobGroupHead{display:flex;align-items:center;justify-content:space-between;width:100%;background:none;border:0;padding:15px 0;font:800 15px Manrope;color:#111;cursor:pointer}
+.mobGroupHead{display:flex;align-items:center;justify-content:space-between;width:100%;background:none;border:0;padding:15px 0;font:800 13px Manrope,sans-serif;letter-spacing:.1em;color:#111;cursor:pointer}
 .mobGroupHead svg{color:#999;transition:transform .15s}
 .mobGroupHead.open svg{transform:rotate(180deg)}
 .mobGroupBody{padding:2px 0 16px}
@@ -298,6 +305,20 @@ html{scroll-behavior:smooth}.font-display{font-family:Manrope,sans-serif}button,
 .mobColLink{display:flex;align-items:baseline;justify-content:space-between;gap:10px;font-size:14px;font-weight:600;color:#222;text-decoration:none;padding:7px 0 7px 8px}
 .mobColLink:hover{color:#111}
 .mobShopAll{display:block;margin-top:14px;font:800 11px Manrope;letter-spacing:.1em;color:#111;text-decoration:none;text-transform:uppercase}
+/* Phone menu: Shop by category (admin categories) + account links */
+.navCats{margin-top:24px}
+.navCatsTitle{display:flex;align-items:center;gap:8px;margin:0 0 12px;font:700 10.5px Manrope,sans-serif;letter-spacing:.2em;text-transform:uppercase;color:#6b6b6b}
+.navCatsTitle::before{content:"";width:18px;height:1.5px;background:#111}
+.navCatsGrid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.navCat{display:flex;align-items:center;gap:10px;min-height:52px;padding:6px 8px 6px 6px;border:1px solid #ececec;border-radius:10px;color:#111;text-decoration:none;font:600 12.5px Manrope,sans-serif;line-height:1.2}
+.navCat:active,.navCat:hover{border-color:#111}
+.navCatThumb{flex:none;width:38px;height:38px;border-radius:7px;background:#f3f2ef;display:grid;place-items:center;overflow:hidden;color:#444}
+.navCatThumb img{width:100%;height:100%;object-fit:cover}
+.navCatName{min-width:0;overflow-wrap:anywhere}
+.navAccount{margin-top:auto;padding-top:22px;border-top:1px solid #eee;display:flex;flex-direction:column}
+.navCats + .navAccount{margin-top:26px}
+.navAccount a{display:flex;align-items:center;gap:12px;padding:11px 0;color:#222;text-decoration:none;font:600 13.5px Manrope,sans-serif}
+.navAccount svg{color:#555}
 
 /* ---- Product detail: color/size selection (real, state-driven) ---- */
 .colorDots{display:flex;gap:12px;margin:12px 0 6px;flex-wrap:wrap}
@@ -730,7 +751,7 @@ html{scroll-behavior:smooth}.font-display{font-family:Manrope,sans-serif}button,
 .brandCardMark{
   position:absolute; inset:9%;
   display:flex; align-items:center; justify-content:center;
-  z-index:1; pointer-events:none;
+  pointer-events:none;
 }
 .brandCardMark img{
   max-height:42%; max-width:100%; width:auto; height:auto;
@@ -739,14 +760,16 @@ html{scroll-behavior:smooth}.font-display{font-family:Manrope,sans-serif}button,
 /* Shared brand-logo treatments (components/shop/BrandMark.tsx). The stored
    logo file is never altered — these are presentation-only filters:
    - onPhoto: a light (white) logo keeps its colour over a campaign photo;
-     every other logo sits on a white label (.brandMarkPlate);
+     every other logo is knocked out to a white mark with no background;
    - lightOnLight: a logo the API classified as light (white on transparency)
      becomes a dark silhouette so it stays visible on light surfaces.
    Dark / unanalyzed logos are rendered exactly as uploaded. */
 .brandMarkImg{ object-fit:contain; -webkit-user-drag:none; }
 .brandMarkImg--onPhoto{ filter:drop-shadow(0 2px 14px rgba(0,0,0,.35)); }
-.brandMarkPlate{ display:flex; align-items:center; justify-content:center; background:#fff; border-radius:12px; padding:16px 20px; max-width:84%; box-shadow:0 8px 28px rgba(0,0,0,.18); }
-.brandCardMark .brandMarkPlate img{ max-height:64px; max-width:100%; }
+/* Knock-out: background -> black, mark -> white, then screen-blend so black
+   vanishes into the photo. Needs no stacking context between the img and the
+   photo (see .brandCardMark: no z-index). */
+.brandMarkImg--knockout{ filter:grayscale(1) invert(1) contrast(4); mix-blend-mode:screen; }
 .brandMarkImg--lightOnLight{ filter:brightness(0); }
 .adminBrandThumbImg{ width:100%; height:100%; }
 /* /lifestyles — "Shop by Lifestyle → EXPLORE ALL" grid (same card grammar as the homepage rail). */

@@ -10,6 +10,7 @@ import { superItems, adminItems } from './lib/adminNav';
 import { RequireRole } from './components/RequireRole';
 import { AuthProvider } from './lib/AuthContext';
 import { PlatformSettingsProvider } from './lib/PlatformSettingsContext';
+import { ScrollManager } from './components/ScrollManager';
 
 // Every page except the homepage is loaded on demand, so a first visit only
 // downloads the homepage (checkout, account and admin code come later).
@@ -105,6 +106,7 @@ function App() {
     <PlatformSettingsProvider>
     <AuthProvider>
       <BrowserRouter basename={import.meta.env.BASE_URL} future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+      <ScrollManager />
       <Suspense fallback={<div aria-busy="true" style={{ minHeight: '60vh' }} />}>
       <Routes>
         <Route path="/" element={<Index />} />

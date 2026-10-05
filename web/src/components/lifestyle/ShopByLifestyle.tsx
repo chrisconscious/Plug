@@ -397,7 +397,7 @@ export function ShopByLifestyle() {
   if (!loading && items.length === 0) return null;
 
   return (
-    <section ref={sectionRef} className="w-full py-16 md:py-24 bg-white overflow-hidden">
+    <section ref={sectionRef} className="w-full py-9 md:py-12 bg-white overflow-hidden">
       <div ref={innerRef} className="max-w-[1440px] mx-auto px-4 md:px-8">
         {heading}
         {loading ? (

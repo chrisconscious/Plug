@@ -239,12 +239,12 @@ html{scroll-behavior:smooth}.font-display{font-family:Manrope,sans-serif}button,
 
 /* ---- Brand logo display (customer-facing) ---- */
 .productBrandRow{display:flex;align-items:center;gap:7px;text-decoration:none}
-.productBrandLogo{width:18px;height:18px;object-fit:contain;border-radius:3px;flex-shrink:0}
+.productBrandLogo{height:28px;width:auto;max-width:110px;object-fit:contain;flex-shrink:0}
 .productBrand .productBrandRow{color:#888;font-size:9px;font-weight:800;letter-spacing:.08em;text-transform:uppercase}
 .productBrandRow span{display:inline-block}
 .detailBrand{justify-content:flex-start;margin-bottom:8px;color:#111}
 .detailBrand span{font-size:11px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:#38805b;border-bottom:1px solid #38805b;padding-bottom:1px}
-.detailLogo{width:22px;height:22px}
+.detailLogo{height:34px;max-width:140px}
 .brandMark{min-height:56px;display:flex;align-items:center;justify-content:center}
 .brandLogoImg{width:auto;height:auto;max-width:120px;max-height:56px;object-fit:contain}
 .linkButton{background:none;border:0;padding:0;color:inherit;text-decoration:underline;cursor:pointer;font:inherit}
@@ -597,7 +597,9 @@ html{scroll-behavior:smooth}.font-display{font-family:Manrope,sans-serif}button,
    with the real category image or icon fallback, then the name below
    (13px desktop / 11px phone). 150px fixed on desktop; fluid
    `calc(25% - …)` on phones so ~4 cards fit the visible row. */
-/* Homepage section headings (components/SectionHeading.tsx). Archivo,
+/* Homepage sections share one rhythm: 36px / 48px padding top and bottom
+   (72px / 96px between sections, phone / desktop), and one heading
+   (components/SectionHeading.tsx). Archivo,
    self-hosted (SIL Open Font License), only for these titles. */
 @font-face{
   font-family:"Archivo"; font-style:normal; font-weight:100 900; font-stretch:62% 125%; font-display:swap;
@@ -614,9 +616,9 @@ html{scroll-behavior:smooth}.font-display{font-family:Manrope,sans-serif}button,
   .sectionHeading__actions{ display:flex; align-items:center; gap:16px; flex-shrink:0; }
 }
 
-.categorySection{ padding:64px 0; background:#fff; }
+.categorySection{ padding:36px 0; background:#fff; }
 .categorySectionInner{ max-width:1440px; margin:0 auto; padding:0 16px; }
-@media (min-width:768px){ .categorySection{ padding:96px 0; } .categorySectionInner{ padding:0 32px; } }
+@media (min-width:768px){ .categorySection{ padding:48px 0; } .categorySectionInner{ padding:0 32px; } }
 
 .categoryCarouselWrap{ position:relative; display:flex; align-items:center; gap:10px; }
 
@@ -736,12 +738,15 @@ html{scroll-behavior:smooth}.font-display{font-family:Manrope,sans-serif}button,
 }
 /* Shared brand-logo treatments (components/shop/BrandMark.tsx). The stored
    logo file is never altered — these are presentation-only filters:
-   - onPhoto: every logo reads white over a campaign photo;
+   - onPhoto: a light (white) logo keeps its colour over a campaign photo;
+     every other logo sits on a white label (.brandMarkPlate);
    - lightOnLight: a logo the API classified as light (white on transparency)
      becomes a dark silhouette so it stays visible on light surfaces.
    Dark / unanalyzed logos are rendered exactly as uploaded. */
 .brandMarkImg{ object-fit:contain; -webkit-user-drag:none; }
-.brandMarkImg--onPhoto{ filter:brightness(0) invert(1) drop-shadow(0 2px 14px rgba(0,0,0,.3)); }
+.brandMarkImg--onPhoto{ filter:drop-shadow(0 2px 14px rgba(0,0,0,.35)); }
+.brandMarkPlate{ display:flex; align-items:center; justify-content:center; background:#fff; border-radius:12px; padding:16px 20px; max-width:84%; box-shadow:0 8px 28px rgba(0,0,0,.18); }
+.brandCardMark .brandMarkPlate img{ max-height:64px; max-width:100%; }
 .brandMarkImg--lightOnLight{ filter:brightness(0); }
 .adminBrandThumbImg{ width:100%; height:100%; }
 /* /lifestyles — "Shop by Lifestyle → EXPLORE ALL" grid (same card grammar as the homepage rail). */
@@ -758,8 +763,8 @@ html{scroll-behavior:smooth}.font-display{font-family:Manrope,sans-serif}button,
 .lifestyleGridDesc{font-size:11px;opacity:.85;line-height:1.4;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
 .lifestyleGridCount{font-size:10px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;opacity:.8}
 @media(max-width:900px){.lifestyleGrid{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.lifestyleGridName{font-size:15px}}
-.brandPageLogo{ height:44px; margin-bottom:10px; display:flex; align-items:center; }
-.brandPageLogo .brandMarkImg{ max-height:44px; max-width:180px; width:auto; height:auto; }
+.brandPageLogo{ height:60px; margin-bottom:12px; display:flex; align-items:center; }
+.brandPageLogo .brandMarkImg{ max-height:60px; max-width:220px; width:auto; height:auto; }
 .brandWordmark{ font-family:Manrope,sans-serif; font-weight:800; text-transform:uppercase; letter-spacing:.08em; line-height:1.15; overflow-wrap:anywhere; }
 .brandCardMark .brandWord{
   font-family:Manrope,sans-serif;

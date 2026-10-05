@@ -152,7 +152,7 @@ export function ShopByBrands() {
   if (loaded && brandItems.length === 0) return null;
 
   return (
-    <section ref={sectionRef} className="w-full overflow-hidden bg-white py-16 md:py-24">
+    <section ref={sectionRef} className="w-full overflow-hidden bg-white py-9 md:py-12">
       <div className="mx-auto max-w-[1440px] px-4 md:px-8">
         <SectionHeading
           eyebrow="Explore by label"

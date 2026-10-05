@@ -61,7 +61,7 @@ export function LatestDrop() {
   }, [inView, load]);
 
   return (
-    <section ref={ref} className="py-16 md:py-24 bg-white">
+    <section ref={ref} className="py-9 md:py-12 bg-white">
       <div className="max-w-[1440px] mx-auto px-4 md:px-8">
         <SectionHeading
           eyebrow="Discover now"

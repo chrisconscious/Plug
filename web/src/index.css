@@ -250,23 +250,20 @@ html{scroll-behavior:smooth}.font-display{font-family:Manrope,sans-serif}button,
 .linkButton{background:none;border:0;padding:0;color:inherit;text-decoration:underline;cursor:pointer;font:inherit}
 
 /* ---- Canonical storefront header (search + mobile menu) ---- */
-.storeHeader .menuToggle{display:none;background:none;border:0;color:#171717;padding:4px;cursor:pointer}
+.storeHeader .menuToggle{display:none;background:none;border:0;color:#171717;padding:10px;margin-left:-10px;cursor:pointer;-webkit-tap-highlight-color:transparent}
+/* Hamburger: three lines, the middle one shorter; they spread on press. */
+.burger{position:relative;display:block;width:22px;height:14px}
+.burger i{position:absolute;left:0;height:2px;border-radius:2px;background:currentColor;transition:transform .25s cubic-bezier(.22,1,.36,1),width .25s cubic-bezier(.22,1,.36,1)}
+.burger i:nth-child(1){top:0;width:22px}
+.burger i:nth-child(2){top:6px;width:14px}
+.burger i:nth-child(3){top:12px;width:18px}
+.menuToggle:hover .burger i:nth-child(2),.menuToggle:focus-visible .burger i:nth-child(2){width:22px}
+.menuToggle:hover .burger i:nth-child(3),.menuToggle:focus-visible .burger i:nth-child(3){width:22px}
+.menuToggle:active .burger i:nth-child(1){transform:translateY(-1px)}
+.menuToggle:active .burger i:nth-child(3){transform:translateY(1px)}
 .storeHeader .iconBtn{background:none;border:0;color:inherit;padding:4px;cursor:pointer;line-height:0}
 .headerIcons .iconBtn{display:inline-flex;align-items:center}
 .storeHeader a{text-decoration:none}
-.navOverlay{position:fixed;inset:0;z-index:80;background:rgba(0,0,0,.45);display:flex;animation:navFade .2s ease}
-.navDrawer{background:#fff;color:#111;width:86%;max-width:340px;height:100%;padding:18px 20px 28px;overflow-y:auto;overscroll-behavior:contain;display:flex;flex-direction:column;animation:navSlide .26s cubic-bezier(.2,.8,.2,1);box-shadow:8px 0 40px rgba(0,0,0,.18)}
-.navDrawer > *{flex-shrink:0}
-@keyframes navSlide{from{transform:translateX(-100%)}to{transform:none}}
-@keyframes navFade{from{opacity:0}to{opacity:1}}
-@media (prefers-reduced-motion:reduce){.navOverlay,.navDrawer{animation:none}}
-.navOverlayHead{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px}
-.navSearch{display:flex;align-items:center;gap:10px;width:100%;height:44px;padding:0 14px;margin-bottom:6px;border:1px solid #e3e3e3;border-radius:22px;background:#f7f7f6;color:#777;font:500 13px Manrope,sans-serif;text-align:left;cursor:pointer}
-.navSearch:focus-visible{outline:2px solid #111;outline-offset:2px}
-.navOverlayHead b{font:800 22px Manrope;color:#171717;letter-spacing:-.04em}
-.navOverlayLink{display:flex;align-items:center;justify-content:space-between;padding:15px 0;border-bottom:1px solid #eee;font:800 13px Manrope,sans-serif;letter-spacing:.1em;color:#111;text-decoration:none}
-.navOverlayLink svg{color:#aaa}
-.navOverlayLink:hover{color:#555}
 
 /* ---- Category mega-menu (desktop hover: WOMEN / MEN) ---- */
 .storeHeader nav{position:relative}
@@ -294,31 +291,6 @@ html{scroll-behavior:smooth}.font-display{font-family:Manrope,sans-serif}button,
 }
 
 /* ---- Mobile drawer: WOMEN / MEN category accordions ---- */
-.mobGroup{border-bottom:1px solid #eee}
-.mobGroupHead{display:flex;align-items:center;justify-content:space-between;width:100%;background:none;border:0;padding:15px 0;font:800 13px Manrope,sans-serif;letter-spacing:.1em;color:#111;cursor:pointer}
-.mobGroupHead svg{color:#999;transition:transform .15s}
-.mobGroupHead.open svg{transform:rotate(180deg)}
-.mobGroupBody{padding:2px 0 16px}
-.mobCol{margin-top:12px}
-.mobColTitle{display:flex;align-items:baseline;justify-content:space-between;gap:10px;font:800 11px Manrope;letter-spacing:.14em;color:#777;text-decoration:none;text-transform:uppercase;margin-bottom:6px}
-.mobColTitle span,.mobColLink span{font-size:11px;color:#bbb}
-.mobColLink{display:flex;align-items:baseline;justify-content:space-between;gap:10px;font-size:14px;font-weight:600;color:#222;text-decoration:none;padding:7px 0 7px 8px}
-.mobColLink:hover{color:#111}
-.mobShopAll{display:block;margin-top:14px;font:800 11px Manrope;letter-spacing:.1em;color:#111;text-decoration:none;text-transform:uppercase}
-/* Phone menu: Shop by category (admin categories) + account links */
-.navCats{margin-top:24px}
-.navCatsTitle{display:flex;align-items:center;gap:8px;margin:0 0 12px;font:700 10.5px Manrope,sans-serif;letter-spacing:.2em;text-transform:uppercase;color:#6b6b6b}
-.navCatsTitle::before{content:"";width:18px;height:1.5px;background:#111}
-.navCatsGrid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
-.navCat{display:flex;align-items:center;gap:10px;min-height:52px;padding:6px 8px 6px 6px;border:1px solid #ececec;border-radius:10px;color:#111;text-decoration:none;font:600 12.5px Manrope,sans-serif;line-height:1.2}
-.navCat:active,.navCat:hover{border-color:#111}
-.navCatThumb{flex:none;width:38px;height:38px;border-radius:7px;background:#f3f2ef;display:grid;place-items:center;overflow:hidden;color:#444}
-.navCatThumb img{width:100%;height:100%;object-fit:cover}
-.navCatName{min-width:0;overflow-wrap:anywhere}
-.navAccount{margin-top:auto;padding-top:22px;border-top:1px solid #eee;display:flex;flex-direction:column}
-.navCats + .navAccount{margin-top:26px}
-.navAccount a{display:flex;align-items:center;gap:12px;padding:11px 0;color:#222;text-decoration:none;font:600 13.5px Manrope,sans-serif}
-.navAccount svg{color:#555}
 
 /* ---- Product detail: color/size selection (real, state-driven) ---- */
 .colorDots{display:flex;gap:12px;margin:12px 0 6px;flex-wrap:wrap}
@@ -2461,3 +2433,79 @@ body.searchOpen .waFab,body.searchOpen .installCard{opacity:0;pointer-events:non
   .authPage .authSubmit, .authPage .authAltButton{ letter-spacing:.08em; }
 }
 @media(prefers-reduced-motion:reduce){ .authPage .authInput, .authPage .authAltButton{ transition:none; } }
+
+
+/* ===== Phone menu (components/shop/MobileMenu.tsx) =====
+   A side panel (86% of the screen, max 340px), never full screen, phones and
+   small tablets only (the desktop bar replaces it from 901px). */
+.mm{position:fixed;inset:0;z-index:80;display:flex}
+/* Only the backdrop fades; the panel itself stays solid while it slides. */
+.mm::before{content:"";position:absolute;inset:0;background:rgba(12,12,12,.42);-webkit-backdrop-filter:blur(3px);backdrop-filter:blur(3px);animation:mmFade .28s ease both}
+.mm.is-closing::before{animation:mmFadeOut .26s ease both}
+.mmPanel{position:relative;width:86%;max-width:340px;height:100%;background:#fff;color:#111;display:flex;flex-direction:column;padding:16px 22px calc(22px + env(safe-area-inset-bottom));overflow-y:auto;overscroll-behavior:contain;box-shadow:12px 0 48px rgba(0,0,0,.22);animation:mmIn .46s cubic-bezier(.22,1,.36,1) both}
+.mm.is-closing .mmPanel{animation:mmOut .26s cubic-bezier(.4,0,1,1) both}
+.mmPanel > *{flex-shrink:0}
+@keyframes mmFade{from{opacity:0}to{opacity:1}}
+@keyframes mmFadeOut{from{opacity:1}to{opacity:0}}
+@keyframes mmIn{from{transform:translateX(-100%)}to{transform:none}}
+@keyframes mmOut{from{transform:none}to{transform:translateX(-100%)}}
+/* Items rise in one after another. */
+.mmSearch,.mmItem,.mmFoot{animation:mmItem .5s cubic-bezier(.22,1,.36,1) both;animation-delay:calc(140ms + var(--i,0) * 45ms)}
+@keyframes mmItem{from{opacity:0;transform:translateX(-14px)}to{opacity:1;transform:none}}
+.mm.is-closing .mmSearch,.mm.is-closing .mmItem,.mm.is-closing .mmFoot{animation:none}
+
+.mmTop{display:flex;align-items:center;justify-content:space-between;height:48px;margin-bottom:14px}
+.mmLogo{display:flex;align-items:center;color:#111;text-decoration:none;font:800 22px/1 Manrope,sans-serif;letter-spacing:.08em}
+/* Close: two strokes that draw into an X. */
+.mmClose{position:relative;width:44px;height:44px;margin-right:-10px;border:0;border-radius:50%;background:transparent;cursor:pointer;transition:background .2s}
+.mmClose:active{background:#f1f0ed}
+.mmClose span{position:absolute;left:12px;top:21px;width:20px;height:2px;border-radius:2px;background:#111;animation:mmX .42s cubic-bezier(.22,1,.36,1) .12s both}
+.mmClose span:nth-child(1){--r:45deg}
+.mmClose span:nth-child(2){--r:-45deg}
+@keyframes mmX{from{transform:rotate(0) scaleX(.2);opacity:0}to{transform:rotate(var(--r)) scaleX(1);opacity:1}}
+
+.mmSearch{display:flex;align-items:center;gap:10px;width:100%;height:46px;padding:0 16px;margin-bottom:10px;border:1px solid #e6e5e1;border-radius:23px;background:#f6f5f2;color:#77746f;font:500 13.5px Manrope,sans-serif;text-align:left;cursor:pointer;transition:border-color .2s,background .2s}
+.mmSearch:active{border-color:#111;background:#fff}
+
+.mmNav{display:flex;flex-direction:column}
+.mmItem{border-bottom:1px solid #ecebe8}
+.mmRow{display:flex;align-items:center;justify-content:space-between;gap:12px;width:100%;min-height:62px;padding:0;border:0;background:none;color:#111;text-decoration:none;cursor:pointer;-webkit-tap-highlight-color:transparent}
+a.mmItem.mmRow{border-bottom:1px solid #ecebe8}
+.mmLabel{position:relative;font-family:"Archivo",Manrope,sans-serif;font-weight:800;font-stretch:110%;font-size:22px;line-height:1;letter-spacing:-.005em;text-transform:uppercase;transition:transform .25s cubic-bezier(.22,1,.36,1)}
+/* The page you are on gets a small dot. */
+.mmLabel.is-here::after{content:"";position:absolute;right:-14px;top:3px;width:6px;height:6px;border-radius:50%;background:#111}
+.mmArrow,.mmChevron{flex:none;color:#9a9893;transition:transform .3s cubic-bezier(.22,1,.36,1),color .2s}
+.mmRow:active .mmLabel{transform:translateX(4px)}
+.mmRow:active .mmArrow{transform:translateX(4px);color:#111}
+.mmGroup.is-open .mmChevron{transform:rotate(180deg);color:#111}
+
+/* Women / Men open smoothly (grid rows 0fr -> 1fr). */
+.mmSub{display:grid;grid-template-rows:0fr;transition:grid-template-rows .34s cubic-bezier(.22,1,.36,1)}
+.mmGroup.is-open .mmSub{grid-template-rows:1fr}
+.mmSubInner{min-height:0;overflow:hidden}
+.mmGroup.is-open .mmSubInner{padding-bottom:14px}
+.mmCat{display:flex;flex-direction:column}
+.mmCatLink{display:flex;align-items:baseline;justify-content:space-between;gap:12px;padding:10px 2px;color:#222;text-decoration:none;font:600 14.5px Manrope,sans-serif;border-radius:6px;transition:background .15s}
+.mmCatLink small{font-size:11px;color:#a5a29c;font-weight:600}
+.mmCatLink:active{background:#f4f3f0}
+.mmCatChild{padding-left:16px;font-weight:500;color:#555}
+.mmShopAll{display:inline-flex;align-items:center;gap:6px;margin-top:6px;padding:8px 2px;color:#111;text-decoration:none;font:800 11px Manrope,sans-serif;letter-spacing:.14em;text-transform:uppercase}
+.mmNote{margin:6px 2px 4px;font-size:13px;color:#8a8780}
+
+.mmFoot{margin-top:auto;padding-top:26px}
+.mmSignIn{display:flex;align-items:center;justify-content:center;height:50px;border-radius:2px;background:#111;color:#fff;text-decoration:none;font:700 12.5px Manrope,sans-serif;letter-spacing:.08em;text-transform:uppercase;transition:transform .15s}
+.mmSignIn:active{transform:scale(.98)}
+.mmAccount{display:flex;align-items:center;gap:12px;padding:12px;border:1px solid #ecebe8;border-radius:12px;color:#111;text-decoration:none}
+.mmAccount > span:nth-child(2){flex:1;display:flex;flex-direction:column;gap:2px;font-size:14px}
+.mmAccount small{font-size:11.5px;color:#8a8780}
+.mmAvatar{width:38px;height:38px;border-radius:50%;background:#111;color:#fff;display:grid;place-items:center;flex:none}
+.mmQuick{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px}
+.mmQuick a{display:flex;align-items:center;justify-content:center;gap:8px;height:46px;border:1px solid #ecebe8;border-radius:10px;color:#111;text-decoration:none;font:600 13px Manrope,sans-serif;transition:border-color .15s}
+.mmQuick a:active{border-color:#111}
+
+@media (prefers-reduced-motion:reduce){
+  .mm::before,.mmPanel,.mmSearch,.mmItem,.mmFoot,.mmClose span{animation:none!important}
+  .mmClose span:nth-child(1){transform:rotate(45deg)}
+  .mmClose span:nth-child(2){transform:rotate(-45deg)}
+  .mmSub{transition:none}
+}

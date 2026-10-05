@@ -42,7 +42,10 @@ export function ScrollManager() {
   const location = useLocation();
   const navType = useNavigationType();
   const positions = useRef<Record<string, number>>(readStore());
-  const currentKey = useRef(location.key);
+  // A history entry's key plus its address: the first entry of every page
+  // load is keyed "default", so the key alone can collide across reloads.
+  const entryId = (l: { key: string; pathname: string; search: string }) => `${l.key}|${l.pathname}${l.search}`;
+  const currentKey = useRef(entryId(location));
   const prevPath = useRef(location.pathname);
 
   useEffect(() => {
@@ -68,11 +71,11 @@ export function ScrollManager() {
   useLayoutEffect(() => {
     const samePath = prevPath.current === location.pathname;
     prevPath.current = location.pathname;
-    currentKey.current = location.key;
+    currentKey.current = entryId(location);
     writeStore(positions.current);
 
     if (navType === "POP") {
-      const target = positions.current[location.key];
+      const target = positions.current[entryId(location)];
       if (target === undefined) return;
       const started = Date.now();
       let timer = 0;
@@ -108,7 +111,7 @@ export function ScrollManager() {
       }
     }
     if (!samePath) jump(0);
-  }, [location.key, location.pathname, location.hash, navType]);
+  }, [location.key, location.pathname, location.search, location.hash, navType]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return null;
 }
